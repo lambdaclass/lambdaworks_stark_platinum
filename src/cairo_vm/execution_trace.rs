@@ -11,7 +11,9 @@ use crate::{
     cairo_vm::{instruction_flags::CairoInstructionFlags, instruction_offsets::InstructionOffsets},
     FE,
 };
-use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
+use lambdaworks_math::{
+    field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, helpers,
+};
 
 // MAIN TRACE LAYOUT
 // -----------------------------------------------------------------------------------------
@@ -116,6 +118,8 @@ pub fn build_cairo_execution_trace(
     trace_cols.push(t1);
     trace_cols.push(mul);
     trace_cols.push(selector);
+
+    helpers::resize_to_next_power_of_two(&mut trace_cols);
 
     TraceTable::new_from_cols(&trace_cols)
 }
@@ -369,88 +373,104 @@ mod test {
         */
 
         let base_dir = env!("CARGO_MANIFEST_DIR");
-        let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
+        let dir_trace = base_dir.to_owned() + "/cairo_programs/simple_program.trace";
+        let dir_memory = base_dir.to_owned() + "/cairo_programs/simple_program.memory";
 
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
+        let raw_trace = CairoTrace::from_file(&dir_trace).expect(&dir_trace);
+        let memory = CairoMemory::from_file(&dir_memory).expect(&dir_memory);
 
         let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&vec![
             // col 0
-            vec![FE::zero(), FE::zero(), FE::one()],
+            vec![FE::zero(), FE::zero(), FE::one(), FE::zero()],
             // col 1
-            vec![FE::one(), FE::one(), FE::one()],
+            vec![FE::one(), FE::one(), FE::one(), FE::zero()],
             // col 2
-            vec![FE::one(), FE::one(), FE::zero()],
+            vec![FE::one(), FE::one(), FE::zero(), FE::zero()],
             // col 3
-            vec![FE::zero(), FE::zero(), FE::one()],
+            vec![FE::zero(), FE::zero(), FE::one(), FE::zero()],
             // col 4
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 5
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 6
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 7
-            vec![FE::zero(), FE::zero(), FE::one()],
+            vec![FE::zero(), FE::zero(), FE::one(), FE::zero()],
             // col 8
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 9
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 10
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 11
-            vec![FE::one(), FE::zero(), FE::zero()],
+            vec![FE::one(), FE::zero(), FE::zero(), FE::zero()],
             // col 12
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 13
-            vec![FE::zero(), FE::zero(), FE::one()],
+            vec![FE::zero(), FE::zero(), FE::one(), FE::zero()],
             // col 14
-            vec![FE::one(), FE::one(), FE::zero()],
+            vec![FE::one(), FE::one(), FE::zero(), FE::zero()],
             // col 15
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 16
-            vec![FE::from(3), FE::from(3), FE::from(9)],
+            vec![FE::from(3), FE::from(3), FE::from(9), FE::zero()],
             // col 17
-            vec![FE::from(8), FE::from(9), FE::from(9)],
+            vec![FE::from(8), FE::from(9), FE::from(9), FE::zero()],
             // col 18
-            vec![FE::from(8), FE::from(8), FE::from(8)],
+            vec![FE::from(8), FE::from(8), FE::from(8), FE::zero()],
             // col 19
-            vec![FE::from(1), FE::from(3), FE::from(5)],
+            vec![FE::from(1), FE::from(3), FE::from(5), FE::zero()],
             // col 20
-            vec![FE::from(8), FE::from(8), FE::from(6)],
+            vec![FE::from(8), FE::from(8), FE::from(6), FE::zero()],
             // col 21
-            vec![FE::from(7), FE::from(7), FE::from(7)],
+            vec![FE::from(7), FE::from(7), FE::from(7), FE::zero()],
             // col 22
-            vec![FE::from(2), FE::from(4), FE::from(7)],
+            vec![FE::from(2), FE::from(4), FE::from(7), FE::zero()],
             // col 23
             vec![
                 FE::from(0x480680017fff8000),
                 FE::from(0x400680017fff7fff),
                 FE::from(0x208b7fff7fff7ffe),
+                FE::zero(),
             ],
             // col 24
-            vec![FE::from(3), FE::from(3), FE::from(9)],
+            vec![FE::from(3), FE::from(3), FE::from(9), FE::zero()],
             // col 25
-            vec![FE::from(9), FE::from(9), FE::from(9)],
+            vec![FE::from(9), FE::from(9), FE::from(9), FE::zero()],
             // col 26
-            vec![FE::from(3), FE::from(3), FE::from(9)],
+            vec![FE::from(3), FE::from(3), FE::from(9), FE::zero()],
             // col 27
-            vec![FE::from(0x8000), FE::from(0x7fff), FE::from(0x7ffe)],
+            vec![
+                FE::from(0x8000),
+                FE::from(0x7fff),
+                FE::from(0x7ffe),
+                FE::zero(),
+            ],
             // col 28
-            vec![FE::from(0x7fff), FE::from(0x7fff), FE::from(0x7fff)],
+            vec![
+                FE::from(0x7fff),
+                FE::from(0x7fff),
+                FE::from(0x7fff),
+                FE::zero(),
+            ],
             // col 29
-            vec![FE::from(0x8001), FE::from(0x8001), FE::from(0x7fff)],
+            vec![
+                FE::from(0x8001),
+                FE::from(0x8001),
+                FE::from(0x7fff),
+                FE::zero(),
+            ],
             // col 30
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 31
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![FE::zero(), FE::zero(), FE::zero(), FE::zero()],
             // col 32
-            vec![FE::from(0x1b), FE::from(0x1b), FE::from(0x51)],
+            vec![FE::from(0x1b), FE::from(0x1b), FE::from(0x51), FE::zero()],
             // col 33 - Selector column
-            vec![FE::one(), FE::one(), FE::zero()],
+            vec![FE::one(), FE::one(), FE::zero(), FE::zero()],
         ]);
 
         assert_eq!(execution_trace.cols(), expected_trace.cols());
@@ -479,11 +499,11 @@ mod test {
         */
 
         let base_dir = env!("CARGO_MANIFEST_DIR");
-        let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.memory";
+        let dir_trace = base_dir.to_owned() + "/cairo_programs/call_func.trace";
+        let dir_memory = base_dir.to_owned() + "/cairo_programs/call_func.memory";
 
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
+        let raw_trace = CairoTrace::from_file(&dir_trace).expect(&dir_trace);
+        let memory = CairoMemory::from_file(&dir_memory).expect(&dir_memory);
 
         let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
 
@@ -498,6 +518,7 @@ mod test {
                 FE::one(),
                 FE::zero(),
                 FE::one(),
+                FE::zero(),
             ],
             // col 1
             vec![
@@ -508,6 +529,7 @@ mod test {
                 FE::one(),
                 FE::one(),
                 FE::one(),
+                FE::zero(),
             ],
             // col 2
             vec![
@@ -517,6 +539,7 @@ mod test {
                 FE::zero(),
                 FE::zero(),
                 FE::one(),
+                FE::zero(),
                 FE::zero(),
             ],
             // col 3
@@ -528,9 +551,11 @@ mod test {
                 FE::one(),
                 FE::zero(),
                 FE::one(),
+                FE::zero(),
             ],
             // col 4
             vec![
+                FE::zero(),
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
@@ -548,6 +573,7 @@ mod test {
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
+                FE::zero(),
             ],
             // col 6
             vec![
@@ -555,6 +581,7 @@ mod test {
                 FE::zero(),
                 FE::zero(),
                 FE::one(),
+                FE::zero(),
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
@@ -568,6 +595,7 @@ mod test {
                 FE::one(),
                 FE::zero(),
                 FE::one(),
+                FE::zero(),
             ],
             // col 8
             vec![
@@ -578,9 +606,11 @@ mod test {
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
+                FE::zero(),
             ],
             // col 9
             vec![
+                FE::zero(),
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
@@ -598,6 +628,7 @@ mod test {
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
+                FE::zero(),
             ],
             // col 11
             vec![
@@ -608,12 +639,14 @@ mod test {
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
+                FE::zero(),
             ],
             // col 12
             vec![
                 FE::zero(),
                 FE::zero(),
                 FE::one(),
+                FE::zero(),
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
@@ -628,6 +661,7 @@ mod test {
                 FE::one(),
                 FE::zero(),
                 FE::one(),
+                FE::zero(),
             ],
             // col 14
             vec![
@@ -638,9 +672,11 @@ mod test {
                 FE::zero(),
                 FE::one(),
                 FE::zero(),
+                FE::zero(),
             ],
             // col 15
             vec![
+                FE::zero(),
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
@@ -660,6 +696,7 @@ mod test {
                 FE::from(9),
                 FE::from(6),
                 FE::from(19),
+                FE::zero(),
             ],
             // col 17
             vec![
@@ -670,6 +707,7 @@ mod test {
                 FE::from(19),
                 FE::from(19),
                 FE::from(19),
+                FE::zero(),
             ],
             // col 18
             vec![
@@ -680,6 +718,7 @@ mod test {
                 FE::from(18),
                 FE::from(14),
                 FE::from(14),
+                FE::zero(),
             ],
             // col 19
             vec![
@@ -690,6 +729,7 @@ mod test {
                 FE::from(2),
                 FE::from(9),
                 FE::from(11),
+                FE::zero(),
             ],
             // col 20
             vec![
@@ -700,6 +740,7 @@ mod test {
                 FE::from(16),
                 FE::from(18),
                 FE::from(12),
+                FE::zero(),
             ],
             // col 21
             vec![
@@ -710,6 +751,7 @@ mod test {
                 FE::from(17),
                 FE::from(13),
                 FE::from(13),
+                FE::zero(),
             ],
             // col 22
             vec![
@@ -720,6 +762,7 @@ mod test {
                 FE::from(17),
                 FE::from(10),
                 FE::from(13),
+                FE::zero(),
             ],
             // col 23
             vec![
@@ -730,6 +773,7 @@ mod test {
                 FE::from(0x208b7fff7fff7ffe),
                 FE::from(0x400680017fff7fff),
                 FE::from(0x208b7fff7fff7ffe),
+                FE::zero(),
             ],
             // col 24
             vec![
@@ -740,6 +784,7 @@ mod test {
                 FE::from(14),
                 FE::from(6),
                 FE::from(19),
+                FE::zero(),
             ],
             // col 25
             vec![
@@ -750,6 +795,7 @@ mod test {
                 FE::from(9),
                 FE::from(19),
                 FE::from(19),
+                FE::zero(),
             ],
             // col 26
             vec![
@@ -762,6 +808,7 @@ mod test {
                 FE::from(9),
                 FE::from(6),
                 FE::from(19),
+                FE::zero(),
             ],
             // col 27
             vec![
@@ -772,6 +819,7 @@ mod test {
                 FE::from(0x7ffe),
                 FE::from(0x7fff),
                 FE::from(0x7ffe),
+                FE::zero(),
             ],
             // col 28
             vec![
@@ -782,6 +830,7 @@ mod test {
                 FE::from(0x7fff),
                 FE::from(0x7fff),
                 FE::from(0x7fff),
+                FE::zero(),
             ],
             // col 29
             vec![
@@ -792,6 +841,7 @@ mod test {
                 FE::from(0x7fff),
                 FE::from(0x8001),
                 FE::from(0x7fff),
+                FE::zero(),
             ],
             // col 30
             vec![
@@ -802,9 +852,11 @@ mod test {
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
+                FE::zero(),
             ],
             // col 31
             vec![
+                FE::zero(),
                 FE::zero(),
                 FE::zero(),
                 FE::zero(),
@@ -824,6 +876,7 @@ mod test {
                 FE::from(81),
                 FE::from(114),
                 FE::from(0x169),
+                FE::zero(),
             ],
             // col 33 - Selector column
             vec![
@@ -833,6 +886,7 @@ mod test {
                 FE::one(),
                 FE::one(),
                 FE::one(),
+                FE::zero(),
                 FE::zero(),
             ],
         ]);

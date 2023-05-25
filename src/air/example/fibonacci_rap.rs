@@ -9,7 +9,6 @@ use crate::{
         AIR,
     },
     fri::FieldElement,
-    prover::ProvingError,
     transcript_to_field,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
@@ -32,21 +31,14 @@ impl AIR for FibonacciRAP {
     type Field = Stark252PrimeField;
     type RawTrace = Vec<Vec<FieldElement<Self::Field>>>;
     type RAPChallenges = FieldElement<Self::Field>;
-    type PublicInput = ();
 
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable::new_from_cols(raw_trace))
+    fn build_main_trace(raw_trace: &Self::RawTrace) -> TraceTable<Self::Field> {
+        TraceTable::new_from_cols(raw_trace)
     }
 
     fn build_auxiliary_trace(
-        &self,
         main_trace: &TraceTable<Self::Field>,
         gamma: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
     ) -> TraceTable<Self::Field> {
         let main_segment_cols = main_trace.cols();
         let not_perm = &main_segment_cols[0];
@@ -69,7 +61,7 @@ impl AIR for FibonacciRAP {
         TraceTable::new_from_cols(&[aux_col])
     }
 
-    fn build_rap_challenges<T: Transcript>(&self, transcript: &mut T) -> Self::RAPChallenges {
+    fn build_rap_challenges<T: Transcript>(transcript: &mut T) -> Self::RAPChallenges {
         transcript_to_field(transcript)
     }
 
@@ -106,7 +98,6 @@ impl AIR for FibonacciRAP {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
     ) -> BoundaryConstraints<Self::Field> {
         // Main boundary constraints
         let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::one());
@@ -120,10 +111,6 @@ impl AIR for FibonacciRAP {
 
     fn context(&self) -> AirContext {
         self.context.clone()
-    }
-
-    fn composition_poly_degree_bound(&self) -> usize {
-        self.context().trace_length
     }
 }
 

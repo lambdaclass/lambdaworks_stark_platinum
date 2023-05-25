@@ -7,7 +7,6 @@ use crate::{
         AIR,
     },
     fri::FieldElement,
-    prover::ProvingError,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::fields::u64_prime_field::F17;
@@ -27,26 +26,19 @@ impl AIR for Fibonacci17AIR {
     type Field = F17;
     type RawTrace = Vec<Vec<FieldElement<Self::Field>>>;
     type RAPChallenges = ();
-    type PublicInput = ();
 
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable::new_from_cols(raw_trace))
+    fn build_main_trace(raw_trace: &Self::RawTrace) -> TraceTable<Self::Field> {
+        TraceTable::new_from_cols(raw_trace)
     }
 
     fn build_auxiliary_trace(
-        &self,
         _main_trace: &TraceTable<Self::Field>,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
     ) -> TraceTable<Self::Field> {
         TraceTable::empty()
     }
 
-    fn build_rap_challenges<T: Transcript>(&self, _transcript: &mut T) -> Self::RAPChallenges {}
+    fn build_rap_challenges<T: Transcript>(_transcript: &mut T) -> Self::RAPChallenges {}
 
     fn compute_transition(
         &self,
@@ -63,7 +55,6 @@ impl AIR for Fibonacci17AIR {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
     ) -> BoundaryConstraints<Self::Field> {
         let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::one());
         let a1 = BoundaryConstraint::new_simple(1, FieldElement::<Self::Field>::one());
@@ -72,15 +63,7 @@ impl AIR for Fibonacci17AIR {
         BoundaryConstraints::from_constraints(vec![a0, a1, result])
     }
 
-    fn number_auxiliary_rap_columns(&self) -> usize {
-        0
-    }
-
     fn context(&self) -> air::context::AirContext {
         self.context.clone()
-    }
-
-    fn composition_poly_degree_bound(&self) -> usize {
-        self.context().trace_length
     }
 }
