@@ -237,7 +237,7 @@ fn test_prove_cairo_fibonacci(file_name: &str, trace_length: usize) {
     let (raw_trace, memory) = load_cairo_trace_and_memory(file_name);
 
     let proof_options = ProofOptions {
-        blowup_factor: 2,
+        blowup_factor: 4,
         fri_number_of_queries: 5,
         coset_offset: 3,
     };
