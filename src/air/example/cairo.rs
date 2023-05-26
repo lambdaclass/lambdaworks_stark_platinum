@@ -20,6 +20,7 @@ use crate::{
     prover::ProvingError,
     transcript_to_field, FE,
 };
+use rayon::prelude::*;
 
 /// Main constraint identifiers
 const INST: usize = 16;
@@ -482,8 +483,16 @@ impl AIR for CairoAIR {
         frame: &Frame<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
     ) -> Vec<FieldElement<Self::Field>> {
+
+        let n_constraints = self.num_transition_constraints();
+
         let mut constraints: Vec<FieldElement<Self::Field>> =
-            vec![FE::zero(); self.num_transition_constraints()];
+            vec![FE::zero(); n_constraints];
+
+        (0..n_constraints).par_iter().(i, c)| match i {
+            0..=15 => compute_instr_constraints(&mut constraints, frame); 
+
+        });
 
         compute_instr_constraints(&mut constraints, frame);
         compute_operand_constraints(&mut constraints, frame);
