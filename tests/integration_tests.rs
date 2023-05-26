@@ -269,6 +269,12 @@ fn test_prove_cairo_fibonacci(file_name: &str, trace_length: usize) {
 }
 
 #[test_log::test]
+#[ignore]
+fn test_prove_cairo_factorial_100() {
+    test_prove_cairo_fibonacci("factorial_100", 1024);
+}
+
+#[test_log::test]
 fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_fibonacci("fibonacci_5", 64);
 }
