@@ -19,13 +19,6 @@ fn cairo_benches(c: &mut Criterion) {
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
 
-    /*
-    let cargo_path = env!("CARGO_MANIFEST_DIR");
-    let cairo_programs_path = &(cargo_path.to_string() + "/src/cairo_vm/test_data/");
-
-    println!("Path: {:?}", cairo_programs_path);
-    */
-
     run_cairo_bench(&mut group, "fibonacci/10", & "fibonacci_10");
     run_cairo_bench(&mut group, "fibonacci/30", &"fibonacci_30");
 
