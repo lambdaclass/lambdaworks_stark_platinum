@@ -60,7 +60,7 @@ fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, fi
             let mut program = vec![];
 
             // This should be obtained from Cairo Memory
-            // It's not actually the steps, but it should work
+            // 24 may not be right
             for i in 1..=24 as u64 {
                 program.push(cairo_memory.get(&i).unwrap().clone());
             }
