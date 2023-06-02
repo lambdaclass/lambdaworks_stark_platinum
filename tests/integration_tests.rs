@@ -252,6 +252,7 @@ fn test_prove_cairo_fibonacci(file_name: &str, trace_length: usize) {
     let cairo_air = cairo::CairoAIR::new(proof_options, trace_length, raw_trace.steps());
 
     let last_step = &raw_trace.rows[raw_trace.steps() - 1];
+    
     let mut public_input = PublicInputs {
         pc_init: FE::from(raw_trace.rows[0].pc),
         ap_init: FE::from(raw_trace.rows[0].ap),
