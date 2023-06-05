@@ -5,7 +5,7 @@ use lambdaworks_math::{
 };
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
-use crate::air::{frame::Frame, trace::TraceTable, AIR};
+use crate::{air::{frame::Frame, trace::TraceTable, AIR}, Domain, prover::evaluate_polynomial_on_lde_domain};
 use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
@@ -36,7 +36,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     pub fn evaluate(
         &self,
         lde_trace: &TraceTable<F>,
-        lde_domain: &[FieldElement<F>],
+        domain: &Domain<F>,
         alpha_and_beta_transition_coefficients: &[(FieldElement<F>, FieldElement<F>)],
         alpha_and_beta_boundary_coefficients: &[(FieldElement<F>, FieldElement<F>)],
         rap_challenges: &A::RAPChallenges,
@@ -47,7 +47,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         // The + 1 is for the boundary constraints column
         let mut evaluation_table = ConstraintEvaluationTable::new(
             self.air.context().num_transition_constraints() + 1,
-            lde_domain,
+            &domain.lde_roots_of_unity_coset,
         );
         let n_trace_colums = self.trace_polys.len();
         let boundary_constraints = &self.boundary_constraints;
@@ -83,11 +83,34 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         #[cfg(debug_assertions)]
         let mut transition_evaluations = Vec::new();
 
+        let mut boundary_polys_evaluations = Vec::with_capacity(boundary_polys.len());
+        for boundary_poly in boundary_polys.iter() {
+            let evaluations = evaluate_polynomial_on_lde_domain(
+                &boundary_poly,
+                domain.blowup_factor,
+                domain.interpolation_domain_size,
+                &domain.coset_offset,
+            ).unwrap();
+            boundary_polys_evaluations.push(evaluations);
+        }
+
+        let mut boundary_zerofiers_inverse_evaluations = Vec::with_capacity(boundary_zerofiers.len());
+        for poly in boundary_zerofiers.iter() {
+            let mut evaluations = evaluate_polynomial_on_lde_domain(
+                &poly,
+                domain.blowup_factor,
+                domain.interpolation_domain_size,
+                &domain.coset_offset,
+            ).unwrap();
+            FieldElement::inplace_batch_inverse(&mut evaluations);
+            boundary_zerofiers_inverse_evaluations.push(evaluations);
+        }
+
         let divisors = self.air.transition_divisors();
         let boundary_term_degree_adjustment =
             self.air.composition_poly_degree_bound() - self.air.context().trace_length;
         // Iterate over trace and domain and compute transitions
-        for (i, d) in lde_domain.iter().enumerate() {
+        for (i, d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
             let frame = Frame::read_from_trace(
                 lde_trace,
                 i,
@@ -109,13 +132,13 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             );
 
             let d_adjustment_power = d.pow(boundary_term_degree_adjustment);
-            let boundary_evaluation = zip(&boundary_polys, &boundary_zerofiers)
+            let boundary_evaluation = zip(&boundary_polys_evaluations, &boundary_zerofiers_inverse_evaluations)
                 .enumerate()
-                .map(|(index, (boundary_poly, boundary_zerofier))| {
+                .map(|(index, (boundary_poly_evaluation, zerofier_inverse_evaluation))| {
                     let (boundary_alpha, boundary_beta) =
                         alpha_and_beta_boundary_coefficients[index].clone();
 
-                    (boundary_poly.evaluate(d) / boundary_zerofier.evaluate(d))
+                    &boundary_poly_evaluation[i] * &zerofier_inverse_evaluation[i]
                         * (&boundary_alpha * &d_adjustment_power + &boundary_beta)
                 })
                 .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);

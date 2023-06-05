@@ -91,7 +91,7 @@ where
     (trees, roots)
 }
 
-fn evaluate_polynomial_on_lde_domain<F>(
+pub fn evaluate_polynomial_on_lde_domain<F>(
     p: &Polynomial<FieldElement<F>>,
     blowup_factor: usize,
     domain_size: usize,
@@ -224,7 +224,7 @@ where
 
     let constraint_evaluations = evaluator.evaluate(
         &round_1_result.lde_trace,
-        &domain.lde_roots_of_unity_coset,
+        &domain,
         transition_coeffs,
         boundary_coeffs,
         &round_1_result.rap_challenges,
