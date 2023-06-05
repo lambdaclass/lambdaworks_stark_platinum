@@ -5,7 +5,11 @@ use lambdaworks_math::{
 };
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
-use crate::{air::{frame::Frame, trace::TraceTable, AIR}, Domain, prover::evaluate_polynomial_on_lde_domain};
+use crate::{
+    air::{frame::Frame, trace::TraceTable, AIR},
+    prover::evaluate_polynomial_on_lde_domain,
+    Domain,
+};
 use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
@@ -84,24 +88,27 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let mut transition_evaluations = Vec::new();
 
         let mut boundary_polys_evaluations = Vec::with_capacity(boundary_polys.len());
-        for boundary_poly in boundary_polys.iter() {
+        for poly in boundary_polys.iter() {
             let evaluations = evaluate_polynomial_on_lde_domain(
-                &boundary_poly,
+                poly,
                 domain.blowup_factor,
                 domain.interpolation_domain_size,
                 &domain.coset_offset,
-            ).unwrap();
+            )
+            .unwrap();
             boundary_polys_evaluations.push(evaluations);
         }
 
-        let mut boundary_zerofiers_inverse_evaluations = Vec::with_capacity(boundary_zerofiers.len());
+        let mut boundary_zerofiers_inverse_evaluations =
+            Vec::with_capacity(boundary_zerofiers.len());
         for poly in boundary_zerofiers.iter() {
             let mut evaluations = evaluate_polynomial_on_lde_domain(
-                &poly,
+                poly,
                 domain.blowup_factor,
                 domain.interpolation_domain_size,
                 &domain.coset_offset,
-            ).unwrap();
+            )
+            .unwrap();
             FieldElement::inplace_batch_inverse(&mut evaluations);
             boundary_zerofiers_inverse_evaluations.push(evaluations);
         }
@@ -132,16 +139,22 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             );
 
             let d_adjustment_power = d.pow(boundary_term_degree_adjustment);
-            let boundary_evaluation = zip(&boundary_polys_evaluations, &boundary_zerofiers_inverse_evaluations)
-                .enumerate()
-                .map(|(index, (boundary_poly_evaluation, zerofier_inverse_evaluation))| {
+            let boundary_evaluation = zip(
+                &boundary_polys_evaluations,
+                &boundary_zerofiers_inverse_evaluations,
+            )
+            .enumerate()
+            .map(
+                |(index, (boundary_poly_evaluation, zerofier_inverse_evaluation))| {
                     let (boundary_alpha, boundary_beta) =
                         alpha_and_beta_boundary_coefficients[index].clone();
 
-                    &boundary_poly_evaluation[i] * &zerofier_inverse_evaluation[i]
+                    &boundary_poly_evaluation[i]
+                        * &zerofier_inverse_evaluation[i]
                         * (&boundary_alpha * &d_adjustment_power + &boundary_beta)
-                })
-                .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
+                },
+            )
+            .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
 
             evaluations.push(boundary_evaluation);
 
