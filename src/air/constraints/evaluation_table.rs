@@ -16,10 +16,7 @@ pub struct ConstraintEvaluationTable<F: IsField> {
 
 impl<F: IsField> ConstraintEvaluationTable<F> {
     pub fn new(_n_cols: usize, domain: &[FieldElement<F>]) -> Self {
-        let evaluations_acc = vec![FieldElement::zero(); _n_cols];
-
-        println!("domain len: {}", domain.len());
-        println!("_n_cols: {}", _n_cols);
+        let evaluations_acc = Vec::with_capacity(domain.len());
 
         ConstraintEvaluationTable {
             evaluations_acc,
@@ -33,12 +30,5 @@ impl<F: IsField> ConstraintEvaluationTable<F> {
         Polynomial<FieldElement<F>>: FFTPoly<F>,
     {
         Polynomial::interpolate_offset_fft(&self.evaluations_acc, offset).unwrap()
-    }
-
-    pub fn acc_evaluation_polynomial(&mut self, row: &[FieldElement<F>]) {
-        self.evaluations_acc
-            .iter_mut()
-            .zip(row)
-            .for_each(|(acc, d)| *acc = &*acc + d);
     }
 }
