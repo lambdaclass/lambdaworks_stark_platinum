@@ -60,8 +60,6 @@ pub fn run_program(
 
     let program_content = std::fs::read(filename).map_err(Error::IO)?;
 
-    // println!("Program content: \n {}", std::str::from_utf8(&program_content).unwrap());
-
     let (cairo_runner, vm) =
         match cairo_run::cairo_run(&program_content, &cairo_run_config, &mut hint_executor) {
             Ok(runner) => runner,
