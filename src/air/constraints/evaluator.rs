@@ -5,7 +5,11 @@ use lambdaworks_math::{
 };
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
-use crate::{air::{frame::Frame, trace::TraceTable, AIR}, prover::evaluate_polynomial_on_lde_domain, Domain};
+use crate::{
+    air::{frame::Frame, trace::TraceTable, AIR},
+    prover::evaluate_polynomial_on_lde_domain,
+    Domain,
+};
 use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
@@ -94,19 +98,20 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 domain.blowup_factor,
                 domain.interpolation_domain_size,
                 &domain.coset_offset,
-            ).unwrap();
+            )
+            .unwrap();
             FieldElement::inplace_batch_inverse(&mut evaluations);
             transition_zerofiers_inverse_evaluations.push(evaluations);
-        } 
+        }
 
         let mut degree_adjustments = Vec::new();
         for transition_degree in self.air.context().transition_degrees().iter() {
             let mut transition_adjustment = Vec::new();
             for d in domain.lde_roots_of_unity_coset.iter() {
                 let degree_adjustment = self.air.composition_poly_degree_bound()
-                        - (self.air.context().trace_length * (transition_degree - 1));
+                    - (self.air.context().trace_length * (transition_degree - 1));
                 transition_adjustment.push(d.pow(degree_adjustment));
-            } 
+            }
             degree_adjustments.push(transition_adjustment);
         }
 
@@ -125,8 +130,14 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             transition_evaluations.push(evaluations.clone());
 
             // TODO: Remove clones
-            let denominators: Vec<_> = transition_zerofiers_inverse_evaluations.iter().map(|zerofier_evals| zerofier_evals[i].clone()).collect();
-            let degree_adjustments: Vec<_> = degree_adjustments.iter().map(|transition_adjustments| transition_adjustments[i].clone()).collect();
+            let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
+                .iter()
+                .map(|zerofier_evals| zerofier_evals[i].clone())
+                .collect();
+            let degree_adjustments: Vec<_> = degree_adjustments
+                .iter()
+                .map(|transition_adjustments| transition_adjustments[i].clone())
+                .collect();
             evaluations = Self::compute_constraint_composition_poly_evaluations(
                 &evaluations,
                 &denominators,

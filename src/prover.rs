@@ -224,7 +224,7 @@ where
 
     let constraint_evaluations = evaluator.evaluate(
         &round_1_result.lde_trace,
-        &domain,
+        domain,
         transition_coeffs,
         boundary_coeffs,
         &round_1_result.rap_challenges,

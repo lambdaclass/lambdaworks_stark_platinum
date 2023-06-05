@@ -253,7 +253,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     );
 
     let divisors = air.transition_divisors();
-   
+
     let mut denominators = Vec::with_capacity(divisors.len());
     for divisor in divisors.iter() {
         denominators.push(divisor.evaluate(&challenges.z));
@@ -263,7 +263,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let mut degree_adjustments = Vec::with_capacity(divisors.len());
     for transition_degree in air.context().transition_degrees().iter() {
         let degree_adjustment = air.composition_poly_degree_bound()
-                        - (air.context().trace_length * (transition_degree - 1));
+            - (air.context().trace_length * (transition_degree - 1));
         degree_adjustments.push(challenges.z.pow(degree_adjustment));
     }
     let transition_c_i_evaluations =
