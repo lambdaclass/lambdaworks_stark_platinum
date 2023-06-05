@@ -122,7 +122,13 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
             evaluations.push(boundary_evaluation);
 
-            evaluation_table.evaluations.push(evaluations);
+            println!("evaluations: {:?}", evaluations);
+
+            println!("cant evaluations: {}", evaluations.len());
+
+            evaluation_table.acc_evaluation_polynomial(&evaluations);
+
+            println!("sum acc: {:?}", evaluation_table.evaluations_acc);
         }
 
         evaluation_table
