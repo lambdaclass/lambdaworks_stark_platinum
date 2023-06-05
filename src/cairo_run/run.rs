@@ -1,10 +1,13 @@
-use super::file_writer::FileWriter;
+use crate::cairo_vm::cairo_mem::CairoMemory;
+use crate::cairo_vm::cairo_trace::CairoTrace;
+
+use super::cairo_layout::CairoLayout;
+use super::vec_writer::VecWriter;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
 use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
 use cairo_vm::vm::errors::trace_errors::TraceError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
-use std::io;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -21,13 +24,13 @@ pub enum Error {
     Trace(#[from] TraceError),
 }
 
-/// Runs a cairo program in JSON format and returns trace and memory files.
+/// Runs a cairo program in JSON format and returns trace, memory and program length.
 /// Uses [cairo-rs](https://github.com/lambdaclass/cairo-rs/) project to run the program.
 ///
 ///  # Params
 ///
 /// `entrypoint_function` - the name of the entrypoint function tu run. If `None` is provided, the default value is `main`.
-/// `layout` - type of layout of Cairo.
+/// `layout` - type of layout of Cairo. ``
 /// `filename` - path to the input file.
 /// `trace_path` - path where to store the generated trace file.
 /// `memory_path` - path where to store the generated memory file.
@@ -38,11 +41,9 @@ pub enum Error {
 /// `Error` indicating the type of error.
 pub fn run_program(
     entrypoint_function: Option<&str>,
-    layout: &str,
+    layout: CairoLayout,
     filename: &str,
-    trace_path: &str,
-    memory_path: &str,
-) -> Result<(), Error> {
+) -> Result<(CairoTrace, CairoMemory, usize), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
@@ -52,12 +53,14 @@ pub fn run_program(
         entrypoint,
         trace_enabled,
         relocate_mem: true,
-        layout,
+        layout: layout.as_str(),
         proof_mode: false,
         secure_run: None,
     };
 
     let program_content = std::fs::read(filename).map_err(Error::IO)?;
+
+    // println!("Program content: \n {}", std::str::from_utf8(&program_content).unwrap());
 
     let (cairo_runner, vm) =
         match cairo_run::cairo_run(&program_content, &cairo_run_config, &mut hint_executor) {
@@ -70,26 +73,35 @@ pub fn run_program(
 
     let relocated_trace = vm.get_relocated_trace()?;
 
-    let trace_file = std::fs::File::create(trace_path)?;
+    let mut trace_vec = Vec::<u8>::new();
     let mut trace_writer =
-        FileWriter::new(io::BufWriter::with_capacity(3 * 1024 * 1024, trace_file));
-
+        VecWriter::new(&mut trace_vec);
     cairo_run::write_encoded_trace(relocated_trace, &mut trace_writer)?;
-    trace_writer.flush()?;
 
-    let memory_file = std::fs::File::create(memory_path)?;
+    let mut memory_vec = Vec::<u8>::new();
     let mut memory_writer =
-        FileWriter::new(io::BufWriter::with_capacity(5 * 1024 * 1024, memory_file));
-
+        VecWriter::new(&mut memory_vec);
     cairo_run::write_encoded_memory(&cairo_runner.relocated_memory, &mut memory_writer)?;
+
+    trace_writer.flush()?;
     memory_writer.flush()?;
 
-    Ok(())
+    println!("From bytes: {:?}", memory_vec.len());
+
+    //TO DO: Better error handling
+    let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();
+    let cairo_trace = CairoTrace::from_bytes_le(&trace_vec).unwrap();
+
+
+    let data_len = cairo_runner.get_program().data_len();
+
+    Ok((cairo_trace, cairo_mem, data_len))
 }
 
 #[cfg(test)]
 mod tests {
     use crate::air::trace::TraceTable;
+    use crate::cairo_run::cairo_layout::CairoLayout;
     use crate::cairo_vm::cairo_mem::CairoMemory;
     use crate::cairo_vm::cairo_trace::CairoTrace;
     use crate::cairo_vm::execution_trace::build_cairo_execution_trace;
@@ -111,7 +123,7 @@ mod tests {
 
         println!("{}", json_filename);
 
-        super::run_program(None, "all_cairo", &json_filename, &dir_trace, &dir_memory).unwrap();
+        super::run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
 
         // read trace from file
         let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();

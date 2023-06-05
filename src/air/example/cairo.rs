@@ -162,6 +162,35 @@ pub struct PublicInputs {
     pub num_steps: usize, // number of execution steps
 }
 
+
+impl PublicInputs {
+
+    /// Creates a Public Input from register states and memory 
+    /// - In the future we should use the output of the Cairo Runner. This is not currently supported in Cairo RS 
+    ///  - RangeChecks are not filled, and the prover mutates them inside the prove function. This works but also should be loaded from the Cairo RS output
+    pub fn from_regs_and_mem(register_states: &CairoTrace, memory: &CairoMemory, program_size: usize) -> Self {
+
+        let mut program = vec![];
+
+        for i in 1..=program_size as u64 {
+            program.push(memory.get(&i).unwrap().clone());
+        }
+
+        let last_step = &register_states.rows[register_states.steps() - 1];
+
+        PublicInputs {
+            pc_init: FE::from(register_states.rows[0].pc),
+            ap_init: FE::from(register_states.rows[0].ap),
+            fp_init: FE::from(register_states.rows[0].fp),
+            pc_final: FieldElement::from(last_step.pc),
+            ap_final: FieldElement::from(last_step.ap),
+            range_check_min: None,
+            range_check_max: None,
+            program,
+            num_steps: register_states.steps(),
+        }
+    }
+}
 #[derive(Clone)]
 pub struct CairoAIR {
     pub context: AirContext,
@@ -169,6 +198,10 @@ pub struct CairoAIR {
 }
 
 impl CairoAIR {
+
+    /// Creates a new CairoAIR from proof_options
+    /// full_trace_length: Padding to 2^n
+    /// number_steps: Number of steps of the execution / register steps / rows in cairo runner trace
     pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize) -> Self {
         let context = AirContext {
             options: proof_options,
