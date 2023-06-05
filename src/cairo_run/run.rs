@@ -82,8 +82,6 @@ pub fn run_program(
     trace_writer.flush()?;
     memory_writer.flush()?;
 
-    println!("From bytes: {:?}", memory_vec.len());
-
     //TO DO: Better error handling
     let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();
     let cairo_trace = CairoTrace::from_bytes_le(&trace_vec).unwrap();
