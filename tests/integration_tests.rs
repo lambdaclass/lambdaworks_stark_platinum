@@ -170,7 +170,6 @@ fn test_prove_cairo_simple_program() {
 }
 
 #[test_log::test]
-#[ignore]
 fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&program_path("fibonacci_5.json"));
 }
