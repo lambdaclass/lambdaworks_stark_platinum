@@ -16,3 +16,6 @@ benchmark:
 # Example: make flamegraph BENCH=criterion_field FILTER=CAIRO/fibonacci/50_b4_q64
 flamegraph:
 	CARGO_PROFILE_BENCH_DEBUG=true cargo flamegraph --root --bench ${BENCH} -- --bench ${FILTER}
+
+build_metal:
+	cargo b --features metal --release
