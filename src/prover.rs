@@ -633,28 +633,31 @@ where
 
 #[cfg(test)]
 mod tests {
-    use lambdaworks_math::{
-        field::{
-            element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-            traits::IsFFTField,
-        },
-        polynomial::Polynomial,
-    };
-
-    use crate::{
-        air::{
-            context::{AirContext, ProofOptions},
-            example::simple_fibonacci,
-            trace::TraceTable,
-        },
-        Domain,
-    };
-
-    use super::evaluate_polynomial_on_lde_domain;
-
+    use lambdaworks_math::field::element::FieldElement;
+    use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
     pub type FE = FieldElement<Stark252PrimeField>;
 
     mod all {
+        use lambdaworks_math::{
+            field::{
+                element::FieldElement,
+                fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+                traits::IsFFTField,
+            },
+            polynomial::Polynomial,
+        };
+
+        use super::super::evaluate_polynomial_on_lde_domain;
+        use super::FE;
+        use crate::{
+            air::{
+                context::{AirContext, ProofOptions},
+                example::simple_fibonacci,
+                trace::TraceTable,
+            },
+            Domain,
+        };
+
         #[test]
         fn test_domain_constructor() {
             let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
@@ -720,9 +723,13 @@ mod tests {
             .unwrap();
 
             for poly in trace_polys.iter() {
-                let lde_evaluation =
-                    evaluate_polynomial_on_lde_domain(poly, blowup_factor, domain_size, &coset_offset)
-                        .unwrap();
+                let lde_evaluation = evaluate_polynomial_on_lde_domain(
+                    poly,
+                    blowup_factor,
+                    domain_size,
+                    &coset_offset,
+                )
+                .unwrap();
                 assert_eq!(lde_evaluation.len(), trace_length * blowup_factor);
                 for (i, evaluation) in lde_evaluation.iter().enumerate() {
                     assert_eq!(
@@ -740,7 +747,8 @@ mod tests {
             let domain_size: usize = 8;
             let offset = FE::from(3);
             let evaluations =
-                evaluate_polynomial_on_lde_domain(&poly, blowup_factor, domain_size, &offset).unwrap();
+                evaluate_polynomial_on_lde_domain(&poly, blowup_factor, domain_size, &offset)
+                    .unwrap();
             assert_eq!(evaluations.len(), domain_size * blowup_factor);
 
             let primitive_root: FE = Stark252PrimeField::get_primitive_root_of_unity(
@@ -754,14 +762,11 @@ mod tests {
     }
 
     #[cfg(not(any(metal, cuda)))]
-    mod cpu {
-    }
+    mod cpu {}
 
     #[cfg(cuda)]
-    mod cuda {
-    }
+    mod cuda {}
 
     #[cfg(metal)]
-    mod metal {
-    }
+    mod metal {}
 }
