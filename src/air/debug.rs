@@ -10,7 +10,7 @@ use crate::{
     Domain,
 };
 
-use super::AIR;
+use super::air::AIR;
 
 /// Validates that the trace is valid with respect to the supplied AIR constraints
 pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(

@@ -1,11 +1,11 @@
 use super::{
-    air::{constraints::evaluator::ConstraintEvaluator, AIR},
+    air::{constraints::evaluator::ConstraintEvaluator},
     fri::fri_decommit::FriDecommitment,
     sample_z_ood,
 };
 use crate::{
     batch_sample_challenges, fri::HASHER, proof::StarkProof, transcript_to_field,
-    transcript_to_usize, Domain,
+    transcript_to_usize, Domain, air::air::AIR,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;

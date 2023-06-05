@@ -1,5 +1,5 @@
 use super::{
-    air::{constraints::evaluator::ConstraintEvaluator, frame::Frame, trace::TraceTable, AIR},
+    air::{constraints::evaluator::ConstraintEvaluator, frame::Frame, trace::TraceTable},
     fri::fri_commit_phase,
     sample_z_ood,
 };
@@ -7,7 +7,7 @@ use crate::{
     batch_sample_challenges,
     fri::{fri_decommit::FriDecommitment, fri_query_phase, HASHER},
     proof::{DeepPolynomialOpenings, StarkProof},
-    transcript_to_field, Domain,
+    transcript_to_field, Domain, air::air::AIR,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;

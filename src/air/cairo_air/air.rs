@@ -10,8 +10,7 @@ use crate::{
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
         context::{AirContext, ProofOptions},
         frame::Frame,
-        trace::TraceTable,
-        AIR,
+        trace::TraceTable, air::AIR,
     },
     cairo_vm::{
         cairo_mem::CairoMemory, cairo_trace::CairoTrace,
@@ -861,11 +860,8 @@ mod test {
         air::{
             context::ProofOptions,
             debug::validate_trace,
-            example::cairo::{
-                add_program_in_public_input_section, CairoAIR, PublicInputs, OFF_DST, OFF_OP1,
-            },
             trace::TraceTable,
-            AIR,
+            cairo_air::air::{CairoAIR, PublicInputs, add_program_in_public_input_section, OFF_OP1, OFF_DST}, air::AIR,
         },
         cairo_run::run::Error,
         cairo_vm::{cairo_mem::CairoMemory, cairo_trace::CairoTrace},
