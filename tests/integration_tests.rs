@@ -147,8 +147,7 @@ fn test_prove_cairo_program(file_path: &str) {
     // This should be auto calculated
     let padded_trace_length = memory.len().next_power_of_two();
 
-    let cairo_air =
-        CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
+    let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
 
     let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
 

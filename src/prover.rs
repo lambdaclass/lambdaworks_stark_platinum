@@ -4,10 +4,11 @@ use super::{
     sample_z_ood,
 };
 use crate::{
+    air::traits::AIR,
     batch_sample_challenges,
     fri::{fri_decommit::FriDecommitment, fri_query_phase, HASHER},
     proof::{DeepPolynomialOpenings, StarkProof},
-    transcript_to_field, Domain, air::air::AIR,
+    transcript_to_field, Domain,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;

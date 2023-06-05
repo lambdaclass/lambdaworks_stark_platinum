@@ -7,10 +7,11 @@ use lambdaworks_math::field::{
 
 use crate::{
     air::{
+        traits::AIR,
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
         context::{AirContext, ProofOptions},
         frame::Frame,
-        trace::TraceTable, air::AIR,
+        trace::TraceTable,
     },
     cairo_vm::{
         cairo_mem::CairoMemory, cairo_trace::CairoTrace,
@@ -858,10 +859,13 @@ mod test {
 
     use crate::{
         air::{
+            traits::AIR,
+            cairo_air::air::{
+                add_program_in_public_input_section, CairoAIR, PublicInputs, OFF_DST, OFF_OP1,
+            },
             context::ProofOptions,
             debug::validate_trace,
             trace::TraceTable,
-            cairo_air::air::{CairoAIR, PublicInputs, add_program_in_public_input_section, OFF_OP1, OFF_DST}, air::AIR,
         },
         cairo_run::run::Error,
         cairo_vm::{cairo_mem::CairoMemory, cairo_trace::CairoTrace},

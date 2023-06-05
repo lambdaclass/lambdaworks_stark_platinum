@@ -1,9 +1,10 @@
 use crate::{
     air::{
         self,
+        traits::AIR,
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
         context::AirContext,
-        trace::TraceTable, air::AIR,
+        trace::TraceTable,
     },
     fri::FieldElement,
     prover::ProvingError,

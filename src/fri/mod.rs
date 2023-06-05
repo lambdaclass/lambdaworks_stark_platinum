@@ -1,7 +1,7 @@
 pub mod fri_commitment;
 pub mod fri_decommit;
 mod fri_functions;
-use crate::air::air::AIR;
+use crate::air::traits::AIR;
 use crate::fri::fri_commitment::FriLayer;
 use crate::{transcript_to_field, transcript_to_usize, Domain};
 use lambdaworks_crypto::hash::sha3::Sha3Hasher;

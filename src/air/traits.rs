@@ -1,9 +1,17 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::{field::{traits::IsFFTField, element::FieldElement}, polynomial::Polynomial};
+use lambdaworks_math::{
+    field::{element::FieldElement, traits::IsFFTField},
+    polynomial::Polynomial,
+};
 
 use crate::prover::ProvingError;
 
-use super::{trace::TraceTable, constraints::boundary::BoundaryConstraints, context::{AirContext, ProofOptions}, frame::Frame};
+use super::{
+    constraints::boundary::BoundaryConstraints,
+    context::{AirContext, ProofOptions},
+    frame::Frame,
+    trace::TraceTable,
+};
 use crate::get_powers_of_primitive_root_coset;
 /// AIR is a representation of the Constraints
 pub trait AIR: Clone {
