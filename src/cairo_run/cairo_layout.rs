@@ -8,7 +8,7 @@ pub enum CairoLayout {
     RecursiveLargeOutput,
     AllCairo,
     AllSolidity,
-    Dynamic
+    Dynamic,
 }
 
 impl CairoLayout {
@@ -23,7 +23,7 @@ impl CairoLayout {
             CairoLayout::RecursiveLargeOutput => "recursive_large_output",
             CairoLayout::AllCairo => "all_cairo",
             CairoLayout::AllSolidity => "all_solidity",
-            CairoLayout::Dynamic => "dynamic"
+            CairoLayout::Dynamic => "dynamic",
         }
     }
 }

@@ -162,14 +162,15 @@ pub struct PublicInputs {
     pub num_steps: usize, // number of execution steps
 }
 
-
 impl PublicInputs {
-
-    /// Creates a Public Input from register states and memory 
-    /// - In the future we should use the output of the Cairo Runner. This is not currently supported in Cairo RS 
+    /// Creates a Public Input from register states and memory
+    /// - In the future we should use the output of the Cairo Runner. This is not currently supported in Cairo RS
     ///  - RangeChecks are not filled, and the prover mutates them inside the prove function. This works but also should be loaded from the Cairo RS output
-    pub fn from_regs_and_mem(register_states: &CairoTrace, memory: &CairoMemory, program_size: usize) -> Self {
-
+    pub fn from_regs_and_mem(
+        register_states: &CairoTrace,
+        memory: &CairoMemory,
+        program_size: usize,
+    ) -> Self {
         let mut program = vec![];
 
         for i in 1..=program_size as u64 {
@@ -198,7 +199,6 @@ pub struct CairoAIR {
 }
 
 impl CairoAIR {
-
     /// Creates a new CairoAIR from proof_options
     /// full_trace_length: Padding to 2^n
     /// number_steps: Number of steps of the execution / register steps / rows in cairo runner trace

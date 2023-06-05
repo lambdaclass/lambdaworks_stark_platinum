@@ -26,6 +26,10 @@ impl CairoMemory {
         self.data.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     pub fn from_bytes_le(bytes: &[u8]) -> Result<Self, CairoImportError> {
         // Each row is an 8 bytes address
         // and a value of 32 bytes (which is a field)

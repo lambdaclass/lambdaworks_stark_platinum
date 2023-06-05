@@ -17,9 +17,7 @@ impl Writer for VecWriter<'_> {
 
 impl<'a> VecWriter<'a> {
     pub fn new(vec: &'a mut Vec<u8>) -> Self {
-        Self {
-            buf_writer: vec 
-        }
+        Self { buf_writer: vec }
     }
 
     pub fn flush(&mut self) -> io::Result<()> {

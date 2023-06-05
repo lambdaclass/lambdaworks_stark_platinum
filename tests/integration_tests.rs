@@ -1,7 +1,7 @@
 use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
-use lambdaworks_math::helpers::{resize_to_next_power_of_two, next_power_of_two};
+use lambdaworks_math::helpers::{next_power_of_two, resize_to_next_power_of_two};
 use lambdaworks_stark::air::example::cairo::PublicInputs;
 use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP};
 use lambdaworks_stark::air::example::{
@@ -135,8 +135,8 @@ fn test_prove_quadratic() {
 #[ignore = "metal"]
 /// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
 fn test_prove_cairo_program(file_path: &str) {
-
-    let (register_states, memory, program_size) = run_program(None, CairoLayout::Plain,file_path).unwrap();
+    let (register_states, memory, program_size) =
+        run_program(None, CairoLayout::Plain, file_path).unwrap();
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -147,7 +147,8 @@ fn test_prove_cairo_program(file_path: &str) {
     // This should be auto calculated
     let padded_trace_length = next_power_of_two(memory.len() as u64) as usize;
 
-    let cairo_air = cairo::CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
+    let cairo_air =
+        cairo::CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
 
     let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
 

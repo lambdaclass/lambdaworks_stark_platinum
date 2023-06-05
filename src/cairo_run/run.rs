@@ -74,13 +74,11 @@ pub fn run_program(
     let relocated_trace = vm.get_relocated_trace()?;
 
     let mut trace_vec = Vec::<u8>::new();
-    let mut trace_writer =
-        VecWriter::new(&mut trace_vec);
+    let mut trace_writer = VecWriter::new(&mut trace_vec);
     cairo_run::write_encoded_trace(relocated_trace, &mut trace_writer)?;
 
     let mut memory_vec = Vec::<u8>::new();
-    let mut memory_writer =
-        VecWriter::new(&mut memory_vec);
+    let mut memory_writer = VecWriter::new(&mut memory_vec);
     cairo_run::write_encoded_memory(&cairo_runner.relocated_memory, &mut memory_writer)?;
 
     trace_writer.flush()?;
@@ -91,7 +89,6 @@ pub fn run_program(
     //TO DO: Better error handling
     let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();
     let cairo_trace = CairoTrace::from_bytes_le(&trace_vec).unwrap();
-
 
     let data_len = cairo_runner.get_program().data_len();
 
