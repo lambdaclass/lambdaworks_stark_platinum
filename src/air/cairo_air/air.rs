@@ -11,7 +11,7 @@ use crate::{
         context::{AirContext, ProofOptions},
         frame::Frame,
         trace::TraceTable,
-        AIR,
+        traits::AIR,
     },
     cairo_vm::{
         cairo_mem::CairoMemory, cairo_trace::CairoTrace,
@@ -859,13 +859,13 @@ mod test {
 
     use crate::{
         air::{
-            context::ProofOptions,
-            debug::validate_trace,
-            example::cairo::{
+            cairo_air::air::{
                 add_program_in_public_input_section, CairoAIR, PublicInputs, OFF_DST, OFF_OP1,
             },
+            context::ProofOptions,
+            debug::validate_trace,
             trace::TraceTable,
-            AIR,
+            traits::AIR,
         },
         cairo_run::run::Error,
         cairo_vm::{cairo_mem::CairoMemory, cairo_trace::CairoTrace},

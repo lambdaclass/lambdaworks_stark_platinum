@@ -2,10 +2,10 @@ use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
 use lambdaworks_math::helpers::resize_to_next_power_of_two;
-use lambdaworks_stark::air::example::cairo::PublicInputs;
+use lambdaworks_stark::air::cairo_air::air::{CairoAIR, PublicInputs};
 use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP};
 use lambdaworks_stark::air::example::{
-    cairo, dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
+    dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
 };
 use lambdaworks_stark::cairo_run::cairo_layout::CairoLayout;
 use lambdaworks_stark::cairo_run::run::run_program;
@@ -147,8 +147,7 @@ fn test_prove_cairo_program(file_path: &str) {
     // This should be auto calculated
     let padded_trace_length = memory.len().next_power_of_two();
 
-    let cairo_air =
-        cairo::CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
+    let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
 
     let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
 
@@ -250,7 +249,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     program_2[1] = FieldElement::from(5);
     program_2[3] = FieldElement::from(5);
 
-    let cairo_air = cairo::CairoAIR::new(proof_options, 16, program_1_raw_trace.steps());
+    let cairo_air = CairoAIR::new(proof_options, 16, program_1_raw_trace.steps());
 
     let first_step = &program_1_raw_trace.rows[0];
     let last_step = &program_1_raw_trace.rows[program_1_raw_trace.steps() - 1];
@@ -297,7 +296,7 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
         program.push(memory.get(&i).unwrap().clone());
     }
 
-    let cairo_air = cairo::CairoAIR::new(proof_options, 16, raw_trace.steps());
+    let cairo_air = CairoAIR::new(proof_options, 16, raw_trace.steps());
 
     let first_step = &raw_trace.rows[0];
     let last_step = &raw_trace.rows[raw_trace.steps() - 1];
