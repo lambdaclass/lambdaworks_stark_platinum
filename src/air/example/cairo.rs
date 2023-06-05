@@ -165,7 +165,7 @@ pub struct PublicInputs {
 impl PublicInputs {
     /// Creates a Public Input from register states and memory
     /// - In the future we should use the output of the Cairo Runner. This is not currently supported in Cairo RS
-    ///  - RangeChecks are not filled, and the prover mutates them inside the prove function. This works but also should be loaded from the Cairo RS output
+    /// - RangeChecks are not filled, and the prover mutates them inside the prove function. This works but also should be loaded from the Cairo RS output
     pub fn from_regs_and_mem(
         register_states: &CairoTrace,
         memory: &CairoMemory,
