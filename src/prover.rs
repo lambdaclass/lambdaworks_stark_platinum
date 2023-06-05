@@ -761,12 +761,12 @@ mod tests {
         }
     }
 
-    #[cfg(not(any(metal, cuda)))]
+    #[cfg(not(any(feature = "metal", feature = "cuda")))]
     mod cpu {}
 
-    #[cfg(cuda)]
+    #[cfg(feature = "cuda")]
     mod cuda {}
 
-    #[cfg(metal)]
+    #[cfg(feature = "metal")]
     mod metal {}
 }
