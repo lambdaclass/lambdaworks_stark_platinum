@@ -30,7 +30,7 @@ pub enum Error {
 ///  # Params
 ///
 /// `entrypoint_function` - the name of the entrypoint function tu run. If `None` is provided, the default value is `main`.
-/// `layout` - type of layout of Cairo. ``
+/// `layout` - type of layout of Cairo.
 /// `filename` - path to the input file.
 /// `trace_path` - path where to store the generated trace file.
 /// `memory_path` - path where to store the generated memory file.
