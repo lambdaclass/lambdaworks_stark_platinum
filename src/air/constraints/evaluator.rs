@@ -5,7 +5,7 @@ use lambdaworks_math::{
 };
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
-use crate::air::{traits::AIR, frame::Frame, trace::TraceTable};
+use crate::air::{frame::Frame, trace::TraceTable, traits::AIR};
 use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {

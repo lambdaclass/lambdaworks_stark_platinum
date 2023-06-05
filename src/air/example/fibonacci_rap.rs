@@ -2,11 +2,11 @@ use std::ops::Div;
 
 use crate::{
     air::{
-        traits::AIR,
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
         context::AirContext,
         frame::Frame,
         trace::TraceTable,
+        traits::AIR,
     },
     fri::FieldElement,
     prover::ProvingError,
