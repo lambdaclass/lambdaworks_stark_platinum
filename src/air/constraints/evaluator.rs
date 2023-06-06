@@ -6,7 +6,7 @@ use lambdaworks_math::{
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
 use crate::{
-    air::{frame::Frame, trace::TraceTable, AIR},
+    air::{frame::Frame, trace::TraceTable, traits::AIR},
     prover::evaluate_polynomial_on_lde_domain,
     Domain,
 };

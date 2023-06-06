@@ -2,11 +2,13 @@ use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
 use lambdaworks_math::helpers::resize_to_next_power_of_two;
-use lambdaworks_stark::air::example::cairo::PublicInputs;
+use lambdaworks_stark::air::cairo_air::air::{CairoAIR, PublicInputs};
 use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP};
 use lambdaworks_stark::air::example::{
-    cairo, dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
+    dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
 };
+use lambdaworks_stark::cairo_run::cairo_layout::CairoLayout;
+use lambdaworks_stark::cairo_run::run::run_program;
 use lambdaworks_stark::cairo_vm::cairo_mem::CairoMemory;
 use lambdaworks_stark::cairo_vm::cairo_trace::CairoTrace;
 use lambdaworks_stark::{
@@ -131,174 +133,44 @@ fn test_prove_quadratic() {
 }
 
 #[ignore = "metal"]
+/// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
+fn test_prove_cairo_program(file_path: &str) {
+    let (register_states, memory, program_size) =
+        run_program(None, CairoLayout::Plain, file_path).unwrap();
+
+    let proof_options = ProofOptions {
+        blowup_factor: 4,
+        fri_number_of_queries: 3,
+        coset_offset: 3,
+    };
+
+    // This should be auto calculated
+    let padded_trace_length = memory.len().next_power_of_two();
+
+    let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
+
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+
+    let result = prove(&(register_states, memory), &cairo_air, &mut pub_inputs).unwrap();
+
+    assert!(verify(&result, &cairo_air, &pub_inputs));
+}
+
+fn program_path(program_name: &str) -> String {
+    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
+    const PROGRAM_BASE_REL_PATH: &str = "/src/cairo_vm/test_data/";
+    let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
+    program_base_path + program_name
+}
+
 #[test_log::test]
 fn test_prove_cairo_simple_program() {
-    /*
-    Cairo program used in the test:
-
-    ```
-    func main() {
-        let x = 1;
-        let y = 2;
-        assert x + y = 3;
-        return ();
-    }
-
-    ```
-    */
-    let (raw_trace, memory) = load_cairo_trace_and_memory("simple_program");
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 1,
-        coset_offset: 3,
-    };
-
-    let program_size = 5;
-    let mut program = vec![];
-    for i in 1..=program_size as u64 {
-        program.push(memory.get(&i).unwrap().clone());
-    }
-
-    let cairo_air = cairo::CairoAIR::new(proof_options, 16, raw_trace.steps());
-
-    let first_step = &raw_trace.rows[0];
-    let last_step = &raw_trace.rows[raw_trace.steps() - 1];
-    let mut public_input = PublicInputs {
-        pc_init: FE::from(first_step.pc),
-        ap_init: FE::from(first_step.ap),
-        fp_init: FE::from(first_step.fp),
-        pc_final: FE::from(last_step.pc),
-        ap_final: FE::from(last_step.ap),
-        program,
-        range_check_min: None,
-        range_check_max: None,
-        num_steps: raw_trace.steps(),
-    };
-
-    let result = prove(&(raw_trace, memory), &cairo_air, &mut public_input).unwrap();
-    assert!(verify(&result, &cairo_air, &public_input));
-}
-
-#[test_log::test]
-fn test_prove_cairo_call_func() {
-    /*
-    Cairo program used in the test:
-
-    ```
-    func mul(x: felt, y: felt) -> (res: felt) {
-        return (res = x * y);
-    }
-
-    func main() {
-        let x = 2;
-        let y = 3;
-
-        let (res) = mul(x, y);
-        assert res = 6;
-
-        return ();
-    }
-
-    ```
-    */
-    let (raw_trace, memory) = load_cairo_trace_and_memory("call_func");
-    let proof_options = ProofOptions {
-        blowup_factor: 2,
-        fri_number_of_queries: 1,
-        coset_offset: 3,
-    };
-
-    let program_size = 11;
-    let mut program = vec![];
-
-    for i in 1..=program_size as u64 {
-        program.push(memory.get(&i).unwrap().clone());
-    }
-
-    let cairo_air = cairo::CairoAIR::new(proof_options, 128, raw_trace.steps());
-    let last_step = &raw_trace.rows[raw_trace.steps() - 1];
-    let mut public_input = PublicInputs {
-        pc_init: FE::from(raw_trace.rows[0].pc),
-        ap_init: FE::from(raw_trace.rows[0].ap),
-        fp_init: FE::from(raw_trace.rows[0].fp),
-        pc_final: FieldElement::from(last_step.pc),
-        ap_final: FieldElement::from(last_step.ap),
-        range_check_min: None,
-        range_check_max: None,
-        program,
-        num_steps: raw_trace.steps(),
-    };
-
-    let result = prove(&(raw_trace, memory), &cairo_air, &mut public_input).unwrap();
-    assert!(verify(&result, &cairo_air, &public_input));
-}
-
-fn test_prove_cairo_fibonacci(file_name: &str, trace_length: usize) {
-    let (raw_trace, memory) = load_cairo_trace_and_memory(file_name);
-
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 5,
-        coset_offset: 3,
-    };
-
-    let program_size = 24;
-    let mut program = vec![];
-
-    for i in 1..=program_size as u64 {
-        program.push(memory.get(&i).unwrap().clone());
-    }
-
-    let cairo_air = cairo::CairoAIR::new(proof_options, trace_length, raw_trace.steps());
-
-    let last_step = &raw_trace.rows[raw_trace.steps() - 1];
-    let mut public_input = PublicInputs {
-        pc_init: FE::from(raw_trace.rows[0].pc),
-        ap_init: FE::from(raw_trace.rows[0].ap),
-        fp_init: FE::from(raw_trace.rows[0].fp),
-        pc_final: FieldElement::from(last_step.pc),
-        ap_final: FieldElement::from(last_step.ap),
-        range_check_min: None,
-        range_check_max: None,
-        program,
-        num_steps: raw_trace.steps(),
-    };
-
-    let result = prove(&(raw_trace, memory), &cairo_air, &mut public_input).unwrap();
-    assert!(verify(&result, &cairo_air, &public_input));
-}
-
-#[test_log::test]
-#[ignore]
-fn test_prove_cairo_factorial_100() {
-    test_prove_cairo_fibonacci("factorial_100", 1024);
+    test_prove_cairo_program(&program_path("simple_program.json"));
 }
 
 #[test_log::test]
 fn test_prove_cairo_fibonacci_5() {
-    test_prove_cairo_fibonacci("fibonacci_5", 64);
-}
-
-#[test_log::test]
-fn test_prove_cairo_fibonacci_10() {
-    test_prove_cairo_fibonacci("fibonacci_10", 128);
-}
-
-#[test_log::test]
-fn test_prove_cairo_fibonacci_30() {
-    test_prove_cairo_fibonacci("fibonacci_30", 256);
-}
-
-#[test_log::test]
-#[ignore]
-fn test_prove_cairo_fibonacci_50() {
-    test_prove_cairo_fibonacci("fibonacci_50", 512);
-}
-
-#[test_log::test]
-#[ignore]
-fn test_prove_cairo_fibonacci_100() {
-    test_prove_cairo_fibonacci("fibonacci_100", 1024);
+    test_prove_cairo_program(&program_path("fibonacci_5.json"));
 }
 
 #[test_log::test]
@@ -377,7 +249,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     program_2[1] = FieldElement::from(5);
     program_2[3] = FieldElement::from(5);
 
-    let cairo_air = cairo::CairoAIR::new(proof_options, 16, program_1_raw_trace.steps());
+    let cairo_air = CairoAIR::new(proof_options, 16, program_1_raw_trace.steps());
 
     let first_step = &program_1_raw_trace.rows[0];
     let last_step = &program_1_raw_trace.rows[program_1_raw_trace.steps() - 1];
@@ -424,7 +296,7 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
         program.push(memory.get(&i).unwrap().clone());
     }
 
-    let cairo_air = cairo::CairoAIR::new(proof_options, 16, raw_trace.steps());
+    let cairo_air = CairoAIR::new(proof_options, 16, raw_trace.steps());
 
     let first_step = &raw_trace.rows[0];
     let last_step = &raw_trace.rows[raw_trace.steps() - 1];
