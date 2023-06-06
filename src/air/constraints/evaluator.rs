@@ -163,7 +163,11 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
             evaluations.push(boundary_evaluation);
 
-            evaluation_table.evaluations.push(evaluations);
+            let merged_value = evaluations
+                .iter()
+                .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
+
+            evaluation_table.evaluations_acc.push(merged_value);
         }
 
         evaluation_table
