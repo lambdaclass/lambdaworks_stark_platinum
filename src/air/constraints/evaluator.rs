@@ -125,7 +125,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let mut transition_zerofiers_inverse_evaluations = Vec::new();
         for divisor in &divisors {
             let mut evaluations = evaluate_polynomial_on_lde_domain(
-                &divisor,
+                divisor,
                 domain.blowup_factor,
                 domain.interpolation_domain_size,
                 &domain.coset_offset,
@@ -173,11 +173,10 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .collect();
 
             let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
-                &self.air,
                 &evaluations_transition,
-                &divisors,
+                &denominators,
+                &degree_adjustments,
                 alpha_and_beta_transition_coefficients,
-                d,
             );
 
             let d_adjustment_power = d.pow(boundary_term_degree_adjustment);
@@ -219,13 +218,17 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     /// The second one is when the verifier needs to check the consistency between the trace and
     /// the composition polynomial. In that case the `evaluations` are over an *out of domain* frame
     /// (in the fibonacci example they are evaluations on the points `z`, `zg`, `zg^2`).
-    pub fn compute_constraint_composition_poly_evaluations(
+    ///
+    /// # Returns
+    ///
+    /// Returns the sum of the evaluations computed.
+    pub fn compute_constraint_composition_poly_evaluations_sum(
         evaluations: &[FieldElement<F>],
         inverse_denominators: &[FieldElement<F>],
         degree_adjustments: &[FieldElement<F>],
         constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
-    ) -> Vec<FieldElement<F>> {
-        let mut ret = Vec::with_capacity(evaluations.len());
+    ) -> FieldElement<F> {
+        let mut ret = FieldElement::<F>::zero();
         for (((eval, degree_adjustment), inverse_denominator), (alpha, beta)) in evaluations
             .iter()
             .zip(degree_adjustments)
@@ -234,35 +237,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         {
             let zerofied_eval = eval * inverse_denominator;
             let result = zerofied_eval * (alpha * degree_adjustment + beta);
-            ret.push(result);
-        }
-
-        ret
-    }
-
-    /// Return the sum of the evaluations computed by `compute_constraint_composition_poly_evaluations`.
-    pub fn compute_constraint_composition_poly_evaluations_sum(
-        air: &A,
-        evaluations: &[FieldElement<F>],
-        divisors: &[Polynomial<FieldElement<F>>],
-        constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
-        x: &FieldElement<F>,
-    ) -> FieldElement<F> {
-        // TODO: We should get the trace degree in a better way because in some special cases
-        // the trace degree may not be exactly the trace length - 1 but a smaller number.
-        let transition_degrees = air.context().transition_degrees();
-
-        let mut ret = FieldElement::<F>::zero();
-        for (((eval, transition_degree), div), (alpha, beta)) in evaluations
-            .iter()
-            .zip(transition_degrees)
-            .zip(divisors)
-            .zip(constraint_coeffs)
-        {
-            let zerofied_eval = eval / div.evaluate(x);
-            let degree_adjustment = air.composition_poly_degree_bound()
-                - (air.context().trace_length * (transition_degree - 1));
-            let result = zerofied_eval * (alpha * x.pow(degree_adjustment) + beta);
             ret += result;
         }
 

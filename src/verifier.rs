@@ -265,14 +265,12 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
             - (air.context().trace_length * (transition_degree - 1));
         degree_adjustments.push(challenges.z.pow(degree_adjustment));
     }
-
     let transition_c_i_evaluations_sum =
-        ConstraintEvaluator::compute_constraint_composition_poly_evaluations_sum(
-            air,
+        ConstraintEvaluator::<F, A>::compute_constraint_composition_poly_evaluations_sum(
             &transition_ood_frame_evaluations,
-            &divisors,
+            &denominators,
+            &degree_adjustments,
             &challenges.transition_coeffs,
-            &challenges.z,
         );
 
     let composition_poly_ood_evaluation =
