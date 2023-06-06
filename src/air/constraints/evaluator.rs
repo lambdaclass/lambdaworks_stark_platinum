@@ -60,58 +60,62 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             boundary_constraints.generate_roots_of_unity(&self.primitive_root, n_trace_colums);
         let values = boundary_constraints.values(n_trace_colums);
 
-        let boundary_polys: Vec<Polynomial<FieldElement<F>>> = zip(domains, values)
+        #[cfg(debug_assertions)]
+        let mut boundary_polys = Vec::new();
+
+        let boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = zip(domains, values)
             .zip(self.trace_polys)
             .map(|((xs, ys), trace_poly)| {
-                trace_poly
+                let boundary_poly = trace_poly
                     - &Polynomial::interpolate(&xs, &ys)
-                        .expect("xs and ys have equal length and xs are unique")
+                        .expect("xs and ys have equal length and xs are unique");
+
+                #[cfg(debug_assertions)]
+                boundary_polys.push(boundary_poly.clone());
+
+                evaluate_polynomial_on_lde_domain(
+                    &boundary_poly,
+                    domain.blowup_factor,
+                    domain.interpolation_domain_size,
+                    &domain.coset_offset,
+                )
+                .unwrap()
             })
             .collect();
 
-        let boundary_zerofiers: Vec<Polynomial<FieldElement<F>>> = (0..n_trace_colums)
+        #[cfg(debug_assertions)]
+        let mut boundary_zerofiers = Vec::new();
+
+        let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = (0..n_trace_colums)
             .map(|col| {
-                self.boundary_constraints
-                    .compute_zerofier(&self.primitive_root, col)
+                let zerofier = self
+                    .boundary_constraints
+                    .compute_zerofier(&self.primitive_root, col);
+
+                #[cfg(debug_assertions)]
+                boundary_zerofiers.push(zerofier.clone());
+
+                let mut evals = evaluate_polynomial_on_lde_domain(
+                    &zerofier,
+                    domain.blowup_factor,
+                    domain.interpolation_domain_size,
+                    &domain.coset_offset,
+                )
+                .unwrap();
+                FieldElement::inplace_batch_inverse(&mut evals);
+                evals
             })
             .collect();
-
-        let blowup_factor = self.air.blowup_factor();
-
         #[cfg(debug_assertions)]
         for (poly, z) in boundary_polys.iter().zip(boundary_zerofiers.iter()) {
             let (_, b) = poly.clone().long_division_with_remainder(z);
             assert_eq!(b, Polynomial::zero());
         }
 
+        let blowup_factor = self.air.blowup_factor();
+
         #[cfg(debug_assertions)]
         let mut transition_evaluations = Vec::new();
-
-        let mut boundary_polys_evaluations = Vec::with_capacity(boundary_polys.len());
-        for poly in boundary_polys.iter() {
-            let evaluations = evaluate_polynomial_on_lde_domain(
-                poly,
-                domain.blowup_factor,
-                domain.interpolation_domain_size,
-                &domain.coset_offset,
-            )
-            .unwrap();
-            boundary_polys_evaluations.push(evaluations);
-        }
-
-        let mut boundary_zerofiers_inverse_evaluations =
-            Vec::with_capacity(boundary_zerofiers.len());
-        for poly in boundary_zerofiers.iter() {
-            let mut evaluations = evaluate_polynomial_on_lde_domain(
-                poly,
-                domain.blowup_factor,
-                domain.interpolation_domain_size,
-                &domain.coset_offset,
-            )
-            .unwrap();
-            FieldElement::inplace_batch_inverse(&mut evaluations);
-            boundary_zerofiers_inverse_evaluations.push(evaluations);
-        }
 
         let divisors = self.air.transition_divisors();
         let boundary_term_degree_adjustment =
