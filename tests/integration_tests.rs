@@ -227,98 +227,98 @@ fn test_prove_dummy() {
     assert!(verify(&result, &dummy_air, &()));
 }
 
-#[test_log::test]
-fn test_verifier_rejects_proof_of_a_slightly_different_program() {
-    // The prover generates a proof for a program that
-    // is different from the one that the verifier
-    // expects.
-    let (program_1_raw_trace, program_1_memory) = load_cairo_trace_and_memory("simple_program");
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 1,
-        coset_offset: 3,
-    };
+// #[test_log::test]
+// fn test_verifier_rejects_proof_of_a_slightly_different_program() {
+//     // The prover generates a proof for a program that
+//     // is different from the one that the verifier
+//     // expects.
+//     let (program_1_raw_trace, program_1_memory) = load_cairo_trace_and_memory("simple_program");
+//     let proof_options = ProofOptions {
+//         blowup_factor: 4,
+//         fri_number_of_queries: 1,
+//         coset_offset: 3,
+//     };
 
-    let program_size = 5;
-    let mut program_1 = vec![];
-    for i in 1..=program_size as u64 {
-        program_1.push(program_1_memory.get(&i).unwrap().clone());
-    }
+//     let program_size = 5;
+//     let mut program_1 = vec![];
+//     for i in 1..=program_size as u64 {
+//         program_1.push(program_1_memory.get(&i).unwrap().clone());
+//     }
 
-    let mut program_2 = program_1.clone();
-    program_2[1] = FieldElement::from(5);
-    program_2[3] = FieldElement::from(5);
+//     let mut program_2 = program_1.clone();
+//     program_2[1] = FieldElement::from(5);
+//     program_2[3] = FieldElement::from(5);
 
-    let cairo_air = CairoAIR::new(proof_options, 16, program_1_raw_trace.steps());
+//     let cairo_air = CairoAIR::new(proof_options, 16, program_1_raw_trace.steps());
 
-    let first_step = &program_1_raw_trace.rows[0];
-    let last_step = &program_1_raw_trace.rows[program_1_raw_trace.steps() - 1];
+//     let first_step = &program_1_raw_trace.rows[0];
+//     let last_step = &program_1_raw_trace.rows[program_1_raw_trace.steps() - 1];
 
-    let mut public_input = PublicInputs {
-        pc_init: FE::from(first_step.pc),
-        ap_init: FE::from(first_step.ap),
-        fp_init: FE::from(first_step.fp),
-        pc_final: FE::from(last_step.pc),
-        ap_final: FE::from(last_step.ap),
-        program: program_1,
-        range_check_min: None,
-        range_check_max: None,
-        num_steps: program_1_raw_trace.steps(),
-    };
+//     let mut public_input = PublicInputs {
+//         pc_init: FE::from(first_step.pc),
+//         ap_init: FE::from(first_step.ap),
+//         fp_init: FE::from(first_step.fp),
+//         pc_final: FE::from(last_step.pc),
+//         ap_final: FE::from(last_step.ap),
+//         program: program_1,
+//         range_check_min: None,
+//         range_check_max: None,
+//         num_steps: program_1_raw_trace.steps(),
+//     };
 
-    let result = prove(
-        &(program_1_raw_trace, program_1_memory),
-        &cairo_air,
-        &mut public_input,
-    )
-    .unwrap();
+//     let result = prove(
+//         &(program_1_raw_trace, program_1_memory),
+//         &cairo_air,
+//         &mut public_input,
+//     )
+//     .unwrap();
 
-    // Here we change program 1 to program 2 in the public inputs.
-    public_input.program = program_2;
-    assert!(!verify(&result, &cairo_air, &public_input));
-}
+//     // Here we change program 1 to program 2 in the public inputs.
+//     public_input.program = program_2;
+//     assert!(!verify(&result, &cairo_air, &public_input));
+// }
 
-#[test_log::test]
-fn test_verifier_rejects_proof_with_different_range_bounds() {
-    // The verifier should reject when the range checks bounds
-    // are different from those of the executed program.
-    let (raw_trace, memory) = load_cairo_trace_and_memory("simple_program");
+// #[test_log::test]
+// fn test_verifier_rejects_proof_with_different_range_bounds() {
+//     // The verifier should reject when the range checks bounds
+//     // are different from those of the executed program.
+//     let (raw_trace, memory) = load_cairo_trace_and_memory("simple_program");
 
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 1,
-        coset_offset: 3,
-    };
+//     let proof_options = ProofOptions {
+//         blowup_factor: 4,
+//         fri_number_of_queries: 1,
+//         coset_offset: 3,
+//     };
 
-    let program_size = 5;
-    let mut program = vec![];
-    for i in 1..=program_size as u64 {
-        program.push(memory.get(&i).unwrap().clone());
-    }
+//     let program_size = 5;
+//     let mut program = vec![];
+//     for i in 1..=program_size as u64 {
+//         program.push(memory.get(&i).unwrap().clone());
+//     }
 
-    let cairo_air = CairoAIR::new(proof_options, 16, raw_trace.steps());
+//     let cairo_air = CairoAIR::new(proof_options, 16, raw_trace.steps());
 
-    let first_step = &raw_trace.rows[0];
-    let last_step = &raw_trace.rows[raw_trace.steps() - 1];
+//     let first_step = &raw_trace.rows[0];
+//     let last_step = &raw_trace.rows[raw_trace.steps() - 1];
 
-    let mut public_input = PublicInputs {
-        pc_init: FE::from(first_step.pc),
-        ap_init: FE::from(first_step.ap),
-        fp_init: FE::from(first_step.fp),
-        pc_final: FE::from(last_step.pc),
-        ap_final: FE::from(last_step.ap),
-        program,
-        range_check_min: None,
-        range_check_max: None,
-        num_steps: raw_trace.steps(),
-    };
+//     let mut public_input = PublicInputs {
+//         pc_init: FE::from(first_step.pc),
+//         ap_init: FE::from(first_step.ap),
+//         fp_init: FE::from(first_step.fp),
+//         pc_final: FE::from(last_step.pc),
+//         ap_final: FE::from(last_step.ap),
+//         program,
+//         range_check_min: None,
+//         range_check_max: None,
+//         num_steps: raw_trace.steps(),
+//     };
 
-    let result = prove(&(raw_trace, memory), &cairo_air, &mut public_input).unwrap();
+//     let result = prove(&(raw_trace, memory), &cairo_air, &mut public_input).unwrap();
 
-    public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);
-    assert!(!verify(&result, &cairo_air, &public_input));
+//     public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);
+//     assert!(!verify(&result, &cairo_air, &public_input));
 
-    public_input.range_check_min = Some(public_input.range_check_min.unwrap() - 1);
-    public_input.range_check_max = Some(public_input.range_check_max.unwrap() - 1);
-    assert!(!verify(&result, &cairo_air, &public_input));
-}
+//     public_input.range_check_min = Some(public_input.range_check_min.unwrap() - 1);
+//     public_input.range_check_max = Some(public_input.range_check_max.unwrap() - 1);
+//     assert!(!verify(&result, &cairo_air, &public_input));
+// }

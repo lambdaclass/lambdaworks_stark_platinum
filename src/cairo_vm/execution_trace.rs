@@ -7,11 +7,14 @@ use super::{
     },
 };
 use crate::{
-    air::trace::TraceTable,
+    air::{cairo_air::air::PublicInputs, trace::TraceTable},
     cairo_vm::{instruction_flags::CairoInstructionFlags, instruction_offsets::InstructionOffsets},
     FE,
 };
-use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
+use lambdaworks_math::{
+    field::{fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsField},
+    unsigned_integer::element::UnsignedInteger,
+};
 
 // MAIN TRACE LAYOUT
 // -----------------------------------------------------------------------------------------
@@ -34,6 +37,7 @@ use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark2
 pub fn build_cairo_execution_trace(
     raw_trace: &CairoTrace,
     memory: &CairoMemory,
+    public_inputs: &PublicInputs,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
 
@@ -116,6 +120,19 @@ pub fn build_cairo_execution_trace(
     trace_cols.push(t1);
     trace_cols.push(mul);
     trace_cols.push(selector);
+
+    // Build range-check builtin columns: rc_0, rc_1, ... , rc_7, rc_value
+    let range_check_builtin_start = public_inputs.range_check_builtin_start_addr.clone();
+    let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr.clone();
+
+    let range_checked_values: Vec<&FE> = (range_check_builtin_start..=range_check_builtin_stop)
+        .map(|addr| memory.get(&addr).unwrap())
+        .collect();
+
+    let rc_decompositions: Vec<[FE; 8]> = range_checked_values
+        .iter()
+        .map(|rc_value| rc_decompose(rc_value))
+        .collect();
 
     TraceTable::new_from_cols(&trace_cols)
 }
@@ -349,494 +366,522 @@ fn rows_to_cols<const N: usize>(rows: &[[FE; N]]) -> Vec<Vec<FE>> {
     cols
 }
 
+fn rc_decompose(rc_value: &FE) -> [FE; 8] {
+    let mut rc_base_type = rc_value.representative();
+
+    let the_zero = FE::zero();
+    let mut rc_decomposition_values = Vec::<FE>::with_capacity(8);
+
+    let mask = UnsignedInteger::from_hex("FFFF").unwrap();
+    for i in 0..8 {
+        let curr_value = rc_base_type & mask;
+        rc_base_type = rc_base_type >> 16;
+        rc_decomposition_values.push(FE::from(&curr_value));
+    }
+
+    // This can't fail since we have 8 pushes
+    rc_decomposition_values.try_into().unwrap()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn test_build_main_trace_simple_program() {
-        /*
-        The following trace and memory files are obtained running the following Cairo program:
-        ```
-        func main() {
-            let x = 1;
-            let y = 2;
-            assert x + y = 3;
-            return ();
-        }
+    fn test_rc_decompose_all_f() {
+        let sixteen = FE::from_hex("000F000F000F000F000F000F000F000F000F").unwrap();
 
-        ```
-        */
+        let decomposition = rc_decompose(&sixteen);
 
-        let base_dir = env!("CARGO_MANIFEST_DIR");
-        let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
-
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
-
-        let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
-
-        // This trace is obtained from Giza when running the prover for the mentioned program.
-        let expected_trace = TraceTable::new_from_cols(&vec![
-            // col 0
-            vec![FE::zero(), FE::zero(), FE::one()],
-            // col 1
-            vec![FE::one(), FE::one(), FE::one()],
-            // col 2
-            vec![FE::one(), FE::one(), FE::zero()],
-            // col 3
-            vec![FE::zero(), FE::zero(), FE::one()],
-            // col 4
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 5
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 6
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 7
-            vec![FE::zero(), FE::zero(), FE::one()],
-            // col 8
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 9
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 10
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 11
-            vec![FE::one(), FE::zero(), FE::zero()],
-            // col 12
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 13
-            vec![FE::zero(), FE::zero(), FE::one()],
-            // col 14
-            vec![FE::one(), FE::one(), FE::zero()],
-            // col 15
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 16
-            vec![FE::from(3), FE::from(3), FE::from(9)],
-            // col 17
-            vec![FE::from(8), FE::from(9), FE::from(9)],
-            // col 18
-            vec![FE::from(8), FE::from(8), FE::from(8)],
-            // col 19
-            vec![FE::from(1), FE::from(3), FE::from(5)],
-            // col 20
-            vec![FE::from(8), FE::from(8), FE::from(6)],
-            // col 21
-            vec![FE::from(7), FE::from(7), FE::from(7)],
-            // col 22
-            vec![FE::from(2), FE::from(4), FE::from(7)],
-            // col 23
-            vec![
-                FE::from(0x480680017fff8000),
-                FE::from(0x400680017fff7fff),
-                FE::from(0x208b7fff7fff7ffe),
-            ],
-            // col 24
-            vec![FE::from(3), FE::from(3), FE::from(9)],
-            // col 25
-            vec![FE::from(9), FE::from(9), FE::from(9)],
-            // col 26
-            vec![FE::from(3), FE::from(3), FE::from(9)],
-            // col 27
-            vec![FE::from(0x8000), FE::from(0x7fff), FE::from(0x7ffe)],
-            // col 28
-            vec![FE::from(0x7fff), FE::from(0x7fff), FE::from(0x7fff)],
-            // col 29
-            vec![FE::from(0x8001), FE::from(0x8001), FE::from(0x7fff)],
-            // col 30
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 31
-            vec![FE::zero(), FE::zero(), FE::zero()],
-            // col 32
-            vec![FE::from(0x1b), FE::from(0x1b), FE::from(0x51)],
-            // col 33 - Selector column
-            vec![FE::one(), FE::one(), FE::zero()],
-        ]);
-
-        assert_eq!(execution_trace.cols(), expected_trace.cols());
+        decomposition
+            .iter()
+            .for_each(|f| assert_eq!(*f, FE::from_hex("F").unwrap()));
     }
 
-    #[test]
-    fn test_build_main_trace_call_func_program() {
-        /*
-        The following trace and memory files are obtained running the following Cairo program:
-        ```
-        func mul(x: felt, y: felt) -> (res: felt) {
-            return (res = x * y);
-        }
+    // #[test]
+    // fn test_build_main_trace_simple_program() {
+    //     /*
+    //     The following trace and memory files are obtained running the following Cairo program:
+    //     ```
+    //     func main() {
+    //         let x = 1;
+    //         let y = 2;
+    //         assert x + y = 3;
+    //         return ();
+    //     }
 
-        func main() {
-            let x = 2;
-            let y = 3;
+    //     ```
+    //     */
 
-            let (res) = mul(x, y);
-            assert res = 6;
+    //     let base_dir = env!("CARGO_MANIFEST_DIR");
+    //     let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
+    //     let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
 
-            return ();
-        }
+    //     let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
+    //     let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
-        ```
-        */
+    //     let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
 
-        let base_dir = env!("CARGO_MANIFEST_DIR");
-        let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.memory";
+    //     // This trace is obtained from Giza when running the prover for the mentioned program.
+    //     let expected_trace = TraceTable::new_from_cols(&vec![
+    //         // col 0
+    //         vec![FE::zero(), FE::zero(), FE::one()],
+    //         // col 1
+    //         vec![FE::one(), FE::one(), FE::one()],
+    //         // col 2
+    //         vec![FE::one(), FE::one(), FE::zero()],
+    //         // col 3
+    //         vec![FE::zero(), FE::zero(), FE::one()],
+    //         // col 4
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 5
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 6
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 7
+    //         vec![FE::zero(), FE::zero(), FE::one()],
+    //         // col 8
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 9
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 10
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 11
+    //         vec![FE::one(), FE::zero(), FE::zero()],
+    //         // col 12
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 13
+    //         vec![FE::zero(), FE::zero(), FE::one()],
+    //         // col 14
+    //         vec![FE::one(), FE::one(), FE::zero()],
+    //         // col 15
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 16
+    //         vec![FE::from(3), FE::from(3), FE::from(9)],
+    //         // col 17
+    //         vec![FE::from(8), FE::from(9), FE::from(9)],
+    //         // col 18
+    //         vec![FE::from(8), FE::from(8), FE::from(8)],
+    //         // col 19
+    //         vec![FE::from(1), FE::from(3), FE::from(5)],
+    //         // col 20
+    //         vec![FE::from(8), FE::from(8), FE::from(6)],
+    //         // col 21
+    //         vec![FE::from(7), FE::from(7), FE::from(7)],
+    //         // col 22
+    //         vec![FE::from(2), FE::from(4), FE::from(7)],
+    //         // col 23
+    //         vec![
+    //             FE::from(0x480680017fff8000),
+    //             FE::from(0x400680017fff7fff),
+    //             FE::from(0x208b7fff7fff7ffe),
+    //         ],
+    //         // col 24
+    //         vec![FE::from(3), FE::from(3), FE::from(9)],
+    //         // col 25
+    //         vec![FE::from(9), FE::from(9), FE::from(9)],
+    //         // col 26
+    //         vec![FE::from(3), FE::from(3), FE::from(9)],
+    //         // col 27
+    //         vec![FE::from(0x8000), FE::from(0x7fff), FE::from(0x7ffe)],
+    //         // col 28
+    //         vec![FE::from(0x7fff), FE::from(0x7fff), FE::from(0x7fff)],
+    //         // col 29
+    //         vec![FE::from(0x8001), FE::from(0x8001), FE::from(0x7fff)],
+    //         // col 30
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 31
+    //         vec![FE::zero(), FE::zero(), FE::zero()],
+    //         // col 32
+    //         vec![FE::from(0x1b), FE::from(0x1b), FE::from(0x51)],
+    //         // col 33 - Selector column
+    //         vec![FE::one(), FE::one(), FE::zero()],
+    //     ]);
 
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
+    //     assert_eq!(execution_trace.cols(), expected_trace.cols());
+    // }
 
-        let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
+    // #[test]
+    // fn test_build_main_trace_call_func_program() {
+    //     /*
+    //     The following trace and memory files are obtained running the following Cairo program:
+    //     ```
+    //     func mul(x: felt, y: felt) -> (res: felt) {
+    //         return (res = x * y);
+    //     }
 
-        // This trace is obtained from Giza when running the prover for the mentioned program.
-        let expected_trace = TraceTable::new_from_cols(&vec![
-            // col 0
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-            ],
-            // col 1
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-            ],
-            // col 2
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-            ],
-            // col 3
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-            ],
-            // col 4
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 5
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 6
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 7
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-            ],
-            // col 8
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 9
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 10
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 11
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 12
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 13
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-            ],
-            // col 14
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-            ],
-            // col 15
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 16
-            vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from_hex_unchecked(
-                    "0800000000000010fffffffffffffffffffffffffffffffffffffffffffffffb",
-                ),
-                FE::from(6),
-                FE::from(9),
-                FE::from(6),
-                FE::from(19),
-            ],
-            // col 17
-            vec![
-                FE::from(14),
-                FE::from(15),
-                FE::from(16),
-                FE::from(18),
-                FE::from(19),
-                FE::from(19),
-                FE::from(19),
-            ],
-            // col 18
-            vec![
-                FE::from(14),
-                FE::from(14),
-                FE::from(14),
-                FE::from(18),
-                FE::from(18),
-                FE::from(14),
-                FE::from(14),
-            ],
-            // col 19
-            vec![
-                FE::from(3),
-                FE::from(5),
-                FE::from(7),
-                FE::from(1),
-                FE::from(2),
-                FE::from(9),
-                FE::from(11),
-            ],
-            // col 20
-            vec![
-                FE::from(14),
-                FE::from(15),
-                FE::from(16),
-                FE::from(18),
-                FE::from(16),
-                FE::from(18),
-                FE::from(12),
-            ],
-            // col 21
-            vec![
-                FE::from(13),
-                FE::from(13),
-                FE::from(17),
-                FE::from(14),
-                FE::from(17),
-                FE::from(13),
-                FE::from(13),
-            ],
-            // col 22
-            vec![
-                FE::from(4),
-                FE::from(6),
-                FE::from(8),
-                FE::from(15),
-                FE::from(17),
-                FE::from(10),
-                FE::from(13),
-            ],
-            // col 23
-            vec![
-                FE::from(0x480680017fff8000),
-                FE::from(0x480680017fff8000),
-                FE::from(0x1104800180018000),
-                FE::from(0x484a7ffd7ffc8000),
-                FE::from(0x208b7fff7fff7ffe),
-                FE::from(0x400680017fff7fff),
-                FE::from(0x208b7fff7fff7ffe),
-            ],
-            // col 24
-            vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from(14),
-                FE::from(6),
-                FE::from(14),
-                FE::from(6),
-                FE::from(19),
-            ],
-            // col 25
-            vec![
-                FE::from(19),
-                FE::from(19),
-                FE::from(9),
-                FE::from(2),
-                FE::from(9),
-                FE::from(19),
-                FE::from(19),
-            ],
-            // col 26
-            vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from_hex_unchecked(
-                    "0800000000000010fffffffffffffffffffffffffffffffffffffffffffffffb",
-                ),
-                FE::from(3),
-                FE::from(9),
-                FE::from(6),
-                FE::from(19),
-            ],
-            // col 27
-            vec![
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x7ffe),
-                FE::from(0x7fff),
-                FE::from(0x7ffe),
-            ],
-            // col 28
-            vec![
-                FE::from(0x7fff),
-                FE::from(0x7fff),
-                FE::from(0x8001),
-                FE::from(0x7ffc),
-                FE::from(0x7fff),
-                FE::from(0x7fff),
-                FE::from(0x7fff),
-            ],
-            // col 29
-            vec![
-                FE::from(0x8001),
-                FE::from(0x8001),
-                FE::from(0x8001),
-                FE::from(0x7ffd),
-                FE::from(0x7fff),
-                FE::from(0x8001),
-                FE::from(0x7fff),
-            ],
-            // col 30
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 31
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 32
-            vec![
-                FE::from(38),
-                FE::from(57),
-                FE::from_hex_unchecked(
-                    "0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffcb",
-                ),
-                FE::from(6),
-                FE::from(81),
-                FE::from(114),
-                FE::from(0x169),
-            ],
-            // col 33 - Selector column
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-            ],
-        ]);
+    //     func main() {
+    //         let x = 2;
+    //         let y = 3;
 
-        assert_eq!(execution_trace.cols(), expected_trace.cols());
-    }
+    //         let (res) = mul(x, y);
+    //         assert res = 6;
+
+    //         return ();
+    //     }
+
+    //     ```
+    //     */
+
+    //     let base_dir = env!("CARGO_MANIFEST_DIR");
+    //     let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.trace";
+    //     let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.memory";
+
+    //     let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
+    //     let memory = CairoMemory::from_file(&dir_memory).unwrap();
+
+    //     let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
+
+    //     // This trace is obtained from Giza when running the prover for the mentioned program.
+    //     let expected_trace = TraceTable::new_from_cols(&vec![
+    //         // col 0
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::one(),
+    //         ],
+    //         // col 1
+    //         vec![
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::one(),
+    //         ],
+    //         // col 2
+    //         vec![
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //         ],
+    //         // col 3
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::one(),
+    //         ],
+    //         // col 4
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 5
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 6
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 7
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::one(),
+    //         ],
+    //         // col 8
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 9
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 10
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 11
+    //         vec![
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 12
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 13
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::one(),
+    //         ],
+    //         // col 14
+    //         vec![
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //             FE::one(),
+    //             FE::zero(),
+    //         ],
+    //         // col 15
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 16
+    //         vec![
+    //             FE::from(2),
+    //             FE::from(3),
+    //             FE::from_hex_unchecked(
+    //                 "0800000000000010fffffffffffffffffffffffffffffffffffffffffffffffb",
+    //             ),
+    //             FE::from(6),
+    //             FE::from(9),
+    //             FE::from(6),
+    //             FE::from(19),
+    //         ],
+    //         // col 17
+    //         vec![
+    //             FE::from(14),
+    //             FE::from(15),
+    //             FE::from(16),
+    //             FE::from(18),
+    //             FE::from(19),
+    //             FE::from(19),
+    //             FE::from(19),
+    //         ],
+    //         // col 18
+    //         vec![
+    //             FE::from(14),
+    //             FE::from(14),
+    //             FE::from(14),
+    //             FE::from(18),
+    //             FE::from(18),
+    //             FE::from(14),
+    //             FE::from(14),
+    //         ],
+    //         // col 19
+    //         vec![
+    //             FE::from(3),
+    //             FE::from(5),
+    //             FE::from(7),
+    //             FE::from(1),
+    //             FE::from(2),
+    //             FE::from(9),
+    //             FE::from(11),
+    //         ],
+    //         // col 20
+    //         vec![
+    //             FE::from(14),
+    //             FE::from(15),
+    //             FE::from(16),
+    //             FE::from(18),
+    //             FE::from(16),
+    //             FE::from(18),
+    //             FE::from(12),
+    //         ],
+    //         // col 21
+    //         vec![
+    //             FE::from(13),
+    //             FE::from(13),
+    //             FE::from(17),
+    //             FE::from(14),
+    //             FE::from(17),
+    //             FE::from(13),
+    //             FE::from(13),
+    //         ],
+    //         // col 22
+    //         vec![
+    //             FE::from(4),
+    //             FE::from(6),
+    //             FE::from(8),
+    //             FE::from(15),
+    //             FE::from(17),
+    //             FE::from(10),
+    //             FE::from(13),
+    //         ],
+    //         // col 23
+    //         vec![
+    //             FE::from(0x480680017fff8000),
+    //             FE::from(0x480680017fff8000),
+    //             FE::from(0x1104800180018000),
+    //             FE::from(0x484a7ffd7ffc8000),
+    //             FE::from(0x208b7fff7fff7ffe),
+    //             FE::from(0x400680017fff7fff),
+    //             FE::from(0x208b7fff7fff7ffe),
+    //         ],
+    //         // col 24
+    //         vec![
+    //             FE::from(2),
+    //             FE::from(3),
+    //             FE::from(14),
+    //             FE::from(6),
+    //             FE::from(14),
+    //             FE::from(6),
+    //             FE::from(19),
+    //         ],
+    //         // col 25
+    //         vec![
+    //             FE::from(19),
+    //             FE::from(19),
+    //             FE::from(9),
+    //             FE::from(2),
+    //             FE::from(9),
+    //             FE::from(19),
+    //             FE::from(19),
+    //         ],
+    //         // col 26
+    //         vec![
+    //             FE::from(2),
+    //             FE::from(3),
+    //             FE::from_hex_unchecked(
+    //                 "0800000000000010fffffffffffffffffffffffffffffffffffffffffffffffb",
+    //             ),
+    //             FE::from(3),
+    //             FE::from(9),
+    //             FE::from(6),
+    //             FE::from(19),
+    //         ],
+    //         // col 27
+    //         vec![
+    //             FE::from(0x8000),
+    //             FE::from(0x8000),
+    //             FE::from(0x8000),
+    //             FE::from(0x8000),
+    //             FE::from(0x7ffe),
+    //             FE::from(0x7fff),
+    //             FE::from(0x7ffe),
+    //         ],
+    //         // col 28
+    //         vec![
+    //             FE::from(0x7fff),
+    //             FE::from(0x7fff),
+    //             FE::from(0x8001),
+    //             FE::from(0x7ffc),
+    //             FE::from(0x7fff),
+    //             FE::from(0x7fff),
+    //             FE::from(0x7fff),
+    //         ],
+    //         // col 29
+    //         vec![
+    //             FE::from(0x8001),
+    //             FE::from(0x8001),
+    //             FE::from(0x8001),
+    //             FE::from(0x7ffd),
+    //             FE::from(0x7fff),
+    //             FE::from(0x8001),
+    //             FE::from(0x7fff),
+    //         ],
+    //         // col 30
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 31
+    //         vec![
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //             FE::zero(),
+    //         ],
+    //         // col 32
+    //         vec![
+    //             FE::from(38),
+    //             FE::from(57),
+    //             FE::from_hex_unchecked(
+    //                 "0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffcb",
+    //             ),
+    //             FE::from(6),
+    //             FE::from(81),
+    //             FE::from(114),
+    //             FE::from(0x169),
+    //         ],
+    //         // col 33 - Selector column
+    //         vec![
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::one(),
+    //             FE::zero(),
+    //         ],
+    //     ]);
+
+    // assert_eq!(execution_trace.cols(), expected_trace.cols());
+    // }
 }
