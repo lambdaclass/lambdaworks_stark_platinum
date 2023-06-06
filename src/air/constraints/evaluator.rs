@@ -106,6 +106,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 evals
             })
             .collect();
+
         #[cfg(debug_assertions)]
         for (poly, z) in boundary_polys.iter().zip(boundary_zerofiers.iter()) {
             let (_, b) = poly.clone().long_division_with_remainder(z);
