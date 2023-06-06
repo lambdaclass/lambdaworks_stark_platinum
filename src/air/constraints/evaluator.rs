@@ -121,6 +121,33 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let divisors = self.air.transition_divisors();
         let boundary_term_degree_adjustment =
             self.air.composition_poly_degree_bound() - self.air.context().trace_length;
+
+        let mut transition_zerofiers_inverse_evaluations = Vec::new();
+        for divisor in divisors {
+            let mut evaluations = evaluate_polynomial_on_lde_domain(
+                &divisor,
+                domain.blowup_factor,
+                domain.interpolation_domain_size,
+                &domain.coset_offset,
+            )
+            .unwrap();
+            FieldElement::inplace_batch_inverse(&mut evaluations);
+            transition_zerofiers_inverse_evaluations.push(evaluations);
+        }
+
+        let transition_degrees = self.air.context().transition_degrees();
+        let mut degree_adjustments = Vec::with_capacity(transition_degrees.len());
+        for transition_degree in transition_degrees.iter() {
+            let lde = &domain.lde_roots_of_unity_coset;
+            let mut transition_adjustment = Vec::with_capacity(lde.len());
+            for d in lde.iter() {
+                let degree_adjustment = self.air.composition_poly_degree_bound()
+                    - (self.air.context().trace_length * (transition_degree - 1));
+                transition_adjustment.push(d.pow(degree_adjustment));
+            }
+            degree_adjustments.push(transition_adjustment);
+        }
+
         // Iterate over trace and domain and compute transitions
         for (i, d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
             let frame = Frame::read_from_trace(
@@ -135,12 +162,20 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             #[cfg(debug_assertions)]
             transition_evaluations.push(evaluations.clone());
 
+            // TODO: Remove clones
+            let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
+                .iter()
+                .map(|zerofier_evals| zerofier_evals[i].clone())
+                .collect();
+            let degree_adjustments: Vec<_> = degree_adjustments
+                .iter()
+                .map(|transition_adjustments| transition_adjustments[i].clone())
+                .collect();
             evaluations = Self::compute_constraint_composition_poly_evaluations(
-                &self.air,
                 &evaluations,
-                &divisors,
+                &denominators,
+                &degree_adjustments,
                 alpha_and_beta_transition_coefficients,
-                d,
             );
 
             let d_adjustment_power = d.pow(boundary_term_degree_adjustment);
@@ -163,7 +198,11 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
             evaluations.push(boundary_evaluation);
 
-            evaluation_table.evaluations.push(evaluations);
+            let merged_value = evaluations
+                .iter()
+                .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
+
+            evaluation_table.evaluations_acc.push(merged_value);
         }
 
         evaluation_table
@@ -183,27 +222,20 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     /// the composition polynomial. In that case the `evaluations` are over an *out of domain* frame
     /// (in the fibonacci example they are evaluations on the points `z`, `zg`, `zg^2`).
     pub fn compute_constraint_composition_poly_evaluations(
-        air: &A,
         evaluations: &[FieldElement<F>],
-        divisors: &[Polynomial<FieldElement<F>>],
+        inverse_denominators: &[FieldElement<F>],
+        degree_adjustments: &[FieldElement<F>],
         constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
-        x: &FieldElement<F>,
     ) -> Vec<FieldElement<F>> {
-        // TODO: We should get the trace degree in a better way because in some special cases
-        // the trace degree may not be exactly the trace length - 1 but a smaller number.
-        let transition_degrees = air.context().transition_degrees();
-
-        let mut ret = Vec::new();
-        for (((eval, transition_degree), div), (alpha, beta)) in evaluations
+        let mut ret = Vec::with_capacity(evaluations.len());
+        for (((eval, degree_adjustment), inverse_denominator), (alpha, beta)) in evaluations
             .iter()
-            .zip(transition_degrees)
-            .zip(divisors)
+            .zip(degree_adjustments)
+            .zip(inverse_denominators)
             .zip(constraint_coeffs)
         {
-            let zerofied_eval = eval / div.evaluate(x);
-            let degree_adjustment = air.composition_poly_degree_bound()
-                - (air.context().trace_length * (transition_degree - 1));
-            let result = zerofied_eval * (alpha * x.pow(degree_adjustment) + beta);
+            let zerofied_eval = eval * inverse_denominator;
+            let result = zerofied_eval * (alpha * degree_adjustment + beta);
             ret.push(result);
         }
 
