@@ -26,4 +26,13 @@ rstest = "0.17.0"
 
 [features]
 test_fiat_shamir = []
+
+[[bench]]
+name = "criterion_starks"
+harness = false
 metal = ["lambdaworks-fft/metal"]
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
