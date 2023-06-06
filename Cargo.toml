@@ -31,3 +31,8 @@ test_fiat_shamir = []
 name = "criterion_starks"
 harness = false
 metal = ["lambdaworks-fft/metal"]
+
+[profile.bench]
+lto = true
+opt-level = 3
+codegen-units = 1
