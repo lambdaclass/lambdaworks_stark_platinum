@@ -1,10 +1,9 @@
 use super::{
-    air::{constraints::evaluator::ConstraintEvaluator, AIR},
-    fri::fri_decommit::FriDecommitment,
+    air::constraints::evaluator::ConstraintEvaluator, fri::fri_decommit::FriDecommitment,
     sample_z_ood,
 };
 use crate::{
-    batch_sample_challenges, fri::HASHER, proof::StarkProof, transcript_to_field,
+    air::traits::AIR, batch_sample_challenges, fri::HASHER, proof::StarkProof, transcript_to_field,
     transcript_to_usize, Domain,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]

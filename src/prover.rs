@@ -1,9 +1,10 @@
 use super::{
-    air::{constraints::evaluator::ConstraintEvaluator, frame::Frame, trace::TraceTable, AIR},
+    air::{constraints::evaluator::ConstraintEvaluator, frame::Frame, trace::TraceTable},
     fri::fri_commit_phase,
     sample_z_ood,
 };
 use crate::{
+    air::traits::AIR,
     batch_sample_challenges,
     fri::{fri_decommit::FriDecommitment, fri_query_phase, HASHER},
     proof::{DeepPolynomialOpenings, StarkProof},

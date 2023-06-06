@@ -6,7 +6,7 @@ use crate::{
         context::AirContext,
         frame::Frame,
         trace::TraceTable,
-        AIR,
+        traits::AIR,
     },
     fri::FieldElement,
     prover::ProvingError,
