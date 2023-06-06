@@ -36,20 +36,20 @@ pub enum ProvingError {
 struct Round1<F: IsFFTField, A: AIR<Field = F>> {
     trace_polys: Vec<Polynomial<FieldElement<F>>>,
     lde_trace: TraceTable<F>,
-    lde_trace_merkle_trees: Vec<MerkleTree<F>>,
-    lde_trace_merkle_roots: Vec<FieldElement<F>>,
+    lde_trace_merkle_trees: Vec<MerkleTree>,
+    lde_trace_merkle_roots: Vec<[u8; 32]>,
     rap_challenges: A::RAPChallenges,
 }
 
 struct Round2<F: IsFFTField> {
     composition_poly_even: Polynomial<FieldElement<F>>,
     lde_composition_poly_even_evaluations: Vec<FieldElement<F>>,
-    composition_poly_even_merkle_tree: MerkleTree<F>,
-    composition_poly_even_root: FieldElement<F>,
+    composition_poly_even_merkle_tree: MerkleTree,
+    composition_poly_even_root: [u8; 32],
     composition_poly_odd: Polynomial<FieldElement<F>>,
     lde_composition_poly_odd_evaluations: Vec<FieldElement<F>>,
-    composition_poly_odd_merkle_tree: MerkleTree<F>,
-    composition_poly_odd_root: FieldElement<F>,
+    composition_poly_odd_merkle_tree: MerkleTree,
+    composition_poly_odd_root: [u8; 32],
 }
 
 struct Round3<F: IsFFTField> {
@@ -60,7 +60,7 @@ struct Round3<F: IsFFTField> {
 
 struct Round4<F: IsFFTField> {
     fri_last_value: FieldElement<F>,
-    fri_layers_merkle_roots: Vec<FieldElement<F>>,
+    fri_layers_merkle_roots: Vec<[u8; 32]>,
     deep_poly_openings: DeepPolynomialOpenings<F>,
     query_list: Vec<FriDecommitment<F>>,
 }
@@ -78,14 +78,14 @@ fn round_0_transcript_initialization() -> DefaultTranscript {
 
 fn batch_commit<F>(
     vectors: Vec<&Vec<FieldElement<F>>>,
-) -> (Vec<MerkleTree<F>>, Vec<FieldElement<F>>)
+) -> (Vec<MerkleTree>, Vec<[u8; 32]>)
 where
     F: IsFFTField,
     FieldElement<F>: ByteConversion,
 {
     let trees: Vec<_> = vectors
         .iter()
-        .map(|col| MerkleTree::build(col, Box::new(HASHER)))
+        .map(|col| MerkleTree::build(col, HASHER))
         .collect();
 
     let roots = trees.iter().map(|tree| tree.root.clone()).collect();
@@ -119,8 +119,8 @@ fn interpolate_and_commit<T, F>(
 ) -> (
     Vec<Polynomial<FieldElement<F>>>,
     Vec<Vec<FieldElement<F>>>,
-    Vec<MerkleTree<F>>,
-    Vec<FieldElement<F>>,
+    Vec<MerkleTree>,
+    Vec<[u8; 32]>,
 )
 where
     T: Transcript,
@@ -150,7 +150,7 @@ where
 
     // >>>> Send commitments: [tⱼ]
     for root in lde_trace_merkle_roots.iter() {
-        transcript.append(&root.to_bytes_be());
+        transcript.append(root);
     }
 
     (
@@ -547,8 +547,8 @@ where
     );
 
     // >>>> Send commitments: [H₁], [H₂]
-    transcript.append(&round_2_result.composition_poly_even_root.to_bytes_be());
-    transcript.append(&round_2_result.composition_poly_odd_root.to_bytes_be());
+    transcript.append(&round_2_result.composition_poly_even_root);
+    transcript.append(&round_2_result.composition_poly_odd_root);
 
     // ===================================
     // ==========|   Round 3   |==========

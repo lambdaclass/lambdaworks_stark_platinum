@@ -69,13 +69,13 @@ where
     let main_columns = total_columns - aux_columns;
 
     for root in proof.lde_trace_merkle_roots.iter().take(main_columns) {
-        transcript.append(&root.to_bytes_be());
+        transcript.append(root);
     }
 
     let rap_challenges = air.build_rap_challenges(transcript);
 
     for root in proof.lde_trace_merkle_roots.iter().skip(main_columns) {
-        transcript.append(&root.to_bytes_be());
+        transcript.append(root);
     }
 
     // ===================================
@@ -104,8 +104,8 @@ where
         .collect();
 
     // <<<< Receive commitments: [H₁], [H₂]
-    transcript.append(&proof.composition_poly_even_root.to_bytes_be());
-    transcript.append(&proof.composition_poly_odd_root.to_bytes_be());
+    transcript.append(&proof.composition_poly_even_root);
+    transcript.append(&proof.composition_poly_odd_root);
 
     // ===================================
     // ==========|   Round 3   |==========
@@ -153,9 +153,8 @@ where
     let mut zetas: Vec<FieldElement<F>> = Vec::new();
     let merkle_roots = &proof.fri_layers_merkle_roots;
     for root in merkle_roots.iter() {
-        let root_bytes = root.to_bytes_be();
         // <<<< Receive commitment: [pₖ] (the first one is [p₀])
-        transcript.append(&root_bytes);
+        transcript.append(root);
 
         // >>>> Send challenge 𝜁ₖ
         let zeta = transcript_to_field(transcript);
@@ -336,7 +335,7 @@ where
             iota_0,
             &proof
                 .deep_poly_openings
-                .lde_composition_poly_even_evaluation,
+                .lde_composition_poly_even_evaluation.to_bytes_be(),
             &HASHER,
         );
 
@@ -347,7 +346,7 @@ where
         .verify(
             &proof.composition_poly_odd_root,
             iota_0,
-            &proof.deep_poly_openings.lde_composition_poly_odd_evaluation,
+            &proof.deep_poly_openings.lde_composition_poly_odd_evaluation.to_bytes_be(),
             &HASHER,
         );
 
@@ -358,7 +357,7 @@ where
         .zip(&proof.deep_poly_openings.lde_trace_merkle_proofs)
         .zip(&proof.deep_poly_openings.lde_trace_evaluations)
     {
-        result &= merkle_proof.verify(merkle_root, iota_0, evaluation, &HASHER);
+        result &= merkle_proof.verify(merkle_root, iota_0, &evaluation.to_bytes_be(), &HASHER);
     }
 
     // DEEP consistency check
@@ -373,7 +372,7 @@ where
 
 fn verify_query_and_sym_openings<F: IsField + IsFFTField, A: AIR<Field = F>>(
     air: &A,
-    fri_layers_merkle_roots: &[FieldElement<F>],
+    fri_layers_merkle_roots: &[[u8; 32]],
     fri_last_value: &FieldElement<F>,
     zetas: &[FieldElement<F>],
     iota: usize,
@@ -387,7 +386,7 @@ where
     if !fri_decommitment.first_layer_auth_path.verify(
         &fri_layers_merkle_roots[0],
         iota,
-        &fri_decommitment.first_layer_evaluation,
+        &fri_decommitment.first_layer_evaluation.to_bytes_be(),
         &HASHER,
     ) {
         return false;
@@ -434,7 +433,7 @@ where
         if !auth_path.verify(
             merkle_root,
             layer_evaluation_index_sym,
-            evaluation_sym,
+            &evaluation_sym.to_bytes_be(),
             &HASHER,
         ) {
             return false;

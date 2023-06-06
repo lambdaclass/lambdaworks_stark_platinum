@@ -18,7 +18,7 @@ pub use lambdaworks_math::{
 use self::fri_decommit::FriDecommitment;
 use self::fri_functions::{fold_polynomial, next_domain};
 
-pub type FriMerkleTree<F> = MerkleTree<F>;
+pub type FriMerkleTree = MerkleTree;
 pub(crate) const HASHER: Sha3Hasher = Sha3Hasher::new();
 
 pub fn fri_commit_phase<F: IsField, T: Transcript>(
@@ -35,7 +35,7 @@ where
     fri_layer_list.push(current_layer.clone());
 
     // >>>> Send commitment: [p₀]
-    transcript.append(&current_layer.merkle_tree.root.to_bytes_be());
+    transcript.append(&current_layer.merkle_tree.root);
 
     for _ in 1..number_layers {
         // <<<< Receive challenge 𝜁ₖ₋₁
@@ -48,7 +48,7 @@ where
         fri_layer_list.push(current_layer.clone());
 
         // >>>> Send commitment: [pₖ]
-        transcript.append(&current_layer.merkle_tree.root.to_bytes_be());
+        transcript.append(&current_layer.merkle_tree.root);
     }
 
     // <<<< Receive challenge: 𝜁ₙ₋₁

@@ -11,7 +11,7 @@ pub struct FriLayer<F: IsField> {
     pub poly: Polynomial<FieldElement<F>>,
     pub domain: Vec<FieldElement<F>>,
     pub evaluation: Vec<FieldElement<F>>,
-    pub merkle_tree: FriMerkleTree<F>,
+    pub merkle_tree: FriMerkleTree,
 }
 
 impl<F> FriLayer<F>
@@ -21,7 +21,7 @@ where
 {
     pub fn new(poly: Polynomial<FieldElement<F>>, domain: &[FieldElement<F>]) -> Self {
         let evaluation = poly.evaluate_slice(domain);
-        let merkle_tree = FriMerkleTree::build(&evaluation, Box::new(HASHER));
+        let merkle_tree = FriMerkleTree::build(&evaluation, HASHER);
 
         Self {
             poly,
