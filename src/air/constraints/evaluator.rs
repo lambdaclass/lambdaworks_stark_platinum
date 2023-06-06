@@ -10,6 +10,8 @@ use crate::{
     prover::evaluate_polynomial_on_lde_domain,
     Domain,
 };
+use lambdaworks_math::field::traits::IsField;
+use rayon::prelude::*;
 use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
@@ -19,7 +21,9 @@ pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
     primitive_root: FieldElement<F>,
 }
 
-impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F, A> {
+impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F> + std::marker::Sync>
+    ConstraintEvaluator<'poly, F, A>
+{
     pub fn new(
         air: &A,
         trace_polys: &'poly [Polynomial<FieldElement<F>>],
@@ -47,6 +51,8 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     ) -> ConstraintEvaluationTable<F>
     where
         FieldElement<F>: ByteConversion,
+        <F as IsField>::BaseType: Send,
+        <F as IsField>::BaseType: Sync,
     {
         // The + 1 is for the boundary constraints column
         let mut evaluation_table = ConstraintEvaluationTable::new(
@@ -135,20 +141,22 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             transition_zerofiers_inverse_evaluations.push(evaluations);
         }
 
-        let transition_degrees_len = self.air.context().transition_degrees_len();
         let context = self.air.context();
         let transition_degrees = context.transition_degrees();
-        let mut degree_adjustments = Vec::with_capacity(transition_degrees_len);
-        for transition_degree in transition_degrees.iter() {
-            let lde = &domain.lde_roots_of_unity_coset;
-            let mut transition_adjustment = Vec::with_capacity(lde.len());
-            for d in lde.iter() {
-                let degree_adjustment = self.air.composition_poly_degree_bound()
-                    - (self.air.context().trace_length * (transition_degree - 1));
-                transition_adjustment.push(d.pow(degree_adjustment));
-            }
-            degree_adjustments.push(transition_adjustment);
-        }
+
+        let degree_adjustments: Vec<Vec<FieldElement<F>>> = transition_degrees
+            .par_iter()
+            .map(|transition_degree| {
+                let lde = &domain.lde_roots_of_unity_coset;
+                let mut transition_adjustment = Vec::with_capacity(lde.len());
+                for d in lde.iter() {
+                    let degree_adjustment = self.air.composition_poly_degree_bound()
+                        - (self.air.context().trace_length * (transition_degree - 1));
+                    transition_adjustment.push(d.pow(degree_adjustment));
+                }
+                transition_adjustment
+            })
+            .collect();
 
         // Iterate over trace and domain and compute transitions
         for (i, d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
@@ -166,11 +174,11 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
             // TODO: Remove clones
             let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
-                .iter()
+                .par_iter()
                 .map(|zerofier_evals| zerofier_evals[i].clone())
                 .collect();
             let degree_adjustments: Vec<_> = degree_adjustments
-                .iter()
+                .par_iter()
                 .map(|transition_adjustments| transition_adjustments[i].clone())
                 .collect();
             evaluations = Self::compute_constraint_composition_poly_evaluations(
@@ -229,7 +237,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         degree_adjustments: &[FieldElement<F>],
         constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
     ) -> Vec<FieldElement<F>> {
-        let mut ret = Vec::with_capacity(evaluations.len());
+        let mut ret: Vec<FieldElement<F>> = Vec::with_capacity(evaluations.len());
         for (((eval, degree_adjustment), inverse_denominator), (alpha, beta)) in evaluations
             .iter()
             .zip(degree_adjustments)

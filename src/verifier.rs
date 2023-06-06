@@ -8,10 +8,11 @@ use crate::{
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
+
+use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use rayon::prelude::*;
 
 use lambdaworks_math::{
     field::{
@@ -184,13 +185,21 @@ where
     }
 }
 
-fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
+fn step_2_verify_claimed_composition_polynomial<
+    F: IsFFTField,
+    A: AIR<Field = F> + std::marker::Sync,
+>(
     air: &A,
     proof: &StarkProof<F>,
     domain: &Domain<F>,
     public_input: &A::PublicInput,
     challenges: &Challenges<F, A>,
-) -> bool {
+) -> bool
+where
+    <A as AIR>::RAPChallenges: Sync,
+    <F as IsField>::BaseType: Sync,
+    <F as IsField>::BaseType: Send,
+{
     // BEGIN TRACE <-> Composition poly consistency evaluation check
     // These are H_1(z^2) and H_2(z^2)
     let composition_poly_even_ood_evaluation = &proof.composition_poly_even_ood_evaluation;
@@ -253,18 +262,24 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     let divisors = air.transition_divisors();
 
-    let mut denominators = Vec::with_capacity(divisors.len());
-    for divisor in divisors.iter() {
-        denominators.push(divisor.evaluate(&challenges.z));
-    }
+    let mut denominators: Vec<_> = divisors
+        .par_iter()
+        .map(|divisor| divisor.evaluate(&challenges.z))
+        .collect();
+
     FieldElement::inplace_batch_inverse(&mut denominators);
 
-    let mut degree_adjustments = Vec::with_capacity(divisors.len());
-    for transition_degree in air.context().transition_degrees().iter() {
-        let degree_adjustment = air.composition_poly_degree_bound()
-            - (air.context().trace_length * (transition_degree - 1));
-        degree_adjustments.push(challenges.z.pow(degree_adjustment));
-    }
+    let degree_adjustments = &air
+        .context()
+        .transition_degrees()
+        .par_iter()
+        .map(|transition_degree| {
+            let degree_adjustment = air.composition_poly_degree_bound()
+                - (air.context().trace_length * (transition_degree - 1));
+            challenges.z.pow(degree_adjustment)
+        })
+        .collect::<Vec<FieldElement<F>>>();
+
     let transition_c_i_evaluations =
         ConstraintEvaluator::<F, A>::compute_constraint_composition_poly_evaluations(
             &transition_ood_frame_evaluations,
@@ -491,8 +506,11 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
 pub fn verify<F, A>(proof: &StarkProof<F>, air: &A, public_input: &A::PublicInput) -> bool
 where
     F: IsFFTField,
-    A: AIR<Field = F>,
+    A: AIR<Field = F> + std::marker::Sync + std::marker::Send,
     FieldElement<F>: ByteConversion,
+    <F as IsField>::BaseType: Send,
+    <A as AIR>::RAPChallenges: Sync,
+    <F as IsField>::BaseType: Sync,
 {
     let mut transcript = step_1_transcript_initialization();
     let domain = Domain::new(air);

@@ -13,6 +13,7 @@ use crate::{
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::MerkleTree};
+use lambdaworks_math::field::traits::IsField;
 
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
@@ -211,8 +212,10 @@ fn round_2_compute_composition_polynomial<F, A>(
 ) -> Round2<F>
 where
     F: IsFFTField,
-    A: AIR<Field = F>,
+    A: AIR<Field = F> + std::marker::Sync,
     FieldElement<F>: ByteConversion,
+    <F as IsField>::BaseType: Sync,
+    <F as IsField>::BaseType: Send,
 {
     // Create evaluation table
     let evaluator = ConstraintEvaluator::new(
@@ -476,13 +479,15 @@ where
 }
 
 // FIXME remove unwrap() calls and return errors
-pub fn prove<F: IsFFTField, A: AIR<Field = F>>(
+pub fn prove<F: IsFFTField, A: AIR<Field = F> + std::marker::Sync>(
     trace: &A::RawTrace,
     air: &A,
     public_input: &mut A::PublicInput,
 ) -> Result<StarkProof<F>, ProvingError>
 where
     FieldElement<F>: ByteConversion,
+    <F as IsField>::BaseType: Sync,
+    <F as IsField>::BaseType: Send,
 {
     info!("Starting proof generation...");
 
