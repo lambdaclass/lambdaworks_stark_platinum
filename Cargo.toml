@@ -30,3 +30,4 @@ test_fiat_shamir = []
 [[bench]]
 name = "criterion_starks"
 harness = false
+metal = ["lambdaworks-fft/metal"]

@@ -1,15 +1,12 @@
+use std::time::Duration;
+
 use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup,
     Criterion,
 };
-use functions::stark::{
-    generate_cairo_trace
-};
-use lambdaworks_math::helpers::next_power_of_two;
 use lambdaworks_stark::{
-    air::{context::ProofOptions, example::cairo::{self, PublicInputs}},
-    fri::FieldElement,
-    prover::prove,
+    air::{context::ProofOptions, cairo_air::air::{CairoAIR, PublicInputs}},
+    prover::prove, cairo_run::{cairo_layout::CairoLayout, run::run_program},
 };
 
 pub mod functions;
@@ -18,73 +15,45 @@ pub mod util;
 fn cairo_benches(c: &mut Criterion) {
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
-
-    run_cairo_bench(&mut group, "fibonacci/10", & "fibonacci_10");
-    run_cairo_bench(&mut group, "fibonacci/30", &"fibonacci_30");
-
-    run_cairo_bench(&mut group, &"factorial/8", "factorial_8");
-    run_cairo_bench(&mut group, "factorial/16", & "factorial_16");
+    group.measurement_time(Duration::from_secs(15));
+    run_cairo_bench(&mut group, "fibonacci/10", & program_path("fibonacci_10.json"));
 }
 
-fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, file: &str) {
-    let (cairo_trace, cairo_memory) = generate_cairo_trace(file);
+fn program_path(program_name: &str) -> String {
+    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
+    const PROGRAM_BASE_REL_PATH: &str = "/src/cairo_vm/test_data/";
+    let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
+    program_base_path + program_name
+}
 
-    let blowup_factors = [4];
-    let query_numbers = [5];
 
-    for &blowup_factor in blowup_factors.iter() {
-        for &fri_number_of_queries in query_numbers.iter() {
+fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
 
-            let proof_options = ProofOptions {
-                blowup_factor,
-                fri_number_of_queries,
-                coset_offset: 3,
-            };
+    let (register_states, memory, program_size) =
+    run_program(None, CairoLayout::Plain, program_path).unwrap();
 
-            // This should be calculated automatically
-            let optimal_amount_of_rows = next_power_of_two(cairo_trace.steps() as u64) as usize;
+    let proof_options = ProofOptions {
+        blowup_factor: 4,
+        fri_number_of_queries: 5,
+        coset_offset: 3,
+    };
 
-            let cairo_air = cairo::CairoAIR::new(proof_options,optimal_amount_of_rows, cairo_trace.steps());
+    // This should be auto calculated
+    let padded_trace_length = memory.len().next_power_of_two();
 
-            let name = format!("{benchname}_b{blowup_factor}_q{fri_number_of_queries})");
+    let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
 
-            let last_step = &cairo_trace.rows[cairo_trace.steps() - 1];
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
 
-            let mut program = vec![];
-
-            // This should be obtained from Cairo Memory
-            // 24 may not be right
-            for i in 1..=24 as u64 {
-                program.push(cairo_memory.get(&i).unwrap().clone());
-            }
-            
-            let mut public_input = PublicInputs {
-                pc_init: FieldElement::from(cairo_trace.rows[0].pc),
-                ap_init: FieldElement::from(cairo_trace.rows[0].ap),
-                fp_init: FieldElement::from(cairo_trace.rows[0].fp),
-                pc_final: FieldElement::from(last_step.pc),
-                ap_final: FieldElement::from(last_step.ap),
-                range_check_min: None,
-                range_check_max: None,
-                program,
-                num_steps: cairo_trace.steps(),
-            };
-            
-
-            group.bench_function(name, |bench| {
-                bench.iter(
-                    || black_box
-                    (
-                        prove(
-                            black_box(&(cairo_trace.clone(), cairo_memory.clone())), 
-                            black_box(&cairo_air),
-                            black_box(&mut public_input)
-                        )
-                    )
-                );
-            });
-        }
-    }
+    group.bench_function(benchname, |bench| {
+        bench.iter(
+            || black_box
+            (
+                // TO DO: We should change the api to avoid consuming the states and the memory, so we don't have to clone
+                prove(&(register_states.clone(), memory.clone()), &cairo_air, &mut pub_inputs).unwrap()
+            )
+        );
+    });
 }
 
 criterion_group!(benches, cairo_benches);

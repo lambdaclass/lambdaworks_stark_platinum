@@ -4,7 +4,7 @@ use crate::{
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
         context::AirContext,
         trace::TraceTable,
-        AIR,
+        traits::AIR,
     },
     fri::FieldElement,
     prover::ProvingError,
