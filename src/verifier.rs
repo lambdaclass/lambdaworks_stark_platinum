@@ -252,8 +252,8 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     );
 
     let divisors = air.transition_divisors();
-    let transition_c_i_evaluations =
-        ConstraintEvaluator::compute_constraint_composition_poly_evaluations(
+    let transition_c_i_evaluations_sum =
+        ConstraintEvaluator::compute_constraint_composition_poly_evaluations_sum(
             air,
             &transition_ood_frame_evaluations,
             &divisors,
@@ -261,12 +261,8 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
             &challenges.z,
         );
 
-    let composition_poly_ood_evaluation = &boundary_quotient_ood_evaluation
-        + transition_c_i_evaluations
-            .iter()
-            .fold(FieldElement::<F>::zero(), |acc, evaluation| {
-                acc + evaluation
-            });
+    let composition_poly_ood_evaluation =
+        &boundary_quotient_ood_evaluation + transition_c_i_evaluations_sum;
 
     let composition_poly_claimed_ood_evaluation =
         composition_poly_even_ood_evaluation + &challenges.z * composition_poly_odd_ood_evaluation;

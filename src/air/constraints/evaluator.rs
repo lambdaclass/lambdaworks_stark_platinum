@@ -130,14 +130,14 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 &self.air.context().transition_offsets,
             );
 
-            let mut evaluations = self.air.compute_transition(&frame, rap_challenges);
+            let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
 
             #[cfg(debug_assertions)]
-            transition_evaluations.push(evaluations.clone());
+            transition_evaluations.push(evaluations_transition.clone());
 
-            evaluations = Self::compute_constraint_composition_poly_evaluations(
+            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
                 &self.air,
-                &evaluations,
+                &evaluations_transition,
                 &divisors,
                 alpha_and_beta_transition_coefficients,
                 d,
@@ -161,13 +161,9 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             )
             .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
 
-            evaluations.push(boundary_evaluation);
+            evaluations_sum += boundary_evaluation;
 
-            let merged_value = evaluations
-                .iter()
-                .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
-
-            evaluation_table.evaluations_acc.push(merged_value);
+            evaluation_table.evaluations_acc.push(evaluations_sum);
         }
 
         evaluation_table
@@ -209,6 +205,35 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 - (air.context().trace_length * (transition_degree - 1));
             let result = zerofied_eval * (alpha * x.pow(degree_adjustment) + beta);
             ret.push(result);
+        }
+
+        ret
+    }
+
+    /// Return the sum of the evaluations computed by `compute_constraint_composition_poly_evaluations`.
+    pub fn compute_constraint_composition_poly_evaluations_sum(
+        air: &A,
+        evaluations: &[FieldElement<F>],
+        divisors: &[Polynomial<FieldElement<F>>],
+        constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
+        x: &FieldElement<F>,
+    ) -> FieldElement<F> {
+        // TODO: We should get the trace degree in a better way because in some special cases
+        // the trace degree may not be exactly the trace length - 1 but a smaller number.
+        let transition_degrees = air.context().transition_degrees();
+
+        let mut ret = FieldElement::<F>::zero();
+        for (((eval, transition_degree), div), (alpha, beta)) in evaluations
+            .iter()
+            .zip(transition_degrees)
+            .zip(divisors)
+            .zip(constraint_coeffs)
+        {
+            let zerofied_eval = eval / div.evaluate(x);
+            let degree_adjustment = air.composition_poly_degree_bound()
+                - (air.context().trace_length * (transition_degree - 1));
+            let result = zerofied_eval * (alpha * x.pow(degree_adjustment) + beta);
+            ret += result;
         }
 
         ret
