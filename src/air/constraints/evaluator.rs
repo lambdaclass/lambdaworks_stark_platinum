@@ -104,10 +104,12 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             transition_zerofiers_inverse_evaluations.push(evaluations);
         }
 
-        let mut degree_adjustments = Vec::new();
-        for transition_degree in self.air.context().transition_degrees().iter() {
-            let mut transition_adjustment = Vec::new();
-            for d in domain.lde_roots_of_unity_coset.iter() {
+        let transition_degrees = self.air.context().transition_degrees();
+        let mut degree_adjustments = Vec::with_capacity(transition_degrees.len());
+        for transition_degree in transition_degrees.iter() {
+            let lde = &domain.lde_roots_of_unity_coset;
+            let mut transition_adjustment = Vec::with_capacity(lde.len());
+            for d in lde.iter() {
                 let degree_adjustment = self.air.composition_poly_degree_bound()
                     - (self.air.context().trace_length * (transition_degree - 1));
                 transition_adjustment.push(d.pow(degree_adjustment));
