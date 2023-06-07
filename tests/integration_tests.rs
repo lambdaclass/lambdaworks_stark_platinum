@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
@@ -136,7 +137,15 @@ fn test_prove_quadratic() {
 /// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
 fn test_prove_cairo_program(file_path: &str) {
     let (register_states, memory, program_size) =
-        run_program(None, CairoLayout::Plain, file_path).unwrap();
+        run_program(None, CairoLayout::Small, file_path).unwrap();
+
+    memory
+        .data
+        .keys()
+        .sorted()
+        .for_each(|addr| println!("{} {}", &addr, memory.get(&addr).unwrap_or(&(-FE::one()))));
+
+    dbg!(register_states.steps());
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -145,7 +154,8 @@ fn test_prove_cairo_program(file_path: &str) {
     };
 
     // This should be auto calculated
-    let padded_trace_length = memory.len().next_power_of_two();
+    let padded_trace_length = register_states.steps().next_power_of_two();
+    dbg!(padded_trace_length);
 
     let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
 
@@ -171,6 +181,11 @@ fn test_prove_cairo_simple_program() {
 #[test_log::test]
 fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&program_path("fibonacci_5.json"));
+}
+
+#[test_log::test]
+fn test_prove_cairo_rc_program() {
+    test_prove_cairo_program(&program_path("rc_program.json"));
 }
 
 #[test_log::test]

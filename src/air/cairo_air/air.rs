@@ -203,8 +203,8 @@ impl PublicInputs {
             ap_final: FieldElement::from(last_step.ap),
             range_check_min: None,
             range_check_max: None,
-            range_check_builtin_start_addr: 3157,
-            range_check_builtin_stop_addr: 3161,
+            range_check_builtin_start_addr: 1563,
+            range_check_builtin_stop_addr: 1564,
             program,
             num_steps: register_states.steps(),
         }
@@ -421,12 +421,15 @@ impl AIR for CairoAIR {
         public_input: &mut Self::PublicInput,
     ) -> Result<TraceTable<Self::Field>, ProvingError> {
         let mut main_trace = build_cairo_execution_trace(&raw_trace.0, &raw_trace.1, &public_input);
+        println!("BEFORE");
+        dbg!(main_trace.n_cols);
+        dbg!(main_trace.n_rows());
+        dbg!((public_input.program.len() >> 2) + 1);
 
-        pad_with_last_row(
-            &mut main_trace,
-            (public_input.program.len() >> 2) + 1,
-            &MEMORY_COLUMNS,
-        );
+        // pad_with_last_row(
+        //     &mut main_trace,
+        //     (public_input.program.len() >> 2) + 1,
+        //     &MEMORY_COLUMNS,
 
         let (missing_values, rc_min, rc_max) =
             get_missing_values_offset_columns(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);

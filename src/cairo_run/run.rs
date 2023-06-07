@@ -54,7 +54,7 @@ pub fn run_program(
         trace_enabled,
         relocate_mem: true,
         layout: layout.as_str(),
-        proof_mode: false,
+        proof_mode: true,
         secure_run: None,
     };
 

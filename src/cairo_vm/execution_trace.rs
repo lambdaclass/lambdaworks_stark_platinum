@@ -12,7 +12,7 @@ use crate::{
     FE,
 };
 use lambdaworks_math::{
-    field::{fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsField},
+    field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
     unsigned_integer::element::UnsignedInteger,
 };
 
@@ -125,14 +125,19 @@ pub fn build_cairo_execution_trace(
     let range_check_builtin_start = public_inputs.range_check_builtin_start_addr.clone();
     let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr.clone();
 
-    let range_checked_values: Vec<&FE> = (range_check_builtin_start..=range_check_builtin_stop)
+    let range_checked_values: Vec<&FE> = (range_check_builtin_start..range_check_builtin_stop)
         .map(|addr| memory.get(&addr).unwrap())
         .collect();
 
-    let rc_decompositions: Vec<[FE; 8]> = range_checked_values
+    let mut rc_trace_columns = decompose_rc_values_into_trace_columns(&range_checked_values);
+
+    rc_trace_columns
+        .iter_mut()
+        .for_each(|column| column.resize(trace_cols[0].len(), FE::zero()));
+
+    rc_trace_columns
         .iter()
-        .map(|rc_value| rc_decompose(rc_value))
-        .collect();
+        .for_each(|column| trace_cols.push(column.clone()));
 
     TraceTable::new_from_cols(&trace_cols)
 }
@@ -366,21 +371,26 @@ fn rows_to_cols<const N: usize>(rows: &[[FE; N]]) -> Vec<Vec<FE>> {
     cols
 }
 
-fn rc_decompose(rc_value: &FE) -> [FE; 8] {
-    let mut rc_base_type = rc_value.representative();
-
-    let the_zero = FE::zero();
-    let mut rc_decomposition_values = Vec::<FE>::with_capacity(8);
-
+fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
     let mask = UnsignedInteger::from_hex("FFFF").unwrap();
-    for i in 0..8 {
-        let curr_value = rc_base_type & mask;
-        rc_base_type = rc_base_type >> 16;
-        rc_decomposition_values.push(FE::from(&curr_value));
+    let mut rc_base_types: Vec<UnsignedInteger<4>> =
+        rc_values.iter().map(|x| x.representative()).collect();
+
+    let mut decomposition_columns: Vec<Vec<FE>> = Vec::new();
+
+    for _ in 0..8 {
+        decomposition_columns.push(
+            rc_base_types
+                .iter()
+                .map(|&x| FE::from(&(x & mask)))
+                .collect(),
+        );
+
+        rc_base_types = rc_base_types.iter().map(|&x| x >> 16).collect();
     }
 
     // This can't fail since we have 8 pushes
-    rc_decomposition_values.try_into().unwrap()
+    decomposition_columns.try_into().unwrap()
 }
 
 #[cfg(test)]
@@ -388,14 +398,19 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_rc_decompose_all_f() {
-        let sixteen = FE::from_hex("000F000F000F000F000F000F000F000F000F").unwrap();
+    fn test_rc_decompose() {
+        let fifteen = FE::from_hex("000F000F000F000F000F000F000F000F000F").unwrap();
+        let sixteen = FE::from_hex("001000100010001000100010001000100010").unwrap();
 
-        let decomposition = rc_decompose(&sixteen);
+        let decomposition_columns = decompose_rc_values_into_trace_columns(&[&fifteen, &sixteen]);
 
-        decomposition
-            .iter()
-            .for_each(|f| assert_eq!(*f, FE::from_hex("F").unwrap()));
+        for i in 0..8 {
+            assert_eq!(decomposition_columns[i][0], FE::from_hex("F").unwrap());
+        }
+
+        for i in 0..8 {
+            assert_eq!(decomposition_columns[i][1], FE::from_hex("10").unwrap());
+        }
     }
 
     // #[test]
