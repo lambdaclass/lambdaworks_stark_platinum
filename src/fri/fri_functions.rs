@@ -31,11 +31,7 @@ where
     F: IsField,
 {
     let length = input.len() / 2;
-    let mut ret = Vec::with_capacity(length);
-    for v in input.iter().take(length) {
-        ret.push(v * v)
-    }
-    ret
+    input.iter().take(length).map(|v| v.square()).collect()
 }
 
 #[cfg(test)]
