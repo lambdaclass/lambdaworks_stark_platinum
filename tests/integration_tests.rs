@@ -144,11 +144,17 @@ fn test_prove_cairo_program(file_path: &str) {
         coset_offset: 3,
     };
 
-    let padded_trace_length = register_states.steps().next_power_of_two();
-
-    let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
 
     let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+
+    // This should be auto calculated
+    // First pad used to validate the program is added to the steps
+    let first_pad = (pub_inputs.program.len() >> 2) + 1;
+    // Then we need to pad it to next power of two
+    let padded_trace_length = 
+        (register_states.steps() + first_pad).next_power_of_two();
+
+    let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
 
     let result = prove(&(register_states, memory), &cairo_air, &mut pub_inputs).unwrap();
 
