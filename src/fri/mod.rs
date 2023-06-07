@@ -90,8 +90,6 @@ where
         let query_list = (0..number_of_queries)
             .map(|_| {
                 // <<<< Receive challenge 𝜄ₛ (iota_s)
-                println!("domain_size: {}", domain_size);
-
                 let iota_s = transcript_to_usize(transcript) % domain_size;
 
                 let first_layer_evaluation = first_layer.evaluation[iota_s].clone();
