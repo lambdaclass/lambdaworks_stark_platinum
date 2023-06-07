@@ -147,7 +147,7 @@ fn test_prove_cairo_program(file_path: &str) {
     let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
 
     // This should be auto calculated
-    // First pad is needed by the prover to validate the program bytecode 
+    // First pad is needed by the prover to validate the program bytecode
     let first_pad = (pub_inputs.program.len() >> 2) + 1;
     // Then we need to pad it to next power of two
     let padded_trace_length = (register_states.steps() + first_pad).next_power_of_two();
