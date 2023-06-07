@@ -418,18 +418,25 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     // Compute the sum of all the trace terms of the deep composition polynomial.
     // There is one term for every trace polynomial and for every row in the frame.
     // ∑ ⱼₖ [ 𝛾ₖ ( tⱼ − tⱼ(z) ) / ( X − zgᵏ )]
+
+    // @@@ this could be const
     let mut trace_terms = Polynomial::zero();
     for (i, t_j) in trace_polys.iter().enumerate() {
-        for (j, (evaluations, offset)) in trace_frame_evaluations
+        let i_times_trace_frame_evaluation = i * trace_frame_evaluations.len();
+        let iter_trace_gammas = trace_terms_gammas
+            .iter()
+            .skip(i_times_trace_frame_evaluation);
+        for ((evaluations, offset), elemen_trace_gamma) in trace_frame_evaluations
             .iter()
             .zip(&transition_offsets)
-            .enumerate()
+            .zip(iter_trace_gammas)
         {
+            // @@@ we can avoid this clone
             let t_j_z = evaluations[i].clone();
+            // @@@ this can be pre-computed
             let z_shifted = z * primitive_root.pow(*offset);
             let poly = (t_j - t_j_z) / (&x - z_shifted);
-            trace_terms =
-                trace_terms + poly * &trace_terms_gammas[i * trace_frame_evaluations.len() + j];
+            trace_terms = trace_terms + poly * elemen_trace_gamma;
         }
     }
 
