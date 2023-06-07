@@ -129,9 +129,9 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F> + std::marker::Sync>
             self.air.composition_poly_degree_bound() - self.air.context().trace_length;
 
         let mut transition_zerofiers_inverse_evaluations = Vec::new();
-        for divisor in divisors {
+        for divisor in &divisors {
             let mut evaluations = evaluate_polynomial_on_lde_domain(
-                &divisor,
+                divisor,
                 domain.blowup_factor,
                 domain.interpolation_domain_size,
                 &domain.coset_offset,
@@ -141,22 +141,21 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F> + std::marker::Sync>
             transition_zerofiers_inverse_evaluations.push(evaluations);
         }
 
+        let transition_degrees_len = self.air.context().transition_degrees_len();
         let context = self.air.context();
         let transition_degrees = context.transition_degrees();
+        let mut degree_adjustments = Vec::with_capacity(transition_degrees_len);
 
-        let degree_adjustments: Vec<Vec<FieldElement<F>>> = transition_degrees
-            .par_iter()
-            .map(|transition_degree| {
-                let lde = &domain.lde_roots_of_unity_coset;
-                let mut transition_adjustment = Vec::with_capacity(lde.len());
-                for d in lde.iter() {
-                    let degree_adjustment = self.air.composition_poly_degree_bound()
-                        - (self.air.context().trace_length * (transition_degree - 1));
-                    transition_adjustment.push(d.pow(degree_adjustment));
-                }
-                transition_adjustment
-            })
-            .collect();
+        for transition_degree in transition_degrees.iter() {
+            let lde = &domain.lde_roots_of_unity_coset;
+            let mut transition_adjustment = Vec::with_capacity(lde.len());
+            for d in lde.iter() {
+                let degree_adjustment = self.air.composition_poly_degree_bound()
+                    - (self.air.context().trace_length * (transition_degree - 1));
+                transition_adjustment.push(d.pow(degree_adjustment));
+            }
+            degree_adjustments.push(transition_adjustment);
+        }
 
         // Iterate over trace and domain and compute transitions
         for (i, d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
@@ -167,10 +166,10 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F> + std::marker::Sync>
                 &self.air.context().transition_offsets,
             );
 
-            let mut evaluations = self.air.compute_transition(&frame, rap_challenges);
+            let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
 
             #[cfg(debug_assertions)]
-            transition_evaluations.push(evaluations.clone());
+            transition_evaluations.push(evaluations_transition.clone());
 
             // TODO: Remove clones
             let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
@@ -181,8 +180,9 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F> + std::marker::Sync>
                 .par_iter()
                 .map(|transition_adjustments| transition_adjustments[i].clone())
                 .collect();
-            evaluations = Self::compute_constraint_composition_poly_evaluations(
-                &evaluations,
+
+            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
+                &evaluations_transition,
                 &denominators,
                 &degree_adjustments,
                 alpha_and_beta_transition_coefficients,
@@ -206,13 +206,9 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F> + std::marker::Sync>
             )
             .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
 
-            evaluations.push(boundary_evaluation);
+            evaluations_sum += boundary_evaluation;
 
-            let merged_value = evaluations
-                .iter()
-                .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
-
-            evaluation_table.evaluations_acc.push(merged_value);
+            evaluation_table.evaluations_acc.push(evaluations_sum);
         }
 
         evaluation_table
@@ -231,13 +227,17 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F> + std::marker::Sync>
     /// The second one is when the verifier needs to check the consistency between the trace and
     /// the composition polynomial. In that case the `evaluations` are over an *out of domain* frame
     /// (in the fibonacci example they are evaluations on the points `z`, `zg`, `zg^2`).
-    pub fn compute_constraint_composition_poly_evaluations(
+    ///
+    /// # Returns
+    ///
+    /// Returns the sum of the evaluations computed.
+    pub fn compute_constraint_composition_poly_evaluations_sum(
         evaluations: &[FieldElement<F>],
         inverse_denominators: &[FieldElement<F>],
         degree_adjustments: &[FieldElement<F>],
         constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
-    ) -> Vec<FieldElement<F>> {
-        let mut ret: Vec<FieldElement<F>> = Vec::with_capacity(evaluations.len());
+    ) -> FieldElement<F> {
+        let mut ret = FieldElement::<F>::zero();
         for (((eval, degree_adjustment), inverse_denominator), (alpha, beta)) in evaluations
             .iter()
             .zip(degree_adjustments)
@@ -246,7 +246,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F> + std::marker::Sync>
         {
             let zerofied_eval = eval * inverse_denominator;
             let result = zerofied_eval * (alpha * degree_adjustment + beta);
-            ret.push(result);
+            ret += result;
         }
 
         ret
