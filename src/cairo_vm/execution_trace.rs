@@ -125,7 +125,7 @@ pub fn build_cairo_execution_trace(
     let range_check_builtin_start = public_inputs.range_check_builtin_start_addr.clone();
     let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr.clone();
 
-    let range_checked_values: Vec<&FE> = (range_check_builtin_start..range_check_builtin_stop)
+    let mut range_checked_values: Vec<&FE> = (range_check_builtin_start..range_check_builtin_stop)
         .map(|addr| memory.get(&addr).unwrap())
         .collect();
 
@@ -138,6 +138,12 @@ pub fn build_cairo_execution_trace(
     rc_trace_columns
         .iter()
         .for_each(|column| trace_cols.push(column.clone()));
+
+    let mut rc_values_dereferenced: Vec<FE> = 
+        range_checked_values.iter().map(|&x| x.clone()).collect();
+    rc_values_dereferenced.resize(trace_cols[0].len(), FE::zero());
+
+    trace_cols.push(rc_values_dereferenced);
 
     TraceTable::new_from_cols(&trace_cols)
 }

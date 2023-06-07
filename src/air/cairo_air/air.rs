@@ -879,15 +879,20 @@ fn range_check_builtin(
     frame: &Frame<Stark252PrimeField>,
 ) {
     let curr = frame.get_row(0);
-    constraints[RANGE_CHECK_BUILTIN] = &curr[RC_0]
-        + &curr[RC_1]
-        + &curr[RC_2]
-        + &curr[RC_3]
-        + &curr[RC_4]
-        + &curr[RC_5]
-        + &curr[RC_6]
-        + &curr[RC_7]
-        - &curr[RC_VALUE];
+    
+    constraints[RANGE_CHECK_BUILTIN] = evaluate_range_check_builtin_constraint(curr)
+}
+
+pub fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
+    &curr[RC_0]
+        + &curr[RC_1] * &FE::from_hex("10000").unwrap()
+        + &curr[RC_2] * &FE::from_hex("100000000").unwrap()
+        + &curr[RC_3] * &FE::from_hex("1000000000000").unwrap()
+        + &curr[RC_4] * &FE::from_hex("10000000000000000").unwrap()
+        + &curr[RC_5] * &FE::from_hex("100000000000000000000").unwrap()
+        + &curr[RC_6] *  &FE::from_hex("1000000000000000000000000").unwrap()
+        + &curr[RC_7] * &FE::from_hex("10000000000000000000000000000").unwrap()
+        - &curr[RC_VALUE]
 }
 
 #[cfg(test)]
@@ -902,7 +907,7 @@ mod test {
     use crate::{
         air::{
             cairo_air::air::{
-                add_program_in_public_input_section, CairoAIR, PublicInputs, OFF_DST, OFF_OP1,
+                add_program_in_public_input_section, CairoAIR, PublicInputs, OFF_DST, OFF_OP1, evaluate_range_check_builtin_constraint,
             },
             context::ProofOptions,
             debug::validate_trace,
@@ -911,13 +916,36 @@ mod test {
         },
         cairo_run::run::Error,
         cairo_vm::{cairo_mem::CairoMemory, cairo_trace::CairoTrace},
-        Domain,
+        Domain, FE,
     };
 
     use super::{
         add_missing_values_to_offsets_column, generate_memory_permutation_argument_column,
         get_missing_values_offset_columns, sort_columns_by_memory_address, CairoRAPChallenges,
     };
+
+    #[test] 
+    fn range_check_eval_works() {
+        let mut row: Vec<FE> = Vec::new();
+
+        for i in 0..61 {
+            row.push(FE::zero());
+        }
+
+        row[super::RC_0] = FE::one();
+        row[super::RC_1] = FE::one();
+        row[super::RC_2] = FE::one();
+        row[super::RC_3] = FE::one();
+        row[super::RC_4] = FE::one();
+        row[super::RC_5] = FE::one();
+        row[super::RC_6] = FE::one();
+        row[super::RC_7] = FE::one();
+
+
+        row[super::RC_VALUE] = FE::from_hex("00010001000100010001000100010001").unwrap();
+        assert!(evaluate_range_check_builtin_constraint(&row) == FE::zero());
+
+    }
 
     // #[test]
     // fn check_simple_cairo_trace_evaluates_to_zero() {
