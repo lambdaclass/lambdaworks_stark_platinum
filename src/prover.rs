@@ -277,7 +277,7 @@ fn round_3_evaluate_polynomials_in_out_of_domain_element<F: IsFFTField, A: AIR<F
 where
     FieldElement<F>: ByteConversion,
 {
-    let z_squared = z * z;
+    let z_squared = z.square();
 
     // Evaluate H_1 and H_2 in z^2.
     let composition_poly_even_ood_evaluation =
@@ -401,7 +401,7 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     let h_2_z2 = &round_3_result.composition_poly_odd_ood_evaluation;
     let gamma = &composition_poly_gammas[0];
     let gamma_p = &composition_poly_gammas[1];
-    let z_squared = z * z;
+    let z_squared = z.square();
 
     // 𝛾 ( H₁ − H₁(z²) ) / ( X − z² )
     let mut h_1_term = gamma * (h_1 - h_1_z2);
