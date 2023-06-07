@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     air::traits::AIR, batch_sample_challenges, proof::StarkProof, transcript_to_field,
-    transcript_to_usize, Domain, fri::FriHasher,
+    transcript_to_usize, Domain, fri::FriMerkleBackend 
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -326,29 +326,26 @@ where
 
     let iota_0 = challenges.iotas[0];
 
-    let hasher = FriHasher::new();
     // Verify opening Open(H₁(D_LDE, 𝜐₀)
     result &= proof
         .deep_poly_openings
         .lde_composition_poly_even_proof
-        .verify(
+        .verify::<FriMerkleBackend<F>>(
             &proof.composition_poly_even_root,
             iota_0,
             &proof
                 .deep_poly_openings
                 .lde_composition_poly_even_evaluation,
-            &hasher
         );
 
     // Verify opening Open(H₂(D_LDE, 𝜐₀),
     result &= proof
         .deep_poly_openings
         .lde_composition_poly_odd_proof
-        .verify(
+        .verify::<FriMerkleBackend<F>>(
             &proof.composition_poly_odd_root,
             iota_0,
             &proof.deep_poly_openings.lde_composition_poly_odd_evaluation,
-            &hasher
         );
 
     // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
@@ -358,7 +355,7 @@ where
         .zip(&proof.deep_poly_openings.lde_trace_merkle_proofs)
         .zip(&proof.deep_poly_openings.lde_trace_evaluations)
     {
-        result &= merkle_proof.verify(merkle_root, iota_0, evaluation, &hasher);
+        result &= merkle_proof.verify::<FriMerkleBackend<F>>(merkle_root, iota_0, evaluation);
     }
 
     // DEEP consistency check
@@ -384,11 +381,10 @@ where
     FieldElement<F>: ByteConversion,
 {
     // Verify opening Open(p₀(D₀), 𝜐ₛ)
-    if !fri_decommitment.first_layer_auth_path.verify(
+    if !fri_decommitment.first_layer_auth_path.verify::<FriMerkleBackend<F>>(
         &fri_layers_merkle_roots[0],
         iota,
         &fri_decommitment.first_layer_evaluation,
-        &FriHasher::new()
     ) {
         return false;
     }
@@ -431,11 +427,10 @@ where
         let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
 
         // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
-        if !auth_path.verify(
+        if !auth_path.verify::<FriMerkleBackend<F>>(
             merkle_root,
             layer_evaluation_index_sym,
             evaluation_sym,
-            &FriHasher::new(),
         ) {
             return false;
         }

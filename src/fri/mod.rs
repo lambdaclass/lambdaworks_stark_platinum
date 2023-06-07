@@ -6,7 +6,7 @@ use crate::fri::fri_commitment::FriLayer;
 use crate::{transcript_to_field, transcript_to_usize, Domain};
 
 pub use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_crypto::hash::sha3::FieldElementSha3Hasher;
+use lambdaworks_crypto::merkle_tree::merkle::FieldElementBackend;
 pub use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
 use lambdaworks_math::field::traits::{IsFFTField, IsField};
 use lambdaworks_math::traits::ByteConversion;
@@ -19,8 +19,8 @@ use self::fri_decommit::FriDecommitment;
 use self::fri_functions::{fold_polynomial, next_domain};
 
 pub type FriCommitment = [u8; 32];
-pub type FriMerkleTree = MerkleTree<FriCommitment>;
-pub type FriHasher<F> = FieldElementSha3Hasher<F>;
+pub type FriMerkleBackend<F> = FieldElementBackend<F>;
+pub type FriMerkleTree<F> = MerkleTree<FriMerkleBackend<F>>;
 
 pub fn fri_commit_phase<F: IsField, T: Transcript>(
     number_layers: usize,

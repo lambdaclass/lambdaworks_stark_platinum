@@ -3,15 +3,18 @@ use lambdaworks_math::{
     traits::ByteConversion,
 };
 
-use super::FriHasher;
 pub use super::{FriMerkleTree, Polynomial};
 
 #[derive(Clone)]
-pub struct FriLayer<F: IsField> {
+pub struct FriLayer<F>
+where
+    F: IsField,
+    FieldElement<F>: ByteConversion
+{
     pub poly: Polynomial<FieldElement<F>>,
     pub domain: Vec<FieldElement<F>>,
     pub evaluation: Vec<FieldElement<F>>,
-    pub merkle_tree: FriMerkleTree,
+    pub merkle_tree: FriMerkleTree<F>,
 }
 
 impl<F> FriLayer<F>
@@ -21,7 +24,7 @@ where
 {
     pub fn new(poly: Polynomial<FieldElement<F>>, domain: &[FieldElement<F>]) -> Self {
         let evaluation = poly.evaluate_slice(domain);
-        let merkle_tree = FriMerkleTree::build(&evaluation, FriHasher::new());
+        let merkle_tree = FriMerkleTree::build(&evaluation);
 
         Self {
             poly,

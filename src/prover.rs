@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use super::{
     air::{constraints::evaluator::ConstraintEvaluator, frame::Frame, trace::TraceTable},
     fri::fri_commit_phase,
@@ -8,13 +6,13 @@ use super::{
 use crate::{
     air::traits::AIR,
     batch_sample_challenges,
-    fri::{fri_decommit::FriDecommitment, fri_query_phase, FriCommitment, FriHasher},
+    fri::{fri_decommit::FriDecommitment, fri_query_phase, FriCommitment, FriMerkleTree},
     proof::{DeepPolynomialOpenings, StarkProof},
     transcript_to_field, Domain,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::MerkleTree};
+use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::{MerkleTree, FieldElementBackend}};
 
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
@@ -35,22 +33,31 @@ pub enum ProvingError {
     WrongParameter(String),
 }
 
-struct Round1<F: IsFFTField, A: AIR<Field = F>> {
+struct Round1<F, A>
+where
+    F: IsFFTField,
+    A: AIR<Field = F>,
+    FieldElement<F>: ByteConversion,
+{
     trace_polys: Vec<Polynomial<FieldElement<F>>>,
     lde_trace: TraceTable<F>,
-    lde_trace_merkle_trees: Vec<MerkleTree<FriCommitment>>,
+    lde_trace_merkle_trees: Vec<FriMerkleTree<F>>,
     lde_trace_merkle_roots: Vec<[u8; 32]>,
     rap_challenges: A::RAPChallenges,
 }
 
-struct Round2<F: IsFFTField> {
+struct Round2<F>
+where
+    F: IsFFTField,
+    FieldElement<F>: ByteConversion,
+{
     composition_poly_even: Polynomial<FieldElement<F>>,
     lde_composition_poly_even_evaluations: Vec<FieldElement<F>>,
-    composition_poly_even_merkle_tree: MerkleTree<FriCommitment>,
+    composition_poly_even_merkle_tree: FriMerkleTree<F>,
     composition_poly_even_root: [u8; 32],
     composition_poly_odd: Polynomial<FieldElement<F>>,
     lde_composition_poly_odd_evaluations: Vec<FieldElement<F>>,
-    composition_poly_odd_merkle_tree: MerkleTree<FriCommitment>,
+    composition_poly_odd_merkle_tree: FriMerkleTree<F>,
     composition_poly_odd_root: [u8; 32],
 }
 
@@ -80,15 +87,12 @@ fn round_0_transcript_initialization() -> DefaultTranscript {
 
 fn batch_commit<F>(
     vectors: Vec<&Vec<FieldElement<F>>>,
-) -> (Vec<MerkleTree<FriCommitment>>, Vec<FriCommitment>)
+) -> (Vec<FriMerkleTree<F>>, Vec<FriCommitment>)
 where
     F: IsFFTField,
     FieldElement<F>: ByteConversion,
 {
-    let trees: Vec<_> = vectors
-        .iter()
-        .map(|col| MerkleTree::build(col, FriHasher::new()))
-        .collect();
+    let trees: Vec<_> = vectors.iter().map(|col| MerkleTree::<FieldElementBackend<F>>::build(col)).collect();
 
     let roots = trees.iter().map(|tree| tree.root.clone()).collect();
     (trees, roots)
@@ -121,7 +125,7 @@ fn interpolate_and_commit<T, F>(
 ) -> (
     Vec<Polynomial<FieldElement<F>>>,
     Vec<Vec<FieldElement<F>>>,
-    Vec<MerkleTree<FriCommitment>>,
+    Vec<FriMerkleTree<F>>,
     Vec<[u8; 32]>,
 )
 where
@@ -380,7 +384,7 @@ where
 /// FRI. This polynomial is a linear combination of the trace polynomial and the
 /// composition polynomial, with coefficients sampled by the verifier (i.e. using Fiat-Shamir).
 #[allow(clippy::too_many_arguments)]
-fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
+fn compute_deep_composition_poly<A, F>(
     air: &A,
     trace_polys: &[Polynomial<FieldElement<F>>],
     round_2_result: &Round2<F>,
@@ -389,7 +393,12 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     primitive_root: &FieldElement<F>,
     composition_poly_gammas: &[FieldElement<F>; 2],
     trace_terms_gammas: &[FieldElement<F>],
-) -> Polynomial<FieldElement<F>> {
+) -> Polynomial<FieldElement<F>>
+where
+    A: AIR,
+    F: IsFFTField,
+    FieldElement<F>: ByteConversion
+{
     // Compute composition polynomial terms of the deep composition polynomial.
     let x = Polynomial::new_monomial(FieldElement::one(), 1);
     let h_1 = &round_2_result.composition_poly_even;
