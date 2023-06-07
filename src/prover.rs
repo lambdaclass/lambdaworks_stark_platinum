@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use super::{
     air::{constraints::evaluator::ConstraintEvaluator, frame::Frame, trace::TraceTable},
     fri::fri_commit_phase,
@@ -6,7 +8,7 @@ use super::{
 use crate::{
     air::traits::AIR,
     batch_sample_challenges,
-    fri::{fri_decommit::FriDecommitment, fri_query_phase, HASHER},
+    fri::{fri_decommit::FriDecommitment, fri_query_phase, FriCommitment, FriHasher},
     proof::{DeepPolynomialOpenings, StarkProof},
     transcript_to_field, Domain,
 };
@@ -36,7 +38,7 @@ pub enum ProvingError {
 struct Round1<F: IsFFTField, A: AIR<Field = F>> {
     trace_polys: Vec<Polynomial<FieldElement<F>>>,
     lde_trace: TraceTable<F>,
-    lde_trace_merkle_trees: Vec<MerkleTree>,
+    lde_trace_merkle_trees: Vec<MerkleTree<FriCommitment>>,
     lde_trace_merkle_roots: Vec<[u8; 32]>,
     rap_challenges: A::RAPChallenges,
 }
@@ -44,11 +46,11 @@ struct Round1<F: IsFFTField, A: AIR<Field = F>> {
 struct Round2<F: IsFFTField> {
     composition_poly_even: Polynomial<FieldElement<F>>,
     lde_composition_poly_even_evaluations: Vec<FieldElement<F>>,
-    composition_poly_even_merkle_tree: MerkleTree,
+    composition_poly_even_merkle_tree: MerkleTree<FriCommitment>,
     composition_poly_even_root: [u8; 32],
     composition_poly_odd: Polynomial<FieldElement<F>>,
     lde_composition_poly_odd_evaluations: Vec<FieldElement<F>>,
-    composition_poly_odd_merkle_tree: MerkleTree,
+    composition_poly_odd_merkle_tree: MerkleTree<FriCommitment>,
     composition_poly_odd_root: [u8; 32],
 }
 
@@ -78,14 +80,14 @@ fn round_0_transcript_initialization() -> DefaultTranscript {
 
 fn batch_commit<F>(
     vectors: Vec<&Vec<FieldElement<F>>>,
-) -> (Vec<MerkleTree>, Vec<[u8; 32]>)
+) -> (Vec<MerkleTree<FriCommitment>>, Vec<FriCommitment>)
 where
     F: IsFFTField,
     FieldElement<F>: ByteConversion,
 {
     let trees: Vec<_> = vectors
         .iter()
-        .map(|col| MerkleTree::build(col, HASHER))
+        .map(|col| MerkleTree::build(col, FriHasher::new()))
         .collect();
 
     let roots = trees.iter().map(|tree| tree.root.clone()).collect();
@@ -119,7 +121,7 @@ fn interpolate_and_commit<T, F>(
 ) -> (
     Vec<Polynomial<FieldElement<F>>>,
     Vec<Vec<FieldElement<F>>>,
-    Vec<MerkleTree>,
+    Vec<MerkleTree<FriCommitment>>,
     Vec<[u8; 32]>,
 )
 where

@@ -3,7 +3,7 @@ use lambdaworks_math::{
     traits::ByteConversion,
 };
 
-use super::HASHER;
+use super::FriHasher;
 pub use super::{FriMerkleTree, Polynomial};
 
 #[derive(Clone)]
@@ -21,7 +21,7 @@ where
 {
     pub fn new(poly: Polynomial<FieldElement<F>>, domain: &[FieldElement<F>]) -> Self {
         let evaluation = poly.evaluate_slice(domain);
-        let merkle_tree = FriMerkleTree::build(&evaluation, HASHER);
+        let merkle_tree = FriMerkleTree::build(&evaluation, FriHasher::new());
 
         Self {
             poly,

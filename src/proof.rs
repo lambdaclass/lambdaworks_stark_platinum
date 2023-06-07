@@ -1,15 +1,15 @@
 use lambdaworks_crypto::merkle_tree::proof::Proof;
 use lambdaworks_math::field::{element::FieldElement, traits::IsFFTField};
 
-use crate::{air::frame::Frame, fri::fri_decommit::FriDecommitment};
+use crate::{air::frame::Frame, fri::{fri_decommit::FriDecommitment, FriCommitment}};
 
 #[derive(Debug, Clone)]
 pub struct DeepPolynomialOpenings<F: IsFFTField> {
-    pub lde_composition_poly_even_proof: Proof,
+    pub lde_composition_poly_even_proof: Proof<FriCommitment>,
     pub lde_composition_poly_even_evaluation: FieldElement<F>,
-    pub lde_composition_poly_odd_proof: Proof,
+    pub lde_composition_poly_odd_proof: Proof<FriCommitment>,
     pub lde_composition_poly_odd_evaluation: FieldElement<F>,
-    pub lde_trace_merkle_proofs: Vec<Proof>,
+    pub lde_trace_merkle_proofs: Vec<Proof<FriCommitment>>,
     pub lde_trace_evaluations: Vec<FieldElement<F>>,
 }
 

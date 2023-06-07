@@ -3,8 +3,8 @@ use super::{
     sample_z_ood,
 };
 use crate::{
-    air::traits::AIR, batch_sample_challenges, fri::HASHER, proof::StarkProof, transcript_to_field,
-    transcript_to_usize, Domain,
+    air::traits::AIR, batch_sample_challenges, proof::StarkProof, transcript_to_field,
+    transcript_to_usize, Domain, fri::FriHasher,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -326,6 +326,7 @@ where
 
     let iota_0 = challenges.iotas[0];
 
+    let hasher = FriHasher::new();
     // Verify opening Open(H₁(D_LDE, 𝜐₀)
     result &= proof
         .deep_poly_openings
@@ -335,8 +336,8 @@ where
             iota_0,
             &proof
                 .deep_poly_openings
-                .lde_composition_poly_even_evaluation.to_bytes_be(),
-            &HASHER,
+                .lde_composition_poly_even_evaluation,
+            &hasher
         );
 
     // Verify opening Open(H₂(D_LDE, 𝜐₀),
@@ -346,8 +347,8 @@ where
         .verify(
             &proof.composition_poly_odd_root,
             iota_0,
-            &proof.deep_poly_openings.lde_composition_poly_odd_evaluation.to_bytes_be(),
-            &HASHER,
+            &proof.deep_poly_openings.lde_composition_poly_odd_evaluation,
+            &hasher
         );
 
     // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
@@ -357,7 +358,7 @@ where
         .zip(&proof.deep_poly_openings.lde_trace_merkle_proofs)
         .zip(&proof.deep_poly_openings.lde_trace_evaluations)
     {
-        result &= merkle_proof.verify(merkle_root, iota_0, &evaluation.to_bytes_be(), &HASHER);
+        result &= merkle_proof.verify(merkle_root, iota_0, evaluation, &hasher);
     }
 
     // DEEP consistency check
@@ -386,8 +387,8 @@ where
     if !fri_decommitment.first_layer_auth_path.verify(
         &fri_layers_merkle_roots[0],
         iota,
-        &fri_decommitment.first_layer_evaluation.to_bytes_be(),
-        &HASHER,
+        &fri_decommitment.first_layer_evaluation,
+        &FriHasher::new()
     ) {
         return false;
     }
@@ -433,8 +434,8 @@ where
         if !auth_path.verify(
             merkle_root,
             layer_evaluation_index_sym,
-            &evaluation_sym.to_bytes_be(),
-            &HASHER,
+            evaluation_sym,
+            &FriHasher::new(),
         ) {
             return false;
         }
