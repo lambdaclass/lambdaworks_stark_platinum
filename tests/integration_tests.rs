@@ -144,8 +144,7 @@ fn test_prove_cairo_program(file_path: &str) {
         coset_offset: 3,
     };
 
-    // This should be auto calculated
-    let padded_trace_length = memory.len().next_power_of_two();
+    let padded_trace_length = register_states.steps().next_power_of_two();
 
     let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
 
