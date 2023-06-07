@@ -63,42 +63,4 @@ mod tests {
         assert_eq!(p3, Polynomial::new(&[FE::new(143)]));
         assert_eq!(p3.degree(), 0);
     }
-
-    /*
-    #[test]
-    fn text_next_fri_layer() {
-        let p0 = Polynomial::new(&[
-            FE::new(3),
-            FE::new(1),
-            FE::new(2),
-            FE::new(7),
-            FE::new(3),
-            FE::new(5),
-        ]);
-        let beta = FE::new(4);
-        let input_domain = [
-            FE::new(5),
-            FE::new(7),
-            FE::new(13),
-            FE::new(20),
-            FE::new(1),
-            FE::new(1),
-            FE::new(1),
-            FE::new(1),
-        ];
-
-        let next_poly = fold_polynomial(&p0, &beta);
-        let next_domain = next_domain(&input_domain);
-        let layer = FriLayer::new(next_poly, &next_domain);
-
-        assert_eq!(
-            layer.poly,
-            Polynomial::new(&[FE::new(7), FE::new(30), FE::new(23),])
-        );
-        assert_eq!(
-            layer.evaluation,
-            &[FE::new(189), FE::new(151), FE::new(93), FE::new(207),]
-        );
-    }
-    */
 }
