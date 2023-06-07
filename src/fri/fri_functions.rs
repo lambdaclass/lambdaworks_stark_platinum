@@ -28,8 +28,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    //use crate::fri::fri_commitment::FriLayer;
-
     use super::fold_polynomial;
     use lambdaworks_math::field::element::FieldElement;
     use lambdaworks_math::field::fields::u64_prime_field::U64PrimeField;
