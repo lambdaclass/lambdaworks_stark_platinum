@@ -389,7 +389,6 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     trace_terms_gammas: &[FieldElement<F>],
 ) -> Polynomial<FieldElement<F>> {
     // Compute composition polynomial terms of the deep composition polynomial.
-    let x = Polynomial::new_monomial(FieldElement::one(), 1);
     let h_1 = &round_2_result.composition_poly_even;
     let h_1_z2 = &round_3_result.composition_poly_even_ood_evaluation;
     let h_2 = &round_2_result.composition_poly_odd;
@@ -399,10 +398,12 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     let z_squared = z * z;
 
     // 𝛾 ( H₁ − H₁(z²) ) / ( X − z² )
-    let h_1_term = gamma * (h_1 - h_1_z2) / (&x - &z_squared);
+    let mut h_1_term = gamma * (h_1 - h_1_z2);
+    h_1_term.ruffini_division_inplace(&z_squared);
 
     // 𝛾' ( H₂ − H₂(z²) ) / ( X − z² )
-    let h_2_term = gamma_p * (h_2 - h_2_z2) / (&x - z_squared);
+    let mut h_2_term = gamma_p * (h_2 - h_2_z2);
+    h_2_term.ruffini_division_inplace(&z_squared);
 
     // Get trace evaluations needed for the trace terms of the deep composition polynomial
     let transition_offsets = air.context().transition_offsets;
@@ -429,7 +430,8 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
             let t_j_z = evaluations[i].clone();
             // @@@ this can be pre-computed
             let z_shifted = z * primitive_root.pow(*offset);
-            let poly = (t_j - t_j_z) / (&x - z_shifted);
+            let mut poly = t_j - t_j_z;
+            poly.ruffini_division_inplace(&z_shifted);
             trace_terms = trace_terms + poly * elemen_trace_gamma;
         }
     }
