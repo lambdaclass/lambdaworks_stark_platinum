@@ -20,8 +20,12 @@ impl AirContext {
         self.num_transition_constraints
     }
 
-    pub fn transition_degrees(&self) -> Vec<usize> {
-        self.transition_degrees.clone()
+    pub fn transition_degrees(&self) -> &[usize] {
+        &self.transition_degrees
+    }
+
+    pub fn transition_degrees_len(&self) -> usize {
+        self.transition_degrees.len()
     }
 }
 
