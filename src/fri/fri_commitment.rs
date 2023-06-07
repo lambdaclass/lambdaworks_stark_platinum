@@ -34,14 +34,12 @@ where
             .unwrap(); // TODO: return error
 
         let merkle_tree = FriMerkleTree::build(&evaluation, Box::new(HASHER));
-        let coset_offset = coset_offset.square();
-        let domain_size = domain_size / 2;
 
         Self {
             poly,
-            evaluation: evaluation.to_vec(),
+            evaluation,
             merkle_tree,
-            coset_offset,
+            coset_offset: coset_offset.clone(),
             domain_size,
         }
     }
