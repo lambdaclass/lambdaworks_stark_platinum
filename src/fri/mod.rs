@@ -21,17 +21,18 @@ use self::fri_functions::{fold_polynomial, next_domain};
 pub type FriMerkleTree<F> = MerkleTree<F>;
 pub(crate) const HASHER: Sha3Hasher = Sha3Hasher::new();
 
-pub fn fri_commit_phase<F: IsField, T: Transcript>(
+pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     number_layers: usize,
     p_0: Polynomial<FieldElement<F>>,
-    domain_0: &[FieldElement<F>],
     transcript: &mut T,
+    coset_offset: &FieldElement<F>,
+    domain_size: usize,
 ) -> (FieldElement<F>, Vec<FriLayer<F>>)
 where
     FieldElement<F>: ByteConversion,
 {
     let mut fri_layer_list = Vec::with_capacity(number_layers);
-    let mut current_layer = FriLayer::new(p_0, domain_0);
+    let mut current_layer = FriLayer::new(p_0, coset_offset, domain_size);
     fri_layer_list.push(current_layer.clone());
 
     // >>>> Send commitment: [p₀]
