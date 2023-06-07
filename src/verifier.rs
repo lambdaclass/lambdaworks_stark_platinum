@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     air::traits::AIR, batch_sample_challenges, proof::StarkProof, transcript_to_field,
-    transcript_to_usize, Domain, fri::FriMerkleBackend 
+    transcript_to_usize, Domain, fri::FriMerkleBackend, BatchStarkProverBackend 
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -61,20 +61,14 @@ where
     // ==========|   Round 1   |==========
     // ===================================
 
-    let n_trace_cols = air.context().trace_columns;
-
     // <<<< Receive commitments:[tⱼ]
-    let total_columns = proof.lde_trace_merkle_roots.len();
-    let aux_columns = air.number_auxiliary_rap_columns();
-    let main_columns = total_columns - aux_columns;
+    let total_columns = air.context().trace_columns;
 
-    for root in proof.lde_trace_merkle_roots.iter().take(main_columns) {
-        transcript.append(root);
-    }
+    transcript.append(&proof.lde_trace_merkle_roots[0]);
 
     let rap_challenges = air.build_rap_challenges(transcript);
 
-    for root in proof.lde_trace_merkle_roots.iter().skip(main_columns) {
+    if let Some(root) = proof.lde_trace_merkle_roots.get(1) {
         transcript.append(root);
     }
 
@@ -84,9 +78,9 @@ where
 
     // These are the challenges alpha^B_j and beta^B_j
     // >>>> Send challenges: 𝛼_j^B
-    let boundary_coeffs_alphas = batch_sample_challenges(n_trace_cols, transcript);
+    let boundary_coeffs_alphas = batch_sample_challenges(total_columns, transcript);
     // >>>> Send  challenges: 𝛽_j^B
-    let boundary_coeffs_betas = batch_sample_challenges(n_trace_cols, transcript);
+    let boundary_coeffs_betas = batch_sample_challenges(total_columns, transcript);
     // >>>> Send challenges: 𝛼_j^T
     let transition_coeffs_alphas =
         batch_sample_challenges(air.context().num_transition_constraints, transcript);
@@ -104,8 +98,7 @@ where
         .collect();
 
     // <<<< Receive commitments: [H₁], [H₂]
-    transcript.append(&proof.composition_poly_even_root);
-    transcript.append(&proof.composition_poly_odd_root);
+    transcript.append(&proof.composition_poly_root);
 
     // ===================================
     // ==========|   Round 3   |==========
@@ -141,7 +134,7 @@ where
     // Get the number of trace terms the DEEP composition poly will have.
     // One coefficient will be sampled for each of them.
     // TODO: try remove this, call transcript inside for and move gamma declarations
-    let trace_term_coeffs = (0..n_trace_cols)
+    let trace_term_coeffs = (0..total_columns)
         .map(|_| {
             (0..air.context().transition_offsets.len())
                 .map(|_| transcript_to_field(transcript))
@@ -326,26 +319,15 @@ where
 
     let iota_0 = challenges.iotas[0];
 
-    // Verify opening Open(H₁(D_LDE, 𝜐₀)
+    let evaluations = vec![proof.deep_poly_openings.lde_composition_poly_even_evaluation.clone(), proof.deep_poly_openings.lde_composition_poly_odd_evaluation.clone()];
+    // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
     result &= proof
         .deep_poly_openings
-        .lde_composition_poly_even_proof
-        .verify::<FriMerkleBackend<F>>(
-            &proof.composition_poly_even_root,
+        .lde_composition_poly_proof
+        .verify::<BatchStarkProverBackend<F>>(
+            &proof.composition_poly_root,
             iota_0,
-            &proof
-                .deep_poly_openings
-                .lde_composition_poly_even_evaluation,
-        );
-
-    // Verify opening Open(H₂(D_LDE, 𝜐₀),
-    result &= proof
-        .deep_poly_openings
-        .lde_composition_poly_odd_proof
-        .verify::<FriMerkleBackend<F>>(
-            &proof.composition_poly_odd_root,
-            iota_0,
-            &proof.deep_poly_openings.lde_composition_poly_odd_evaluation,
+            &evaluations
         );
 
     // Verify openings Open(tⱼ(D_LDE), 𝜐₀)

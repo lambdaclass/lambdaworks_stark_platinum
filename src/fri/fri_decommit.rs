@@ -3,12 +3,12 @@ use lambdaworks_crypto::merkle_tree::proof::Proof;
 use lambdaworks_math::field::element::FieldElement;
 use lambdaworks_math::field::traits::IsField;
 
-use super::FriCommitment;
+use super::Commitment;
 
 #[derive(Debug, Clone)]
 pub struct FriDecommitment<F: IsField> {
-    pub layers_auth_paths_sym: Vec<Proof<FriCommitment>>,
+    pub layers_auth_paths_sym: Vec<Proof<Commitment>>,
     pub layers_evaluations_sym: Vec<FieldElement<F>>,
     pub first_layer_evaluation: FieldElement<F>,
-    pub first_layer_auth_path: Proof<FriCommitment>,
+    pub first_layer_auth_path: Proof<Commitment>,
 }

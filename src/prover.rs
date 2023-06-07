@@ -6,13 +6,13 @@ use super::{
 use crate::{
     air::traits::AIR,
     batch_sample_challenges,
-    fri::{fri_decommit::FriDecommitment, fri_query_phase, FriCommitment, FriMerkleTree},
+    fri::{fri_decommit::FriDecommitment, fri_query_phase, Commitment, FriMerkleTree},
     proof::{DeepPolynomialOpenings, StarkProof},
-    transcript_to_field, Domain,
+    transcript_to_field, BatchStarkProverBackend, Domain, StarkProverBackend,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::{MerkleTree, FieldElementBackend}};
+use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::MerkleTree};
 
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
@@ -41,7 +41,7 @@ where
 {
     trace_polys: Vec<Polynomial<FieldElement<F>>>,
     lde_trace: TraceTable<F>,
-    lde_trace_merkle_trees: Vec<FriMerkleTree<F>>,
+    lde_trace_merkle_trees: Vec<MerkleTree<BatchStarkProverBackend<F>>>,
     lde_trace_merkle_roots: Vec<[u8; 32]>,
     rap_challenges: A::RAPChallenges,
 }
@@ -53,12 +53,10 @@ where
 {
     composition_poly_even: Polynomial<FieldElement<F>>,
     lde_composition_poly_even_evaluations: Vec<FieldElement<F>>,
-    composition_poly_even_merkle_tree: FriMerkleTree<F>,
-    composition_poly_even_root: [u8; 32],
+    composition_poly_merkle_tree: MerkleTree<BatchStarkProverBackend<F>>,
+    composition_poly_root: Commitment,
     composition_poly_odd: Polynomial<FieldElement<F>>,
     lde_composition_poly_odd_evaluations: Vec<FieldElement<F>>,
-    composition_poly_odd_merkle_tree: FriMerkleTree<F>,
-    composition_poly_odd_root: [u8; 32],
 }
 
 struct Round3<F: IsFFTField> {
@@ -86,16 +84,15 @@ fn round_0_transcript_initialization() -> DefaultTranscript {
 }
 
 fn batch_commit<F>(
-    vectors: Vec<&Vec<FieldElement<F>>>,
-) -> (Vec<FriMerkleTree<F>>, Vec<FriCommitment>)
+    vectors: &[Vec<FieldElement<F>>],
+) -> (MerkleTree<BatchStarkProverBackend<F>>, Commitment)
 where
     F: IsFFTField,
     FieldElement<F>: ByteConversion,
 {
-    let trees: Vec<_> = vectors.iter().map(|col| MerkleTree::<FieldElementBackend<F>>::build(col)).collect();
-
-    let roots = trees.iter().map(|tree| tree.root.clone()).collect();
-    (trees, roots)
+    let tree = MerkleTree::<BatchStarkProverBackend<F>>::build(vectors);
+    let commitment = tree.root;
+    (tree, commitment)
 }
 
 pub fn evaluate_polynomial_on_lde_domain<F>(
@@ -125,8 +122,8 @@ fn interpolate_and_commit<T, F>(
 ) -> (
     Vec<Polynomial<FieldElement<F>>>,
     Vec<Vec<FieldElement<F>>>,
-    Vec<FriMerkleTree<F>>,
-    Vec<[u8; 32]>,
+    MerkleTree<BatchStarkProverBackend<F>>,
+    Commitment,
 )
 where
     T: Transcript,
@@ -151,19 +148,16 @@ where
 
     // Compute commitments [t_j].
     let lde_trace = TraceTable::new_from_cols(&lde_trace_evaluations);
-    let (lde_trace_merkle_trees, lde_trace_merkle_roots) =
-        batch_commit(lde_trace.cols().iter().collect());
+    let (lde_trace_merkle_tree, lde_trace_merkle_root) = batch_commit(&lde_trace.rows());
 
     // >>>> Send commitments: [tⱼ]
-    for root in lde_trace_merkle_roots.iter() {
-        transcript.append(root);
-    }
+    transcript.append(&lde_trace_merkle_root);
 
     (
         trace_polys,
         lde_trace_evaluations,
-        lde_trace_merkle_trees,
-        lde_trace_merkle_roots,
+        lde_trace_merkle_tree,
+        lde_trace_merkle_root,
     )
 }
 
@@ -179,21 +173,23 @@ where
 {
     let main_trace = air.build_main_trace(raw_trace, public_input)?;
 
-    let (mut trace_polys, mut evaluations, mut lde_trace_merkle_trees, mut lde_trace_merkle_roots) =
+    let (mut trace_polys, mut evaluations, mut main_merkle_tree, mut main_merkle_root) =
         interpolate_and_commit(&main_trace, domain, transcript);
 
     let rap_challenges = air.build_rap_challenges(transcript);
 
     let aux_trace = air.build_auxiliary_trace(&main_trace, &rap_challenges, public_input);
 
+    let mut lde_trace_merkle_trees = vec![main_merkle_tree];
+    let mut lde_trace_merkle_roots = vec![main_merkle_root];
     if !aux_trace.is_empty() {
         // Check that this is valid for interpolation
-        let (aux_trace_polys, aux_trace_polys_evaluations, aux_merkle_trees, aux_merkle_roots) =
+        let (aux_trace_polys, aux_trace_polys_evaluations, aux_merkle_tree, aux_merkle_root) =
             interpolate_and_commit(&aux_trace, domain, transcript);
         trace_polys.extend_from_slice(&aux_trace_polys);
         evaluations.extend_from_slice(&aux_trace_polys_evaluations);
-        lde_trace_merkle_trees.extend_from_slice(&aux_merkle_trees);
-        lde_trace_merkle_roots.extend_from_slice(&aux_merkle_roots);
+        lde_trace_merkle_trees.push(aux_merkle_tree);
+        lde_trace_merkle_roots.push(aux_merkle_root);
     }
 
     let lde_trace = TraceTable::new_from_cols(&evaluations);
@@ -256,20 +252,21 @@ where
     )
     .unwrap();
 
-    let (composition_poly_merkle_trees, composition_poly_roots) = batch_commit(vec![
-        &lde_composition_poly_even_evaluations,
-        &lde_composition_poly_odd_evaluations,
-    ]);
+    // TODO: Remove clones
+    let composition_poly_evaluations: Vec<Vec<_>> = lde_composition_poly_even_evaluations
+        .iter()
+        .zip(&lde_composition_poly_odd_evaluations)
+        .map(|(a, b)| vec![a.clone(), b.clone()])
+        .collect();
+    let (composition_poly_merkle_tree, composition_poly_root) = batch_commit(&composition_poly_evaluations);
 
     Round2 {
         composition_poly_even,
         lde_composition_poly_even_evaluations,
-        composition_poly_even_merkle_tree: composition_poly_merkle_trees[0].clone(),
-        composition_poly_even_root: composition_poly_roots[0].clone(),
+        composition_poly_merkle_tree: composition_poly_merkle_tree,
+        composition_poly_root: composition_poly_root,
         composition_poly_odd,
         lde_composition_poly_odd_evaluations,
-        composition_poly_odd_merkle_tree: composition_poly_merkle_trees[1].clone(),
-        composition_poly_odd_root: composition_poly_roots[1].clone(),
     }
 }
 
@@ -397,7 +394,7 @@ fn compute_deep_composition_poly<A, F>(
 where
     A: AIR,
     F: IsFFTField,
-    FieldElement<F>: ByteConversion
+    FieldElement<F>: ByteConversion,
 {
     // Compute composition polynomial terms of the deep composition polynomial.
     let x = Polynomial::new_monomial(FieldElement::one(), 1);
@@ -452,19 +449,16 @@ where
 {
     let index = index_to_open % domain.lde_roots_of_unity_coset.len();
 
-    // H₁ openings
-    let lde_composition_poly_even_proof = round_2_result
-        .composition_poly_even_merkle_tree
+    let lde_composition_poly_proof = round_2_result
+        .composition_poly_merkle_tree
         .get_proof_by_pos(index)
         .unwrap();
+
+    // H₁ openings
     let lde_composition_poly_even_evaluation =
         round_2_result.lde_composition_poly_even_evaluations[index].clone();
 
     // H₂ openings
-    let lde_composition_poly_odd_proof = round_2_result
-        .composition_poly_odd_merkle_tree
-        .get_proof_by_pos(index)
-        .unwrap();
     let lde_composition_poly_odd_evaluation =
         round_2_result.lde_composition_poly_odd_evaluations[index].clone();
 
@@ -477,9 +471,8 @@ where
     let lde_trace_evaluations = round_1_result.lde_trace.get_row(index).to_vec();
 
     DeepPolynomialOpenings {
-        lde_composition_poly_even_proof,
+        lde_composition_poly_proof,
         lde_composition_poly_even_evaluation,
-        lde_composition_poly_odd_proof,
         lde_composition_poly_odd_evaluation,
         lde_trace_merkle_proofs,
         lde_trace_evaluations,
@@ -558,8 +551,7 @@ where
     );
 
     // >>>> Send commitments: [H₁], [H₂]
-    transcript.append(&round_2_result.composition_poly_even_root);
-    transcript.append(&round_2_result.composition_poly_odd_root);
+    transcript.append(&round_2_result.composition_poly_root);
 
     // ===================================
     // ==========|   Round 3   |==========
@@ -624,12 +616,10 @@ where
         lde_trace_merkle_roots: round_1_result.lde_trace_merkle_roots,
         // tⱼ(zgᵏ)
         trace_ood_frame_evaluations: round_3_result.trace_ood_frame_evaluations,
-        // [H₁]
-        composition_poly_even_root: round_2_result.composition_poly_even_root,
+        // [H₁] and [H₂]
+        composition_poly_root: round_2_result.composition_poly_root,
         // H₁(z²)
         composition_poly_even_ood_evaluation: round_3_result.composition_poly_even_ood_evaluation,
-        // [H₂]
-        composition_poly_odd_root: round_2_result.composition_poly_odd_root,
         // H₂(z²)
         composition_poly_odd_ood_evaluation: round_3_result.composition_poly_odd_ood_evaluation,
         // [pₖ]
