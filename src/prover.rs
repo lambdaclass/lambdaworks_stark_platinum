@@ -326,6 +326,9 @@ fn round_4_compute_and_run_fri_on_the_deep_composition_polynomial<
 where
     FieldElement<F>: ByteConversion,
 {
+    let coset_offset_u64 = air.context().options.coset_offset;
+    let coset_offset = FieldElement::<F>::from(coset_offset_u64);
+
     // <<<< Receive challenges: 𝛾, 𝛾'
     let composition_poly_coeffients = [
         transcript_to_field(transcript),
@@ -349,14 +352,17 @@ where
         &trace_poly_coeffients,
     );
 
+    let domain_size = domain.lde_roots_of_unity_coset.len();
+
     // FRI commit and query phases
     let (fri_last_value, fri_layers) = fri_commit_phase(
         domain.root_order as usize,
         deep_composition_poly,
-        &domain.lde_roots_of_unity_coset,
         transcript,
+        &coset_offset,
+        domain_size,
     );
-    let (query_list, iota_0) = fri_query_phase(air, domain, &fri_layers, transcript);
+    let (query_list, iota_0) = fri_query_phase(air, domain_size, &fri_layers, transcript);
 
     let fri_layers_merkle_roots: Vec<_> = fri_layers
         .iter()
