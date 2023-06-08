@@ -145,7 +145,21 @@ pub fn build_cairo_execution_trace(
 
     trace_cols.push(rc_values_dereferenced);
 
-    TraceTable::new_from_cols(&trace_cols)
+    let table = TraceTable::new_from_cols(&trace_cols);
+    println!("ROW 0");
+    table
+        .get_row(0)
+        .iter()
+        .enumerate()
+        .for_each(|(i, cell)| println!("{}: {}", i, cell));
+    println!("ROW 1");
+    table
+        .get_row(1)
+        .iter()
+        .enumerate()
+        .for_each(|(i, cell)| println!("{}: {}", i, cell));
+
+    table
 }
 
 /// Returns the vector of res values.
@@ -405,10 +419,12 @@ mod test {
 
     #[test]
     fn test_rc_decompose() {
-        let fifteen = FE::from_hex("000F000F000F000F000F000F000F000F000F").unwrap();
-        let sixteen = FE::from_hex("001000100010001000100010001000100010").unwrap();
+        let fifteen = FE::from_hex("000F000F000F000F000F000F000F000F").unwrap();
+        let sixteen = FE::from_hex("00100010001000100010001000100010").unwrap();
+        let one_two_three = FE::from_hex("00010002000300040005000600070008").unwrap();
 
-        let decomposition_columns = decompose_rc_values_into_trace_columns(&[&fifteen, &sixteen]);
+        let decomposition_columns =
+            decompose_rc_values_into_trace_columns(&[&fifteen, &sixteen, &one_two_three]);
 
         for i in 0..8 {
             assert_eq!(decomposition_columns[i][0], FE::from_hex("F").unwrap());
@@ -417,6 +433,15 @@ mod test {
         for i in 0..8 {
             assert_eq!(decomposition_columns[i][1], FE::from_hex("10").unwrap());
         }
+
+        assert_eq!(decomposition_columns[0][2], FE::from_hex("8").unwrap());
+        assert_eq!(decomposition_columns[1][2], FE::from_hex("7").unwrap());
+        assert_eq!(decomposition_columns[2][2], FE::from_hex("6").unwrap());
+        assert_eq!(decomposition_columns[3][2], FE::from_hex("5").unwrap());
+        assert_eq!(decomposition_columns[4][2], FE::from_hex("4").unwrap());
+        assert_eq!(decomposition_columns[5][2], FE::from_hex("3").unwrap());
+        assert_eq!(decomposition_columns[6][2], FE::from_hex("2").unwrap());
+        assert_eq!(decomposition_columns[7][2], FE::from_hex("1").unwrap());
     }
 
     // #[test]

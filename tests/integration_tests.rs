@@ -139,14 +139,6 @@ fn test_prove_cairo_program(file_path: &str) {
     let (register_states, memory, program_size) =
         run_program(None, CairoLayout::Small, file_path).unwrap();
 
-    memory
-        .data
-        .keys()
-        .sorted()
-        .for_each(|addr| println!("{} {}", &addr, memory.get(&addr).unwrap_or(&(-FE::one()))));
-
-    dbg!(register_states.steps());
-
     let proof_options = ProofOptions {
         blowup_factor: 4,
         fri_number_of_queries: 3,

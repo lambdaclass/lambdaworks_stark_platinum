@@ -104,21 +104,21 @@ pub const FRAME_T1: usize = 31;
 pub const FRAME_MUL: usize = 32;
 pub const FRAME_SELECTOR: usize = 33;
 
-// Auxiliary range check columns
-pub const RANGE_CHECK_COL_1: usize = 34;
-pub const RANGE_CHECK_COL_2: usize = 35;
-pub const RANGE_CHECK_COL_3: usize = 36;
-
 // Range-check frame identifiers
-pub const RC_0: usize = 37;
-pub const RC_1: usize = 38;
-pub const RC_2: usize = 39;
-pub const RC_3: usize = 40;
-pub const RC_4: usize = 41;
-pub const RC_5: usize = 42;
-pub const RC_6: usize = 43;
-pub const RC_7: usize = 44;
-pub const RC_VALUE: usize = 45;
+pub const RC_0: usize = 34;
+pub const RC_1: usize = 35;
+pub const RC_2: usize = 36;
+pub const RC_3: usize = 37;
+pub const RC_4: usize = 38;
+pub const RC_5: usize = 39;
+pub const RC_6: usize = 40;
+pub const RC_7: usize = 41;
+pub const RC_VALUE: usize = 42;
+
+// Auxiliary range check columns
+pub const RANGE_CHECK_COL_1: usize = 43;
+pub const RANGE_CHECK_COL_2: usize = 44;
+pub const RANGE_CHECK_COL_3: usize = 45;
 
 // Auxiliary memory columns
 pub const MEMORY_ADDR_SORTED_0: usize = 46;

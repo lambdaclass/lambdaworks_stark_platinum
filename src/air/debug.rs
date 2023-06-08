@@ -71,12 +71,14 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
             // And eval is not zero
             if step < exemption_steps[i] && eval != &FieldElement::<F>::zero() {
                 ret = false;
-                error!(
-                    "Inconsistent evaluation of transition {} in step {} - expected 0, got {}",
-                    i,
-                    step,
-                    eval.representative()
-                );
+                if i == 49 {
+                    error!(
+                        "Inconsistent evaluation of transition {} in step {} - expected 0, got {}",
+                        i,
+                        step,
+                        eval.representative()
+                    );
+                }
             }
         })
     }
