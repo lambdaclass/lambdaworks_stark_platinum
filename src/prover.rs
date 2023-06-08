@@ -60,7 +60,7 @@ where
 }
 
 struct Round3<F: IsFFTField> {
-    trace_ood_frame_evaluations: Frame<F>,
+    trace_ood_evaluations: Vec<Vec<FieldElement<F>>>,
     composition_poly_even_ood_evaluation: FieldElement<F>,
     composition_poly_odd_ood_evaluation: FieldElement<F>,
 }
@@ -296,19 +296,15 @@ where
     //
     // In the fibonacci example, the ood frame is simply the evaluations `[t(z), t(z * g), t(z * g^2)]`, where `t` is the trace
     // polynomial and `g` is the primitive root of unity used when interpolating `t`.
-    let ood_trace_evaluations = Frame::get_trace_evaluations(
+    let trace_ood_evaluations = Frame::get_trace_evaluations(
         &round_1_result.trace_polys,
         z,
         &air.context().transition_offsets,
         &domain.trace_primitive_root,
     );
-    let trace_ood_frame_evaluations = Frame::new(
-        ood_trace_evaluations.into_iter().flatten().collect(),
-        round_1_result.trace_polys.len(),
-    );
 
     Round3 {
-        trace_ood_frame_evaluations,
+        trace_ood_evaluations,
         composition_poly_even_ood_evaluation,
         composition_poly_odd_ood_evaluation,
     }
@@ -422,8 +418,7 @@ where
 
     // Get trace evaluations needed for the trace terms of the deep composition polynomial
     let transition_offsets = air.context().transition_offsets;
-    let trace_frame_evaluations =
-        Frame::get_trace_evaluations(trace_polys, z, &transition_offsets, primitive_root);
+    let trace_frame_evaluations = &round_3_result.trace_ood_evaluations;
 
     // Compute the sum of all the trace terms of the deep composition polynomial.
     // There is one term for every trace polynomial and for every row in the frame.
@@ -603,8 +598,8 @@ where
             .to_bytes_be(),
     );
     // >>>> Send values: tⱼ(zgᵏ)
-    for i in 0..round_3_result.trace_ood_frame_evaluations.num_rows() {
-        for element in round_3_result.trace_ood_frame_evaluations.get_row(i).iter() {
+    for row in round_3_result.trace_ood_evaluations.iter() {
+        for element in row.iter() {
             transcript.append(&element.to_bytes_be());
         }
     }
@@ -628,11 +623,20 @@ where
 
     info!("End proof generation");
 
+    let trace_ood_frame_evaluations = Frame::new(
+        round_3_result
+            .trace_ood_evaluations
+            .into_iter()
+            .flatten()
+            .collect(),
+        round_1_result.trace_polys.len(),
+    );
+
     Ok(StarkProof {
         // [tⱼ]
         lde_trace_merkle_roots: round_1_result.lde_trace_merkle_roots,
         // tⱼ(zgᵏ)
-        trace_ood_frame_evaluations: round_3_result.trace_ood_frame_evaluations,
+        trace_ood_frame_evaluations,
         // [H₁] and [H₂]
         composition_poly_root: round_2_result.composition_poly_root,
         // H₁(z²)
