@@ -65,8 +65,10 @@ pub trait AIR: Clone {
         let x_n = Polynomial::new_monomial(FieldElement::one(), trace_length);
         let x = Polynomial::new_monomial(FieldElement::one(), 1);
 
-        (0..self.context().num_transition_constraints)
-            .map(|transition_idx| self.context().transition_exemptions[transition_idx])
+        self.context()
+            .transition_exemptions
+            .iter()
+            .take(self.context().num_transition_constraints)
             .map(|cant_take| {
                 // X^(trace_length) - 1
                 let roots_of_unity_vanishing_polynomial = &x_n - FieldElement::one();
@@ -75,7 +77,7 @@ pub trait AIR: Clone {
                     .iter()
                     .take(root_of_unity_len)
                     .rev()
-                    .take(cant_take)
+                    .take(*cant_take)
                     .fold(
                         Polynomial::new_monomial(FieldElement::one(), 0),
                         |acc, root| acc * (&x - root),
