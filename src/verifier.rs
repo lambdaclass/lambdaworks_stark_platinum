@@ -3,8 +3,8 @@ use super::{
     sample_z_ood,
 };
 use crate::{
-    air::traits::AIR, batch_sample_challenges, proof::StarkProof, transcript_to_field,
-    transcript_to_usize, Domain, fri::FriMerkleBackend, BatchStarkProverBackend 
+    air::traits::AIR, batch_sample_challenges, fri::FriMerkleBackend, proof::StarkProof,
+    transcript_to_field, transcript_to_usize, BatchStarkProverBackend, Domain,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -319,25 +319,34 @@ where
 
     let iota_0 = challenges.iotas[0];
 
-    let evaluations = vec![proof.deep_poly_openings.lde_composition_poly_even_evaluation.clone(), proof.deep_poly_openings.lde_composition_poly_odd_evaluation.clone()];
+    let evaluations = vec![
+        proof
+            .deep_poly_openings
+            .lde_composition_poly_even_evaluation
+            .clone(),
+        proof
+            .deep_poly_openings
+            .lde_composition_poly_odd_evaluation
+            .clone(),
+    ];
     // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
     result &= proof
         .deep_poly_openings
         .lde_composition_poly_proof
-        .verify::<BatchStarkProverBackend<F>>(
-            &proof.composition_poly_root,
-            iota_0,
-            &evaluations
-        );
+        .verify::<BatchStarkProverBackend<F>>(&proof.composition_poly_root, iota_0, &evaluations);
 
+    let lde_trace_evaluations = vec![
+        proof.deep_poly_openings.lde_trace_evaluations[..34].to_vec(),
+        proof.deep_poly_openings.lde_trace_evaluations[34..].to_vec(),
+    ];
     // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
     for ((merkle_root, merkle_proof), evaluation) in proof
         .lde_trace_merkle_roots
         .iter()
         .zip(&proof.deep_poly_openings.lde_trace_merkle_proofs)
-        .zip(&proof.deep_poly_openings.lde_trace_evaluations)
+        .zip(lde_trace_evaluations)
     {
-        result &= merkle_proof.verify::<FriMerkleBackend<F>>(merkle_root, iota_0, evaluation);
+        result &= merkle_proof.verify::<BatchStarkProverBackend<F>>(merkle_root, iota_0, &evaluation);
     }
 
     // DEEP consistency check
@@ -363,11 +372,14 @@ where
     FieldElement<F>: ByteConversion,
 {
     // Verify opening Open(p₀(D₀), 𝜐ₛ)
-    if !fri_decommitment.first_layer_auth_path.verify::<FriMerkleBackend<F>>(
-        &fri_layers_merkle_roots[0],
-        iota,
-        &fri_decommitment.first_layer_evaluation,
-    ) {
+    if !fri_decommitment
+        .first_layer_auth_path
+        .verify::<FriMerkleBackend<F>>(
+            &fri_layers_merkle_roots[0],
+            iota,
+            &fri_decommitment.first_layer_evaluation,
+        )
+    {
         return false;
     }
 
