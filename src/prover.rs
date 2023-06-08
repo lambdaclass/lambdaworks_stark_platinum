@@ -366,7 +366,7 @@ where
 
     let fri_layers_merkle_roots: Vec<_> = fri_layers
         .iter()
-        .map(|layer| layer.merkle_tree.root.clone())
+        .map(|layer| layer.merkle_tree.root)
         .collect();
 
     let deep_poly_openings =

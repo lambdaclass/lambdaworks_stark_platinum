@@ -3,7 +3,10 @@ use super::{
     sample_z_ood,
 };
 use crate::{
-    air::traits::AIR, batch_sample_challenges, fri::{FriMerkleBackend, Commitment}, proof::StarkProof,
+    air::traits::AIR,
+    batch_sample_challenges,
+    fri::{Commitment, FriMerkleBackend},
+    proof::StarkProof,
     transcript_to_field, transcript_to_usize, BatchStarkProverBackend, Domain,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
@@ -345,7 +348,8 @@ where
         .zip(&proof.deep_poly_openings.lde_trace_merkle_proofs)
         .zip(lde_trace_evaluations)
     {
-        result &= merkle_proof.verify::<BatchStarkProverBackend<F>>(merkle_root, iota_0, &evaluation);
+        result &=
+            merkle_proof.verify::<BatchStarkProverBackend<F>>(merkle_root, iota_0, &evaluation);
     }
 
     // DEEP consistency check

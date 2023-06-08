@@ -9,13 +9,18 @@ pub mod verifier;
 use std::marker::PhantomData;
 
 use air::traits::AIR;
-use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::traits::IsMerkleTreeBackend};
+use lambdaworks_crypto::{
+    fiat_shamir::transcript::Transcript, merkle_tree::traits::IsMerkleTreeBackend,
+};
 use lambdaworks_fft::roots_of_unity::get_powers_of_primitive_root_coset;
-use lambdaworks_math::{field::{
-    element::FieldElement,
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-    traits::{IsFFTField, IsField},
-}, traits::ByteConversion};
+use lambdaworks_math::{
+    field::{
+        element::FieldElement,
+        fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+        traits::{IsFFTField, IsField},
+    },
+    traits::ByteConversion,
+};
 use sha3::{Digest, Sha3_256};
 
 pub struct ProofConfig {
@@ -189,4 +194,3 @@ where
         result_hash
     }
 }
-

@@ -13,7 +13,7 @@ use lambdaworks_fft::polynomial::FFTPoly;
 pub struct FriLayer<F>
 where
     F: IsField,
-    FieldElement<F>: ByteConversion
+    FieldElement<F>: ByteConversion,
 {
     pub poly: Polynomial<FieldElement<F>>,
     pub evaluation: Vec<FieldElement<F>>,
