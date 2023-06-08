@@ -53,7 +53,7 @@ struct Round2<F: IsFFTField> {
 }
 
 struct Round3<F: IsFFTField> {
-    trace_ood_frame_evaluations: Vec<Vec<FieldElement<F>>>,
+    trace_ood_evaluations: Vec<Vec<FieldElement<F>>>,
     composition_poly_even_ood_evaluation: FieldElement<F>,
     composition_poly_odd_ood_evaluation: FieldElement<F>,
 }
@@ -292,7 +292,7 @@ where
     //
     // In the fibonacci example, the ood frame is simply the evaluations `[t(z), t(z * g), t(z * g^2)]`, where `t` is the trace
     // polynomial and `g` is the primitive root of unity used when interpolating `t`.
-    let ood_trace_evaluations = Frame::get_trace_evaluations(
+    let trace_ood_evaluations = Frame::get_trace_evaluations(
         &round_1_result.trace_polys,
         z,
         &air.context().transition_offsets,
@@ -300,7 +300,7 @@ where
     );
 
     Round3 {
-        trace_ood_frame_evaluations: ood_trace_evaluations,
+        trace_ood_evaluations,
         composition_poly_even_ood_evaluation,
         composition_poly_odd_ood_evaluation,
     }
@@ -409,7 +409,7 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
 
     // Get trace evaluations needed for the trace terms of the deep composition polynomial
     let transition_offsets = air.context().transition_offsets;
-    let trace_frame_evaluations = &round_3_result.trace_ood_frame_evaluations;
+    let trace_frame_evaluations = &round_3_result.trace_ood_evaluations;
 
     // Compute the sum of all the trace terms of the deep composition polynomial.
     // There is one term for every trace polynomial and for every row in the frame.
@@ -593,7 +593,7 @@ where
             .to_bytes_be(),
     );
     // >>>> Send values: tⱼ(zgᵏ)
-    for row in round_3_result.trace_ood_frame_evaluations.iter() {
+    for row in round_3_result.trace_ood_evaluations.iter() {
         for element in row.iter() {
             transcript.append(&element.to_bytes_be());
         }
@@ -620,7 +620,7 @@ where
 
     let trace_ood_frame_evaluations = Frame::new(
         round_3_result
-            .trace_ood_frame_evaluations
+            .trace_ood_evaluations
             .into_iter()
             .flatten()
             .collect(),
