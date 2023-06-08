@@ -280,7 +280,7 @@ fn round_3_evaluate_polynomials_in_out_of_domain_element<F: IsFFTField, A: AIR<F
 where
     FieldElement<F>: ByteConversion,
 {
-    let z_squared = z * z;
+    let z_squared = z.square();
 
     // Evaluate H_1 and H_2 in z^2.
     let composition_poly_even_ood_evaluation =
@@ -329,6 +329,9 @@ fn round_4_compute_and_run_fri_on_the_deep_composition_polynomial<
 where
     FieldElement<F>: ByteConversion,
 {
+    let coset_offset_u64 = air.context().options.coset_offset;
+    let coset_offset = FieldElement::<F>::from(coset_offset_u64);
+
     // <<<< Receive challenges: 𝛾, 𝛾'
     let composition_poly_coeffients = [
         transcript_to_field(transcript),
@@ -352,14 +355,17 @@ where
         &trace_poly_coeffients,
     );
 
+    let domain_size = domain.lde_roots_of_unity_coset.len();
+
     // FRI commit and query phases
     let (fri_last_value, fri_layers) = fri_commit_phase(
         domain.root_order as usize,
         deep_composition_poly,
-        &domain.lde_roots_of_unity_coset,
         transcript,
+        &coset_offset,
+        domain_size,
     );
-    let (query_list, iota_0) = fri_query_phase(air, domain, &fri_layers, transcript);
+    let (query_list, iota_0) = fri_query_phase(air, domain_size, &fri_layers, transcript);
 
     let fri_layers_merkle_roots: Vec<_> = fri_layers
         .iter()
@@ -397,20 +403,21 @@ where
     FieldElement<F>: ByteConversion,
 {
     // Compute composition polynomial terms of the deep composition polynomial.
-    let x = Polynomial::new_monomial(FieldElement::one(), 1);
     let h_1 = &round_2_result.composition_poly_even;
     let h_1_z2 = &round_3_result.composition_poly_even_ood_evaluation;
     let h_2 = &round_2_result.composition_poly_odd;
     let h_2_z2 = &round_3_result.composition_poly_odd_ood_evaluation;
     let gamma = &composition_poly_gammas[0];
     let gamma_p = &composition_poly_gammas[1];
-    let z_squared = z * z;
+    let z_squared = z.square();
 
     // 𝛾 ( H₁ − H₁(z²) ) / ( X − z² )
-    let h_1_term = gamma * (h_1 - h_1_z2) / (&x - &z_squared);
+    let mut h_1_term = gamma * (h_1 - h_1_z2);
+    h_1_term.ruffini_division_inplace(&z_squared);
 
     // 𝛾' ( H₂ − H₂(z²) ) / ( X − z² )
-    let h_2_term = gamma_p * (h_2 - h_2_z2) / (&x - z_squared);
+    let mut h_2_term = gamma_p * (h_2 - h_2_z2);
+    h_2_term.ruffini_division_inplace(&z_squared);
 
     // Get trace evaluations needed for the trace terms of the deep composition polynomial
     let transition_offsets = air.context().transition_offsets;
@@ -420,18 +427,26 @@ where
     // Compute the sum of all the trace terms of the deep composition polynomial.
     // There is one term for every trace polynomial and for every row in the frame.
     // ∑ ⱼₖ [ 𝛾ₖ ( tⱼ − tⱼ(z) ) / ( X − zgᵏ )]
+
+    // @@@ this could be const
     let mut trace_terms = Polynomial::zero();
     for (i, t_j) in trace_polys.iter().enumerate() {
-        for (j, (evaluations, offset)) in trace_frame_evaluations
+        let i_times_trace_frame_evaluation = i * trace_frame_evaluations.len();
+        let iter_trace_gammas = trace_terms_gammas
+            .iter()
+            .skip(i_times_trace_frame_evaluation);
+        for ((evaluations, offset), elemen_trace_gamma) in trace_frame_evaluations
             .iter()
             .zip(&transition_offsets)
-            .enumerate()
+            .zip(iter_trace_gammas)
         {
+            // @@@ we can avoid this clone
             let t_j_z = evaluations[i].clone();
+            // @@@ this can be pre-computed
             let z_shifted = z * primitive_root.pow(*offset);
-            let poly = (t_j - t_j_z) / (&x - z_shifted);
-            trace_terms =
-                trace_terms + poly * &trace_terms_gammas[i * trace_frame_evaluations.len() + j];
+            let mut poly = t_j - t_j_z;
+            poly.ruffini_division_inplace(&z_shifted);
+            trace_terms = trace_terms + poly * elemen_trace_gamma;
         }
     }
 

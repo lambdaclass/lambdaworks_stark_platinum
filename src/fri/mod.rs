@@ -3,7 +3,7 @@ pub mod fri_decommit;
 mod fri_functions;
 use crate::air::traits::AIR;
 use crate::fri::fri_commitment::FriLayer;
-use crate::{transcript_to_field, transcript_to_usize, Domain, StarkProverBackend};
+use crate::{transcript_to_field, transcript_to_usize, StarkProverBackend};
 
 pub use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 pub use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
@@ -15,40 +15,47 @@ pub use lambdaworks_math::{
 };
 
 use self::fri_decommit::FriDecommitment;
-use self::fri_functions::{fold_polynomial, next_domain};
+use self::fri_functions::fold_polynomial;
 
 pub type Commitment = [u8; 32];
 pub type FriMerkleBackend<F> = StarkProverBackend<F>;
 pub type FriMerkleTree<F> = MerkleTree<StarkProverBackend<F>>;
 
-pub fn fri_commit_phase<F: IsField, T: Transcript>(
+pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     number_layers: usize,
     p_0: Polynomial<FieldElement<F>>,
-    domain_0: &[FieldElement<F>],
     transcript: &mut T,
+    coset_offset: &FieldElement<F>,
+    domain_size: usize,
 ) -> (FieldElement<F>, Vec<FriLayer<F>>)
 where
     FieldElement<F>: ByteConversion,
 {
+    let mut domain_size = domain_size;
+
     let mut fri_layer_list = Vec::with_capacity(number_layers);
-    let mut current_layer = FriLayer::new(p_0, domain_0);
+    let mut current_layer = FriLayer::new(p_0, coset_offset, domain_size);
     fri_layer_list.push(current_layer.clone());
 
     // >>>> Send commitment: [p₀]
     transcript.append(&current_layer.merkle_tree.root);
 
+    let mut coset_offset = coset_offset.clone();
+
     for _ in 1..number_layers {
         // <<<< Receive challenge 𝜁ₖ₋₁
         let zeta = transcript_to_field(transcript);
+        coset_offset = coset_offset.square();
+        domain_size /= 2;
 
         // Compute layer polynomial and domain
         let next_poly = fold_polynomial(&current_layer.poly, &zeta);
-        let next_domain = next_domain(&current_layer.domain);
-        current_layer = FriLayer::new(next_poly, &next_domain);
-        fri_layer_list.push(current_layer.clone());
+        current_layer = FriLayer::new(next_poly, &coset_offset, domain_size);
+        let new_data = &current_layer.merkle_tree.root;
+        fri_layer_list.push(current_layer.clone()); // TODO: remove this clone
 
         // >>>> Send commitment: [pₖ]
-        transcript.append(&current_layer.merkle_tree.root);
+        transcript.append(new_data);
     }
 
     // <<<< Receive challenge: 𝜁ₙ₋₁
@@ -70,7 +77,7 @@ where
 
 pub fn fri_query_phase<F: IsFFTField, A: AIR<Field = F>, T: Transcript>(
     air: &A,
-    domain: &Domain<F>,
+    domain_size: usize,
     fri_layers: &Vec<FriLayer<F>>,
     transcript: &mut T,
 ) -> (Vec<FriDecommitment<F>>, usize)
@@ -83,7 +90,7 @@ where
         let query_list = (0..number_of_queries)
             .map(|_| {
                 // <<<< Receive challenge 𝜄ₛ (iota_s)
-                let iota_s = transcript_to_usize(transcript) % 2_usize.pow(domain.lde_root_order);
+                let iota_s = transcript_to_usize(transcript) % domain_size;
 
                 let first_layer_evaluation = first_layer.evaluation[iota_s].clone();
                 let first_layer_auth_path =
@@ -94,7 +101,7 @@ where
 
                 for layer in fri_layers {
                     // symmetric element
-                    let index_sym = (iota_s + layer.domain.len() / 2) % layer.domain.len();
+                    let index_sym = (iota_s + layer.domain_size / 2) % layer.domain_size;
                     let evaluation_sym = layer.evaluation[index_sym].clone();
                     let auth_path_sym = layer.merkle_tree.get_proof_by_pos(index_sym).unwrap();
                     layers_auth_paths_sym.push(auth_path_sym);
