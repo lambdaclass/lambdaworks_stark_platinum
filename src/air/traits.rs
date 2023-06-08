@@ -87,10 +87,10 @@ pub trait AIR: Clone {
             })
             .collect()
     }
-    fn context(&self) -> AirContext;
+    fn context(&self) -> &AirContext;
 
-    fn options(&self) -> ProofOptions {
-        self.context().options
+    fn options(&self) -> &ProofOptions {
+        &self.context().options
     }
 
     fn blowup_factor(&self) -> u8 {
