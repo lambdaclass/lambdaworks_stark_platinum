@@ -210,7 +210,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     for trace_idx in 0..n_trace_cols {
         let trace_evaluation = &proof.trace_ood_frame_evaluations.get_row(0)[trace_idx];
-        let boundary_constraints_domain = boundary_constraint_domains[trace_idx].clone();
+        let boundary_constraints_domain = &boundary_constraint_domains[trace_idx];
         let boundary_interpolating_polynomial =
             &Polynomial::interpolate(&boundary_constraints_domain, &values[trace_idx])
                 .expect("xs and ys have equal length and xs are unique");
