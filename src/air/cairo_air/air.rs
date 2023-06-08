@@ -420,12 +420,7 @@ impl AIR for CairoAIR {
         raw_trace: &Self::RawTrace,
         public_input: &mut Self::PublicInput,
     ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        let mut main_trace = build_cairo_execution_trace(
-            &raw_trace.0,
-            &raw_trace.1,
-            &public_input,
-            self.context().trace_length,
-        );
+        let mut main_trace = build_cairo_execution_trace(&raw_trace.0, &raw_trace.1, &public_input);
 
         pad_with_last_row(
             &mut main_trace,

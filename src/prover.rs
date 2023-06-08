@@ -19,10 +19,7 @@ use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
 
 use lambdaworks_fft::{errors::FFTError, polynomial::FFTPoly};
 use lambdaworks_math::{
-    field::{
-        element::FieldElement,
-        traits::{IsFFTField, IsPrimeField},
-    },
+    field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
     traits::ByteConversion,
 };

@@ -11,9 +11,8 @@ use crate::{
     cairo_vm::{instruction_flags::CairoInstructionFlags, instruction_offsets::InstructionOffsets},
     FE,
 };
-use lambdaworks_fft::polynomial::FFTPoly;
 use lambdaworks_math::{
-    field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, polynomial::Polynomial,
+    field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
     unsigned_integer::element::UnsignedInteger,
 };
 
@@ -39,7 +38,6 @@ pub fn build_cairo_execution_trace(
     raw_trace: &CairoTrace,
     memory: &CairoMemory,
     public_inputs: &PublicInputs,
-    trace_length: usize,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
 

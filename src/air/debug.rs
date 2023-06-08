@@ -1,9 +1,6 @@
 use lambdaworks_fft::polynomial::FFTPoly;
 use lambdaworks_math::{
-    field::{
-        element::FieldElement,
-        traits::{IsFFTField, IsPrimeField},
-    },
+    field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
 };
 use log::{error, info};
