@@ -3,7 +3,7 @@ use super::{
     sample_z_ood,
 };
 use crate::{
-    air::traits::AIR, batch_sample_challenges, fri::FriMerkleBackend, proof::StarkProof,
+    air::traits::AIR, batch_sample_challenges, fri::{FriMerkleBackend, Commitment}, proof::StarkProof,
     transcript_to_field, transcript_to_usize, BatchStarkProverBackend, Domain,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
@@ -333,11 +333,11 @@ where
         .verify::<BatchStarkProverBackend<F>>(&proof.composition_poly_root, iota_0, &evaluations);
 
     let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
-
     let lde_trace_evaluations = vec![
         proof.deep_poly_openings.lde_trace_evaluations[..num_main_columns].to_vec(),
         proof.deep_poly_openings.lde_trace_evaluations[num_main_columns..].to_vec(),
     ];
+
     // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
     for ((merkle_root, merkle_proof), evaluation) in proof
         .lde_trace_merkle_roots
@@ -360,7 +360,7 @@ where
 
 fn verify_query_and_sym_openings<F: IsField + IsFFTField, A: AIR<Field = F>>(
     air: &A,
-    fri_layers_merkle_roots: &[[u8; 32]],
+    fri_layers_merkle_roots: &[Commitment],
     fri_last_value: &FieldElement<F>,
     zetas: &[FieldElement<F>],
     iota: usize,

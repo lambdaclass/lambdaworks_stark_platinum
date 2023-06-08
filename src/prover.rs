@@ -6,9 +6,9 @@ use super::{
 use crate::{
     air::traits::AIR,
     batch_sample_challenges,
-    fri::{fri_decommit::FriDecommitment, fri_query_phase, Commitment, FriMerkleTree},
+    fri::{fri_decommit::FriDecommitment, fri_query_phase, Commitment},
     proof::{DeepPolynomialOpenings, StarkProof},
-    transcript_to_field, BatchStarkProverBackend, Domain, StarkProverBackend,
+    transcript_to_field, BatchStarkProverBackend, Domain,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -42,7 +42,7 @@ where
     trace_polys: Vec<Polynomial<FieldElement<F>>>,
     lde_trace: TraceTable<F>,
     lde_trace_merkle_trees: Vec<MerkleTree<BatchStarkProverBackend<F>>>,
-    lde_trace_merkle_roots: Vec<[u8; 32]>,
+    lde_trace_merkle_roots: Vec<Commitment>,
     rap_challenges: A::RAPChallenges,
 }
 
@@ -67,7 +67,7 @@ struct Round3<F: IsFFTField> {
 
 struct Round4<F: IsFFTField> {
     fri_last_value: FieldElement<F>,
-    fri_layers_merkle_roots: Vec<[u8; 32]>,
+    fri_layers_merkle_roots: Vec<Commitment>,
     deep_poly_openings: DeepPolynomialOpenings<F>,
     query_list: Vec<FriDecommitment<F>>,
 }
@@ -173,7 +173,7 @@ where
 {
     let main_trace = air.build_main_trace(raw_trace, public_input)?;
 
-    let (mut trace_polys, mut evaluations, mut main_merkle_tree, mut main_merkle_root) =
+    let (mut trace_polys, mut evaluations, main_merkle_tree, main_merkle_root) =
         interpolate_and_commit(&main_trace, domain, transcript);
 
     let rap_challenges = air.build_rap_challenges(transcript);
@@ -264,8 +264,8 @@ where
     Round2 {
         composition_poly_even,
         lde_composition_poly_even_evaluations,
-        composition_poly_merkle_tree: composition_poly_merkle_tree,
-        composition_poly_root: composition_poly_root,
+        composition_poly_merkle_tree,
+        composition_poly_root,
         composition_poly_odd,
         lde_composition_poly_odd_evaluations,
     }

@@ -1,5 +1,3 @@
-use std::os::unix::process::CommandExt;
-
 use lambdaworks_crypto::merkle_tree::proof::Proof;
 use lambdaworks_math::field::{element::FieldElement, traits::IsFFTField};
 
