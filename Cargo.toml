@@ -8,9 +8,9 @@ rust-version = "1.66"
 
 [dependencies]
 rand = "0.8.5"
-lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "5d61e79" }
-lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "5d61e79" }
-lambdaworks-fft = { git = "https://github.com/lambdaclass/lambdaworks", rev = "5d61e79" }
+lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "7fa75300" }
+lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "7fa75300" }
+lambdaworks-fft = { git = "https://github.com/lambdaclass/lambdaworks", rev = "7fa75300" }
 thiserror = "1.0.38"
 log = "0.4.17"
 bincode = { version = "2.0.0-rc.2", tag = "v2.0.0-rc.2", git = "https://github.com/bincode-org/bincode.git" }
