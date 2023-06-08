@@ -109,36 +109,36 @@ pub const RANGE_CHECK_COL_1: usize = 34;
 pub const RANGE_CHECK_COL_2: usize = 35;
 pub const RANGE_CHECK_COL_3: usize = 36;
 
-// Auxiliary memory columns
-pub const MEMORY_ADDR_SORTED_0: usize = 37;
-pub const MEMORY_ADDR_SORTED_1: usize = 38;
-pub const MEMORY_ADDR_SORTED_2: usize = 39;
-pub const MEMORY_ADDR_SORTED_3: usize = 40;
-
-pub const MEMORY_VALUES_SORTED_0: usize = 41;
-pub const MEMORY_VALUES_SORTED_1: usize = 42;
-pub const MEMORY_VALUES_SORTED_2: usize = 43;
-pub const MEMORY_VALUES_SORTED_3: usize = 44;
-
-pub const PERMUTATION_ARGUMENT_COL_0: usize = 45;
-pub const PERMUTATION_ARGUMENT_COL_1: usize = 46;
-pub const PERMUTATION_ARGUMENT_COL_2: usize = 47;
-pub const PERMUTATION_ARGUMENT_COL_3: usize = 48;
-
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1: usize = 49;
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2: usize = 50;
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3: usize = 51;
-
 // Range-check frame identifiers
-pub const RC_0: usize = 52;
-pub const RC_1: usize = 53;
-pub const RC_2: usize = 54;
-pub const RC_3: usize = 55;
-pub const RC_4: usize = 56;
-pub const RC_5: usize = 57;
-pub const RC_6: usize = 58;
-pub const RC_7: usize = 59;
-pub const RC_VALUE: usize = 60;
+pub const RC_0: usize = 37;
+pub const RC_1: usize = 38;
+pub const RC_2: usize = 39;
+pub const RC_3: usize = 40;
+pub const RC_4: usize = 41;
+pub const RC_5: usize = 42;
+pub const RC_6: usize = 43;
+pub const RC_7: usize = 44;
+pub const RC_VALUE: usize = 45;
+
+// Auxiliary memory columns
+pub const MEMORY_ADDR_SORTED_0: usize = 46;
+pub const MEMORY_ADDR_SORTED_1: usize = 47;
+pub const MEMORY_ADDR_SORTED_2: usize = 48;
+pub const MEMORY_ADDR_SORTED_3: usize = 49;
+
+pub const MEMORY_VALUES_SORTED_0: usize = 50;
+pub const MEMORY_VALUES_SORTED_1: usize = 51;
+pub const MEMORY_VALUES_SORTED_2: usize = 52;
+pub const MEMORY_VALUES_SORTED_3: usize = 53;
+
+pub const PERMUTATION_ARGUMENT_COL_0: usize = 54;
+pub const PERMUTATION_ARGUMENT_COL_1: usize = 55;
+pub const PERMUTATION_ARGUMENT_COL_2: usize = 56;
+pub const PERMUTATION_ARGUMENT_COL_3: usize = 57;
+
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1: usize = 58;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2: usize = 59;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3: usize = 60;
 
 pub const MEMORY_COLUMNS: [usize; 8] = [
     FRAME_PC,
@@ -420,16 +420,18 @@ impl AIR for CairoAIR {
         raw_trace: &Self::RawTrace,
         public_input: &mut Self::PublicInput,
     ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        let mut main_trace = build_cairo_execution_trace(&raw_trace.0, &raw_trace.1, &public_input);
-        println!("BEFORE");
-        dbg!(main_trace.n_cols);
-        dbg!(main_trace.n_rows());
-        dbg!((public_input.program.len() >> 2) + 1);
+        let mut main_trace = build_cairo_execution_trace(
+            &raw_trace.0,
+            &raw_trace.1,
+            &public_input,
+            self.context().trace_length,
+        );
 
-        // pad_with_last_row(
-        //     &mut main_trace,
-        //     (public_input.program.len() >> 2) + 1,
-        //     &MEMORY_COLUMNS,
+        pad_with_last_row(
+            &mut main_trace,
+            (public_input.program.len() >> 2) + 1,
+            &MEMORY_COLUMNS,
+        );
 
         let (missing_values, rc_min, rc_max) =
             get_missing_values_offset_columns(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);
@@ -879,18 +881,18 @@ fn range_check_builtin(
     frame: &Frame<Stark252PrimeField>,
 ) {
     let curr = frame.get_row(0);
-    
+
     constraints[RANGE_CHECK_BUILTIN] = evaluate_range_check_builtin_constraint(curr)
 }
 
-pub fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
+fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
     &curr[RC_0]
         + &curr[RC_1] * &FE::from_hex("10000").unwrap()
         + &curr[RC_2] * &FE::from_hex("100000000").unwrap()
         + &curr[RC_3] * &FE::from_hex("1000000000000").unwrap()
         + &curr[RC_4] * &FE::from_hex("10000000000000000").unwrap()
         + &curr[RC_5] * &FE::from_hex("100000000000000000000").unwrap()
-        + &curr[RC_6] *  &FE::from_hex("1000000000000000000000000").unwrap()
+        + &curr[RC_6] * &FE::from_hex("1000000000000000000000000").unwrap()
         + &curr[RC_7] * &FE::from_hex("10000000000000000000000000000").unwrap()
         - &curr[RC_VALUE]
 }
@@ -907,15 +909,20 @@ mod test {
     use crate::{
         air::{
             cairo_air::air::{
-                add_program_in_public_input_section, CairoAIR, PublicInputs, OFF_DST, OFF_OP1, evaluate_range_check_builtin_constraint,
+                add_program_in_public_input_section, evaluate_range_check_builtin_constraint,
+                CairoAIR, PublicInputs, OFF_DST, OFF_OP1,
             },
             context::ProofOptions,
             debug::validate_trace,
+            frame::Frame,
             trace::TraceTable,
             traits::AIR,
         },
         cairo_run::run::Error,
-        cairo_vm::{cairo_mem::CairoMemory, cairo_trace::CairoTrace},
+        cairo_vm::{
+            cairo_mem::CairoMemory, cairo_trace::CairoTrace,
+            execution_trace::decompose_rc_values_into_trace_columns,
+        },
         Domain, FE,
     };
 
@@ -924,11 +931,11 @@ mod test {
         get_missing_values_offset_columns, sort_columns_by_memory_address, CairoRAPChallenges,
     };
 
-    #[test] 
+    #[test]
     fn range_check_eval_works() {
         let mut row: Vec<FE> = Vec::new();
 
-        for i in 0..61 {
+        for _ in 0..61 {
             row.push(FE::zero());
         }
 
@@ -941,10 +948,8 @@ mod test {
         row[super::RC_6] = FE::one();
         row[super::RC_7] = FE::one();
 
-
         row[super::RC_VALUE] = FE::from_hex("00010001000100010001000100010001").unwrap();
-        assert!(evaluate_range_check_builtin_constraint(&row) == FE::zero());
-
+        assert_eq!(evaluate_range_check_builtin_constraint(&row), FE::zero());
     }
 
     // #[test]

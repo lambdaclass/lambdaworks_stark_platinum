@@ -1,6 +1,9 @@
 use lambdaworks_fft::polynomial::FFTPoly;
 use lambdaworks_math::{
-    field::{element::FieldElement, traits::IsFFTField},
+    field::{
+        element::FieldElement,
+        traits::{IsFFTField, IsPrimeField},
+    },
     polynomial::Polynomial,
 };
 use log::{error, info};
@@ -68,12 +71,14 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
         // result
         evaluations.iter().enumerate().for_each(|(i, eval)| {
             // If it's not the last elements we should skip
-            // And eval is not zero 
+            // And eval is not zero
             if step < exemption_steps[i] && eval != &FieldElement::<F>::zero() {
                 ret = false;
                 error!(
-                    "Inconsistent evaluation of transition {} in step {} - expected 0, got {:?}",
-                    i, step, eval
+                    "Inconsistent evaluation of transition {} in step {} - expected 0, got {}",
+                    i,
+                    step,
+                    eval.representative()
                 );
             }
         })

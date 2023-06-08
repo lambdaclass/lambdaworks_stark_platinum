@@ -11,8 +11,9 @@ use crate::{
     cairo_vm::{instruction_flags::CairoInstructionFlags, instruction_offsets::InstructionOffsets},
     FE,
 };
+use lambdaworks_fft::polynomial::FFTPoly;
 use lambdaworks_math::{
-    field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+    field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, polynomial::Polynomial,
     unsigned_integer::element::UnsignedInteger,
 };
 
@@ -38,6 +39,7 @@ pub fn build_cairo_execution_trace(
     raw_trace: &CairoTrace,
     memory: &CairoMemory,
     public_inputs: &PublicInputs,
+    trace_length: usize,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
 
@@ -125,7 +127,7 @@ pub fn build_cairo_execution_trace(
     let range_check_builtin_start = public_inputs.range_check_builtin_start_addr.clone();
     let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr.clone();
 
-    let mut range_checked_values: Vec<&FE> = (range_check_builtin_start..range_check_builtin_stop)
+    let range_checked_values: Vec<&FE> = (range_check_builtin_start..range_check_builtin_stop)
         .map(|addr| memory.get(&addr).unwrap())
         .collect();
 
@@ -139,7 +141,7 @@ pub fn build_cairo_execution_trace(
         .iter()
         .for_each(|column| trace_cols.push(column.clone()));
 
-    let mut rc_values_dereferenced: Vec<FE> = 
+    let mut rc_values_dereferenced: Vec<FE> =
         range_checked_values.iter().map(|&x| x.clone()).collect();
     rc_values_dereferenced.resize(trace_cols[0].len(), FE::zero());
 
@@ -377,7 +379,7 @@ fn rows_to_cols<const N: usize>(rows: &[[FE; N]]) -> Vec<Vec<FE>> {
     cols
 }
 
-fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
+pub fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
     let mask = UnsignedInteger::from_hex("FFFF").unwrap();
     let mut rc_base_types: Vec<UnsignedInteger<4>> =
         rc_values.iter().map(|x| x.representative()).collect();
