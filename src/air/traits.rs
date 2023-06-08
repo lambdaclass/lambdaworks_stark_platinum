@@ -70,13 +70,17 @@ pub trait AIR: Clone {
                 // X^(trace_length) - 1
                 let roots_of_unity_vanishing_polynomial = &x_n - FieldElement::one();
 
-                let mut exemptions_polynomial = Polynomial::new_monomial(FieldElement::one(), 0);
                 let cant_take = self.context().transition_exemptions[transition_idx];
 
-                for i in 0..cant_take {
-                    exemptions_polynomial =
-                        exemptions_polynomial * (&x - &roots_of_unity[root_of_unity_len - 1 - i])
-                }
+                let exemptions_polynomial = roots_of_unity
+                    .iter()
+                    .take(root_of_unity_len)
+                    .rev()
+                    .take(cant_take)
+                    .fold(
+                        Polynomial::new_monomial(FieldElement::one(), 0),
+                        |acc, root| acc * (&x - root),
+                    );
 
                 roots_of_unity_vanishing_polynomial / exemptions_polynomial
             })
