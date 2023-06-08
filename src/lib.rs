@@ -154,6 +154,9 @@ where
     }
 }
 
+/// A Merkle tree backend for vectors of field elements.
+/// This is used by the Stark prover to commit to
+/// multiple trace columns using a single Merkle tree.
 #[derive(Clone)]
 pub struct BatchStarkProverBackend<F> {
     phantom: PhantomData<F>,
