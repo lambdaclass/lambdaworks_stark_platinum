@@ -466,6 +466,7 @@ impl AIR for CairoAIR {
             public_input,
         );
         let (addresses, values) = sort_columns_by_memory_address(addresses, values);
+
         let permutation_col = generate_memory_permutation_argument_column(
             addresses_original,
             values_original,
@@ -892,6 +893,40 @@ fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
         - &curr[RC_VALUE]
 }
 
+/// Get memory holes from accessed addresses. These memory holes appear
+/// as a consequence of interaction with builtins.
+/// IN: Vector of sorted addresses
+/// OUT: Vector of addresses that were not presents in the input vector (holes)
+fn get_memory_holes(sorted_addrs: Vec<FE>) -> Vec<FE> {
+    let mut memory_holes = Vec::new();
+
+    let initial_addr = sorted_addrs[0].clone();
+    let mut tmp_addr = FE::one();
+    // First loop tmp addr = 1
+    while tmp_addr != initial_addr {
+        memory_holes.push(tmp_addr.clone());
+        tmp_addr = tmp_addr + FE::one();
+    }
+
+    let mut prev_addr = &sorted_addrs[0];
+
+    for addr in sorted_addrs.iter() {
+        let addr_diff = addr - prev_addr;
+
+        if addr_diff != FE::one() && addr_diff != FE::zero() {
+            let mut hole_addr = prev_addr + FE::one();
+
+            while hole_addr.representative() < addr.representative() {
+                memory_holes.push(hole_addr.clone());
+                hole_addr = hole_addr + FE::one();
+            }
+        }
+        prev_addr = addr;
+    }
+
+    memory_holes
+}
+
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
@@ -923,7 +958,8 @@ mod test {
 
     use super::{
         add_missing_values_to_offsets_column, generate_memory_permutation_argument_column,
-        get_missing_values_offset_columns, sort_columns_by_memory_address, CairoRAPChallenges,
+        get_memory_holes, get_missing_values_offset_columns, sort_columns_by_memory_address,
+        CairoRAPChallenges,
     };
 
     #[test]
@@ -1217,5 +1253,36 @@ mod test {
         assert_eq!(main_trace.table, expected);
         assert_eq!(main_trace.n_cols, 34);
         assert_eq!(main_trace.table.len(), 34 * 4);
+    }
+
+    #[test]
+    fn test_get_memory_holes() {
+        let mut addrs: Vec<FE> = (1..4).map(|n| FE::from(n)).collect();
+        let addrs_extension: Vec<FE> = (6..10).map(|n| FE::from(n)).collect();
+        addrs.extend_from_slice(&addrs_extension);
+
+        let addrs_extension: Vec<FE> = (13..16).map(|n| FE::from(n)).collect();
+        addrs.extend_from_slice(&addrs_extension);
+
+        let expected_memory_holes = vec![
+            FE::from(4),
+            FE::from(5),
+            FE::from(10),
+            FE::from(11),
+            FE::from(12),
+        ];
+        let calculated_memory_holes = get_memory_holes(addrs);
+
+        assert_eq!(expected_memory_holes, calculated_memory_holes);
+    }
+
+    #[test]
+    fn test_get_memory_holes_hole_at_beginning() {
+        let addrs: Vec<FE> = (3..10).map(|n| FE::from(n)).collect();
+
+        let expected_memory_holes = vec![FE::one(), FE::from(2)];
+        let calculated_memory_holes = get_memory_holes(addrs);
+
+        assert_eq!(expected_memory_holes, calculated_memory_holes);
     }
 }
