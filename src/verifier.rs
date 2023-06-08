@@ -304,6 +304,7 @@ where
 }
 
 fn step_4_verify_deep_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
+    air: &A,
     proof: &StarkProof<F>,
     domain: &Domain<F>,
     challenges: &Challenges<F, A>,
@@ -331,9 +332,11 @@ where
         .lde_composition_poly_proof
         .verify::<BatchStarkProverBackend<F>>(&proof.composition_poly_root, iota_0, &evaluations);
 
+    let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
+
     let lde_trace_evaluations = vec![
-        proof.deep_poly_openings.lde_trace_evaluations[..34].to_vec(),
-        proof.deep_poly_openings.lde_trace_evaluations[34..].to_vec(),
+        proof.deep_poly_openings.lde_trace_evaluations[..num_main_columns].to_vec(),
+        proof.deep_poly_openings.lde_trace_evaluations[num_main_columns..].to_vec(),
     ];
     // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
     for ((merkle_root, merkle_proof), evaluation) in proof
@@ -494,5 +497,5 @@ where
         return false;
     }
 
-    step_4_verify_deep_composition_polynomial(proof, &domain, &challenges)
+    step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges)
 }

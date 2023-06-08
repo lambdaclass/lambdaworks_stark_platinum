@@ -258,7 +258,8 @@ where
         .zip(&lde_composition_poly_odd_evaluations)
         .map(|(a, b)| vec![a.clone(), b.clone()])
         .collect();
-    let (composition_poly_merkle_tree, composition_poly_root) = batch_commit(&composition_poly_evaluations);
+    let (composition_poly_merkle_tree, composition_poly_root) =
+        batch_commit(&composition_poly_evaluations);
 
     Round2 {
         composition_poly_even,
@@ -483,6 +484,7 @@ where
         .iter()
         .map(|tree| tree.get_proof_by_pos(index).unwrap())
         .collect();
+
     let lde_trace_evaluations = round_1_result.lde_trace.get_row(index).to_vec();
 
     DeepPolynomialOpenings {
