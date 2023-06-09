@@ -61,8 +61,8 @@ fn test_prove_fib() {
 
 #[test_log::test]
 fn test_prove_fib_evil() {
-    let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 32);
-    let trace_length = trace[0].len();
+    let good_trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 32);
+    let trace_length = good_trace[0].len();
     let blowup_factor = 2;
 
     let context = AirContext {
@@ -90,7 +90,7 @@ fn test_prove_fib_evil() {
     // Will the honest prover create a proof for a bad trace?
     let mut num_pwns: u32 = 0;
     for bad_val in 1..num_bad_vals_to_try {
-        let mut bad_trace = trace.clone();
+        let mut bad_trace = good_trace.clone();
         bad_trace[0][5] = &bad_trace[0][5] + FE::from(bad_val);
         let result = prove(&bad_trace, &fibonacci_air, &mut (), /*evil=*/false).unwrap();
         num_pwns = num_pwns + verify(&result, &fibonacci_air, &()) as u32;
@@ -103,14 +103,14 @@ fn test_prove_fib_evil() {
     // Uh oh, evil prover has entered the chat
     let mut num_pwns: u32 = 0;
     for bad_val in 1..num_bad_vals_to_try {
-        let mut bad_trace = trace.clone();
+        let mut bad_trace = good_trace.clone();
         bad_trace[0][5] = &bad_trace[0][5] + FE::from(bad_val);
         let result = prove(&bad_trace, &fibonacci_air, &mut (), /*evil=*/true).unwrap();
         num_pwns = num_pwns + verify(&result, &fibonacci_air, &()) as u32;
     }
     println!("num_pwns = {}, expected about {}", num_pwns, num_bad_vals_to_try / blowup_factor);
     // Evil prover should pwn the verifier with probability 1 / blowup_factor,
-    // so we expect num_pws = 
+    // so we expect num_pwns \approx num_bad_vals_to_try / blowup_factor
     // REGARDLESS of fri_number_of_queries, because the verifier only requires ONE
     // consistency check on Deep(x)!!
 }
