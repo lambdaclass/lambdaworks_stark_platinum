@@ -51,7 +51,7 @@ pub trait AIR: Clone {
         public_input: &Self::PublicInput,
     ) -> BoundaryConstraints<Self::Field>;
 
-    fn transition_divisors(&self) -> Vec<Polynomial<FieldElement<Self::Field>>> {
+    fn transition_exemptions(&self) -> Vec<Polynomial<FieldElement<Self::Field>>> {
         let trace_length = self.context().trace_length;
         let roots_of_unity_order = trace_length.trailing_zeros();
         let roots_of_unity = get_powers_of_primitive_root_coset(
@@ -62,7 +62,6 @@ pub trait AIR: Clone {
         .unwrap();
         let root_of_unity_len = roots_of_unity.len();
 
-        let x_n = Polynomial::new_monomial(FieldElement::one(), trace_length);
         let x = Polynomial::new_monomial(FieldElement::one(), 1);
 
         self.context()
@@ -70,10 +69,7 @@ pub trait AIR: Clone {
             .iter()
             .take(self.context().num_transition_constraints)
             .map(|cant_take| {
-                // X^(trace_length) - 1
-                let roots_of_unity_vanishing_polynomial = &x_n - FieldElement::one();
-
-                let exemptions_polynomial = roots_of_unity
+                roots_of_unity
                     .iter()
                     .take(root_of_unity_len)
                     .rev()
@@ -81,9 +77,7 @@ pub trait AIR: Clone {
                     .fold(
                         Polynomial::new_monomial(FieldElement::one(), 0),
                         |acc, root| acc * (&x - root),
-                    );
-
-                roots_of_unity_vanishing_polynomial / exemptions_polynomial
+                    )
             })
             .collect()
     }

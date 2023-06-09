@@ -118,37 +118,64 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         #[cfg(debug_assertions)]
         let mut transition_evaluations = Vec::new();
 
-        let divisors = self.air.transition_divisors();
-        let boundary_term_degree_adjustment =
-            self.air.composition_poly_degree_bound() - self.air.context().trace_length;
+        let transition_exemptions = self.air.transition_exemptions();
+        let trace_length = self.air.context().trace_length;
+        let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
+        let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
 
-        let mut transition_zerofiers_inverse_evaluations = Vec::new();
-        for divisor in &divisors {
-            let mut evaluations = evaluate_polynomial_on_lde_domain(
-                divisor,
-                domain.blowup_factor,
-                domain.interpolation_domain_size,
-                &domain.coset_offset,
-            )
-            .unwrap();
-            FieldElement::inplace_batch_inverse(&mut evaluations);
-            transition_zerofiers_inverse_evaluations.push(evaluations);
-        }
+        let transition_exemptions_evaluations: Vec<_> = transition_exemptions
+            .iter()
+            .map(|exemption| {
+                evaluate_polynomial_on_lde_domain(
+                    exemption,
+                    domain.blowup_factor,
+                    domain.interpolation_domain_size,
+                    &domain.coset_offset,
+                )
+                .unwrap()
+            })
+            .collect();
 
-        let transition_degrees_len = self.air.context().transition_degrees_len();
         let context = self.air.context();
-        let transition_degrees = context.transition_degrees();
-        let mut degree_adjustments = Vec::with_capacity(transition_degrees_len);
-        for transition_degree in transition_degrees.iter() {
-            let lde = &domain.lde_roots_of_unity_coset;
-            let mut transition_adjustment = Vec::with_capacity(lde.len());
-            for d in lde.iter() {
-                let degree_adjustment = self.air.composition_poly_degree_bound()
-                    - (self.air.context().trace_length * (transition_degree - 1));
-                transition_adjustment.push(d.pow(degree_adjustment));
-            }
-            degree_adjustments.push(transition_adjustment);
-        }
+        let degree_adjustments: Vec<Vec<FieldElement<F>>> = context
+            .transition_degrees()
+            .iter()
+            .map(|transition_degree| {
+                domain
+                    .lde_roots_of_unity_coset
+                    .iter()
+                    .map(|d| {
+                        let degree_adjustment = composition_poly_degree_bound
+                            - (trace_length * (transition_degree - 1));
+                        d.pow(degree_adjustment)
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let x_n = Polynomial::new_monomial(FieldElement::<F>::one(), trace_length);
+        let x_n_1 = x_n - FieldElement::<F>::one();
+
+        let mut zerofier_evaluations = evaluate_polynomial_on_lde_domain(
+            &x_n_1,
+            domain.blowup_factor,
+            domain.interpolation_domain_size,
+            &domain.coset_offset,
+        )
+        .unwrap();
+
+        FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
+        let transition_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
+            transition_exemptions_evaluations
+                .iter()
+                .map(|row| {
+                    zerofier_evaluations
+                        .iter()
+                        .zip(row.iter())
+                        .map(|(c1, c2)| c1 * c2)
+                        .collect()
+                })
+                .collect();
 
         // Iterate over trace and domain and compute transitions
         for (i, d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
