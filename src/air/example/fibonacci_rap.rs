@@ -118,8 +118,8 @@ impl AIR for FibonacciRAP {
         BoundaryConstraints::from_constraints(vec![a0, a1, a0_aux])
     }
 
-    fn context(&self) -> AirContext {
-        self.context.clone()
+    fn context(&self) -> &AirContext {
+        &self.context
     }
 
     fn composition_poly_degree_bound(&self) -> usize {

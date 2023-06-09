@@ -408,7 +408,7 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     h_2_term.ruffini_division_inplace(&z_squared);
 
     // Get trace evaluations needed for the trace terms of the deep composition polynomial
-    let transition_offsets = air.context().transition_offsets;
+    let transition_offsets = &air.context().transition_offsets;
     let trace_frame_evaluations = &round_3_result.trace_ood_evaluations;
 
     // Compute the sum of all the trace terms of the deep composition polynomial.
@@ -424,7 +424,7 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
             .skip(i_times_trace_frame_evaluation);
         for ((evaluations, offset), elemen_trace_gamma) in trace_frame_evaluations
             .iter()
-            .zip(&transition_offsets)
+            .zip(transition_offsets)
             .zip(iter_trace_gammas)
         {
             // @@@ we can avoid this clone
