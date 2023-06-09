@@ -105,14 +105,14 @@ impl<F: IsField> BoundaryConstraints<F> {
         primitive_root: &FieldElement<F>,
         col: usize,
     ) -> Polynomial<FieldElement<F>> {
-        let mut zerofier = Polynomial::new_monomial(FieldElement::<F>::one(), 0);
-        for step in self.steps(col).into_iter() {
-            let binomial = Polynomial::new(&[-primitive_root.pow(step), FieldElement::<F>::one()]);
-            // TODO: Implement the MulAssign trait for Polynomials?
-            zerofier = zerofier * binomial;
-        }
-
-        zerofier
+        self.steps(col).into_iter().fold(
+            Polynomial::new_monomial(FieldElement::<F>::one(), 0),
+            |acc, step| {
+                let binomial =
+                    Polynomial::new(&[-primitive_root.pow(step), FieldElement::<F>::one()]);
+                acc * binomial
+            },
+        )
     }
 }
 
