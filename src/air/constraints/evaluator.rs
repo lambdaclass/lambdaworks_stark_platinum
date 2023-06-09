@@ -115,9 +115,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
         let blowup_factor = self.air.blowup_factor();
 
-        #[cfg(debug_assertions)]
-        let mut transition_evaluations = Vec::new();
-
         let transition_exemptions = self.air.transition_exemptions();
         let trace_length = self.air.context().trace_length;
         let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
@@ -177,6 +174,44 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 })
                 .collect();
 
+        let evaluations_sum = self.evaluate_iteration(
+            domain,
+            lde_trace,
+            blowup_factor,
+            rap_challenges,
+            &transition_zerofiers_inverse_evaluations,
+            &degree_adjustments,
+            alpha_and_beta_transition_coefficients,
+            boundary_term_degree_adjustment,
+            &boundary_polys_evaluations,
+            &boundary_zerofiers_inverse_evaluations,
+            alpha_and_beta_boundary_coefficients,
+        );
+        evaluation_table.evaluations_acc = evaluations_sum;
+
+        evaluation_table
+    }
+
+    #[inline(always)]
+    fn evaluate_iteration(
+        &self,
+        domain: &Domain<F>,
+        lde_trace: &TraceTable<F>,
+        blowup_factor: u8,
+        rap_challenges: &A::RAPChallenges,
+        transition_zerofiers_inverse_evaluations: &[Vec<FieldElement<F>>],
+        degree_adjustments: &[Vec<FieldElement<F>>],
+        alpha_and_beta_transition_coefficients: &[(FieldElement<F>, FieldElement<F>)],
+        boundary_term_degree_adjustment: usize,
+        boundary_polys_evaluations: &[Vec<FieldElement<F>>],
+        boundary_zerofiers_inverse_evaluations: &[Vec<FieldElement<F>>],
+        alpha_and_beta_boundary_coefficients: &[(FieldElement<F>, FieldElement<F>)],
+    ) -> Vec<FieldElement<F>> {
+        #[cfg(debug_assertions)]
+        let mut transition_evaluations = Vec::new();
+
+        let mut ret = Vec::new();
+
         // Iterate over trace and domain and compute transitions
         for (i, d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
             let frame = Frame::read_from_trace(
@@ -192,26 +227,24 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             transition_evaluations.push(evaluations_transition.clone());
 
             // TODO: Remove clones
-            let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
+            let denominators = transition_zerofiers_inverse_evaluations
                 .iter()
-                .map(|zerofier_evals| zerofier_evals[i].clone())
-                .collect();
-            let degree_adjustments: Vec<_> = degree_adjustments
+                .map(|zerofier_evals| zerofier_evals[i].clone());
+            let degree_adjustments = degree_adjustments
                 .iter()
-                .map(|transition_adjustments| transition_adjustments[i].clone())
-                .collect();
+                .map(|transition_adjustments| transition_adjustments[i].clone());
 
-            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
+            let evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
                 &evaluations_transition,
-                &denominators,
-                &degree_adjustments,
+                denominators,
+                degree_adjustments,
                 alpha_and_beta_transition_coefficients,
             );
 
             let d_adjustment_power = d.pow(boundary_term_degree_adjustment);
-            let boundary_evaluation = zip(
-                &boundary_polys_evaluations,
-                &boundary_zerofiers_inverse_evaluations,
+            let boundary_evaluation_sum = zip(
+                boundary_polys_evaluations,
+                boundary_zerofiers_inverse_evaluations,
             )
             .enumerate()
             .map(
@@ -224,14 +257,11 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                         * (&boundary_alpha * &d_adjustment_power + &boundary_beta)
                 },
             )
-            .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
+            .fold(evaluations_sum, |acc, eval| acc + eval);
 
-            evaluations_sum += boundary_evaluation;
-
-            evaluation_table.evaluations_acc.push(evaluations_sum);
+            ret.push(boundary_evaluation_sum);
         }
-
-        evaluation_table
+        ret
     }
 
     /// Given `evaluations` T_i(x) of the trace polynomial composed with the constraint
@@ -253,8 +283,8 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     /// Returns the sum of the evaluations computed.
     pub fn compute_constraint_composition_poly_evaluations_sum(
         evaluations: &[FieldElement<F>],
-        inverse_denominators: &[FieldElement<F>],
-        degree_adjustments: &[FieldElement<F>],
+        inverse_denominators: impl Iterator<Item = FieldElement<F>>,
+        degree_adjustments: impl Iterator<Item = FieldElement<F>>,
         constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
     ) -> FieldElement<F> {
         let mut ret = FieldElement::<F>::zero();

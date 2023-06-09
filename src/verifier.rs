@@ -267,17 +267,21 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     }
     FieldElement::inplace_batch_inverse(&mut denominators);
 
-    let mut degree_adjustments = Vec::with_capacity(divisors.len());
-    for transition_degree in air.context().transition_degrees().iter() {
-        let degree_adjustment = air.composition_poly_degree_bound()
-            - (air.context().trace_length * (transition_degree - 1));
-        degree_adjustments.push(challenges.z.pow(degree_adjustment));
-    }
+    let degree_adjustments = air
+        .context()
+        .transition_degrees()
+        .iter()
+        .map(|transition_degree| {
+            let degree_adjustment = air.composition_poly_degree_bound()
+                - (air.context().trace_length * (transition_degree - 1));
+            challenges.z.pow(degree_adjustment)
+        });
+
     let transition_c_i_evaluations_sum =
         ConstraintEvaluator::<F, A>::compute_constraint_composition_poly_evaluations_sum(
             &transition_ood_frame_evaluations,
-            &denominators,
-            &degree_adjustments,
+            denominators.into_iter(),
+            degree_adjustments,
             &challenges.transition_coeffs,
         );
 
