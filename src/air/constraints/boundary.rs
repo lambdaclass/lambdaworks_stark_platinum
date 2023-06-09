@@ -67,17 +67,14 @@ impl<F: IsField> BoundaryConstraints<F> {
         primitive_root: &FieldElement<F>,
         count_cols_trace: usize,
     ) -> Vec<Vec<FieldElement<F>>> {
-        let mut ret = Vec::new();
-
-        for i in 0..count_cols_trace {
-            ret.push(
+        (0..count_cols_trace)
+            .map(|i| {
                 self.steps(i)
                     .into_iter()
                     .map(|s| primitive_root.pow(s))
-                    .collect(),
-            );
-        }
-        ret
+                    .collect()
+            })
+            .collect()
     }
 
     /// For every trace column, give all the values the trace must be equal to in
