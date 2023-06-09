@@ -230,9 +230,9 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     // TODO: Get trace polys degrees in a better way. The degree may not be trace_length - 1 in some
     // special cases.
+    let trace_length = air.context().trace_length;
 
-    let boundary_term_degree_adjustment =
-        air.composition_poly_degree_bound() - air.context().trace_length;
+    let boundary_term_degree_adjustment = air.composition_poly_degree_bound() - trace_length;
 
     let boundary_quotient_ood_evaluations: Vec<FieldElement<F>> = boundary_c_i_evaluations
         .iter()
@@ -251,7 +251,15 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         &challenges.rap_challenges,
     );
 
-    let divisors = air.transition_divisors();
+    let transition_exemptions = air.transition_exemptions();
+
+    let x_n = Polynomial::new_monomial(FieldElement::<F>::one(), trace_length);
+    let x_n_1 = x_n - FieldElement::<F>::one();
+
+    let divisors = transition_exemptions
+        .into_iter()
+        .map(|exemption| x_n_1.clone() / exemption)
+        .collect::<Vec<Polynomial<FieldElement<F>>>>();
 
     let mut denominators = Vec::with_capacity(divisors.len());
     for divisor in divisors.iter() {
