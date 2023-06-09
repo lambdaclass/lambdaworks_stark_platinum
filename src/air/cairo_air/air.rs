@@ -220,11 +220,13 @@ impl CairoAIR {
     /// Creates a new CairoAIR from proof_options
     /// full_trace_length: Padding to 2^n
     /// number_steps: Number of steps of the execution / register steps / rows in cairo runner trace
+    #[rustfmt::skip]
     pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize) -> Self {
         let context = AirContext {
             options: proof_options,
             trace_length: full_trace_length,
-            trace_columns: 34 + 3 + 12 + 3 + 8 + 1, // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
+            trace_columns: 34 + 3 + 12 + 3
+                + 8 + 1, // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
             transition_degrees: vec![
                 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
                 1, // Flag 15
@@ -422,6 +424,8 @@ impl AIR for CairoAIR {
     ) -> Result<TraceTable<Self::Field>, ProvingError> {
         let mut main_trace = build_cairo_execution_trace(&raw_trace.0, &raw_trace.1, &public_input);
 
+        // Artificial (0, 0) dummy memory accesses must be added for the public memory.
+        // See section 9.8 of the Cairo whitepaper.
         pad_with_last_row(
             &mut main_trace,
             (public_input.program.len() >> 2) + 1,
@@ -433,6 +437,8 @@ impl AIR for CairoAIR {
         public_input.range_check_min = Some(rc_min);
         public_input.range_check_max = Some(rc_max);
 
+        // Range-checked columns (only offsets for now) holes must be filled.
+        // See section 9.9 of the Cairo whitepaper.
         add_missing_values_to_offsets_column(&mut main_trace, missing_values);
 
         if self.context().trace_length < main_trace.n_rows() {
@@ -441,6 +447,7 @@ impl AIR for CairoAIR {
             ));
         }
 
+        // Trace length must be padded to next power of two.
         let padding = self.context().trace_length - main_trace.n_rows();
         pad_with_last_row(&mut main_trace, padding, &MEMORY_COLUMNS);
 
