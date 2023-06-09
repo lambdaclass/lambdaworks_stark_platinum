@@ -172,7 +172,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                     zerofier_evaluations
                         .iter()
                         .zip(row.iter())
-                        .map(|(c1, c2)| c1.clone() * c2.clone())
+                        .map(|(c1, c2)| c1 * c2)
                         .collect()
                 })
                 .collect();
