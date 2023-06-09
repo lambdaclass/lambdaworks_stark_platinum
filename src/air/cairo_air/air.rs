@@ -640,8 +640,8 @@ impl AIR for CairoAIR {
         BoundaryConstraints::from_constraints(constraints)
     }
 
-    fn context(&self) -> AirContext {
-        self.context.clone()
+    fn context(&self) -> &AirContext {
+        &self.context
     }
 
     fn composition_poly_degree_bound(&self) -> usize {
