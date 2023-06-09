@@ -145,21 +145,7 @@ pub fn build_cairo_execution_trace(
 
     trace_cols.push(rc_values_dereferenced);
 
-    let table = TraceTable::new_from_cols(&trace_cols);
-    println!("ROW 0");
-    table
-        .get_row(0)
-        .iter()
-        .enumerate()
-        .for_each(|(i, cell)| println!("{}: {}", i, cell));
-    println!("ROW 1");
-    table
-        .get_row(1)
-        .iter()
-        .enumerate()
-        .for_each(|(i, cell)| println!("{}: {}", i, cell));
-
-    table
+    TraceTable::new_from_cols(&trace_cols)
 }
 
 /// Returns the vector of res values.

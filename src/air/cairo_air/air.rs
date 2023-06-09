@@ -424,6 +424,11 @@ impl AIR for CairoAIR {
     ) -> Result<TraceTable<Self::Field>, ProvingError> {
         let mut main_trace = build_cairo_execution_trace(&raw_trace.0, &raw_trace.1, &public_input);
 
+        let mut address_cols = main_trace
+            .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
+            .table;
+        address_cols.sort_by(|x, y| x.representative().cmp(&y.representative()));
+
         // Artificial (0, 0) dummy memory accesses must be added for the public memory.
         // See section 9.8 of the Cairo whitepaper.
         pad_with_last_row(
@@ -441,7 +446,7 @@ impl AIR for CairoAIR {
         // See section 9.9 of the Cairo whitepaper.
         add_missing_values_to_offsets_column(&mut main_trace, missing_values);
 
-        let mut memory_holes = get_memory_holes(&main_trace.cols()[FRAME_PC]);
+        let mut memory_holes = get_memory_holes(&address_cols);
         fill_memory_holes_to_trace(&mut main_trace, &mut memory_holes);
 
         if self.context().trace_length < main_trace.n_rows() {
@@ -962,7 +967,6 @@ fn fill_memory_holes_to_trace(
             .take(NUM_ADDR_COLS)
             .zip(memory_holes_window)
             .for_each(|(memory_column_idx, memory_hole)| {
-                println!("{} -> {}", memory_column_idx, &memory_hole);
                 last_row[*memory_column_idx] = memory_hole.clone()
             });
 
