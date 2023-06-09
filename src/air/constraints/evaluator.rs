@@ -122,18 +122,20 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let boundary_term_degree_adjustment =
             self.air.composition_poly_degree_bound() - self.air.context().trace_length;
 
-        let mut transition_zerofiers_inverse_evaluations = Vec::new();
-        for divisor in &divisors {
-            let mut evaluations = evaluate_polynomial_on_lde_domain(
-                divisor,
-                domain.blowup_factor,
-                domain.interpolation_domain_size,
-                &domain.coset_offset,
-            )
-            .unwrap();
-            FieldElement::inplace_batch_inverse(&mut evaluations);
-            transition_zerofiers_inverse_evaluations.push(evaluations);
-        }
+        let transition_zerofiers_inverse_evaluations: Vec<_> = divisors
+            .iter()
+            .map(|divisor| {
+                let mut evaluations = evaluate_polynomial_on_lde_domain(
+                    divisor,
+                    domain.blowup_factor,
+                    domain.interpolation_domain_size,
+                    &domain.coset_offset,
+                )
+                .unwrap();
+                FieldElement::inplace_batch_inverse(&mut evaluations);
+                evaluations
+            })
+            .collect();
 
         let transition_degrees_len = self.air.context().transition_degrees_len();
         let context = self.air.context();
