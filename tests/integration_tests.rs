@@ -92,7 +92,7 @@ fn test_prove_fib_evil() {
     for bad_val in 1..num_bad_vals_to_try {
         let mut bad_trace = trace.clone();
         bad_trace[0][5] = &bad_trace[0][5] + FE::from(bad_val);
-        let result = prove(&bad_trace, &fibonacci_air, &mut (), false).unwrap();
+        let result = prove(&bad_trace, &fibonacci_air, &mut (), /*evil=*/false).unwrap();
         num_pwns = num_pwns + verify(&result, &fibonacci_air, &()) as u32;
     }
     println!("num_pwns = {}", num_pwns);
@@ -105,7 +105,7 @@ fn test_prove_fib_evil() {
     for bad_val in 1..num_bad_vals_to_try {
         let mut bad_trace = trace.clone();
         bad_trace[0][5] = &bad_trace[0][5] + FE::from(bad_val);
-        let result = prove(&bad_trace, &fibonacci_air, &mut (), true).unwrap();
+        let result = prove(&bad_trace, &fibonacci_air, &mut (), /*evil=*/true).unwrap();
         num_pwns = num_pwns + verify(&result, &fibonacci_air, &()) as u32;
     }
     println!("num_pwns = {}, expected about {}", num_pwns, num_bad_vals_to_try / blowup_factor);
