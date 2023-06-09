@@ -1,5 +1,6 @@
 use super::{
-    air::constraints::evaluator::ConstraintEvaluator, fri::fri_decommit::FriDecommitment,
+    air::{constraints::evaluator::ConstraintEvaluator, frame::Frame},
+    fri::fri_decommit::FriDecommitment,
     sample_z_ood,
 };
 use crate::{
@@ -184,19 +185,17 @@ where
     }
 }
 
-fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
+pub fn composition_poly_ood_evaluation_exact_from_trace<F: IsFFTField, A: AIR<Field = F>>(
     air: &A,
-    proof: &StarkProof<F>,
+    trace_ood_frame_evaluations: &Frame<F>,
     domain: &Domain<F>,
     public_input: &A::PublicInput,
-    challenges: &Challenges<F, A>,
-) -> bool {
-    // BEGIN TRACE <-> Composition poly consistency evaluation check
-    // These are H_1(z^2) and H_2(z^2)
-    let composition_poly_even_ood_evaluation = &proof.composition_poly_even_ood_evaluation;
-    let composition_poly_odd_ood_evaluation = &proof.composition_poly_odd_ood_evaluation;
-
-    let boundary_constraints = air.boundary_constraints(&challenges.rap_challenges, public_input);
+    z: &FieldElement<F>,
+    rap_challenges: &A::RAPChallenges,
+    boundary_coeffs: &[(FieldElement<F>, FieldElement<F>)],
+    transition_coeffs: &[(FieldElement<F>, FieldElement<F>)],
+) -> FieldElement<F> {
+    let boundary_constraints = air.boundary_constraints(&rap_challenges, public_input);
 
     let n_trace_cols = air.context().trace_columns;
 
@@ -209,7 +208,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let mut boundary_quotient_degrees = Vec::with_capacity(n_trace_cols);
 
     for trace_idx in 0..n_trace_cols {
-        let trace_evaluation = &proof.trace_ood_frame_evaluations.get_row(0)[trace_idx];
+        let trace_evaluation = &trace_ood_frame_evaluations.get_row(0)[trace_idx];
         let boundary_constraints_domain = boundary_constraint_domains[trace_idx].clone();
         let boundary_interpolating_polynomial =
             &Polynomial::interpolate(&boundary_constraints_domain, &values[trace_idx])
@@ -219,8 +218,8 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
             boundary_constraints.compute_zerofier(&domain.trace_primitive_root, trace_idx);
 
         let boundary_quotient_ood_evaluation = (trace_evaluation
-            - boundary_interpolating_polynomial.evaluate(&challenges.z))
-            / boundary_zerofier.evaluate(&challenges.z);
+            - boundary_interpolating_polynomial.evaluate(&z))
+            / boundary_zerofier.evaluate(&z);
 
         let boundary_quotient_degree = air.context().trace_length - boundary_zerofier.degree() - 1;
 
@@ -236,9 +235,9 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     let boundary_quotient_ood_evaluations: Vec<FieldElement<F>> = boundary_c_i_evaluations
         .iter()
-        .zip(&challenges.boundary_coeffs)
+        .zip(boundary_coeffs)
         .map(|(poly_eval, (alpha, beta))| {
-            poly_eval * (alpha * challenges.z.pow(boundary_term_degree_adjustment) + beta)
+            poly_eval * (alpha * &z.pow(boundary_term_degree_adjustment) + beta)
         })
         .collect();
 
@@ -247,8 +246,8 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         .fold(FieldElement::<F>::zero(), |acc, x| acc + x);
 
     let transition_ood_frame_evaluations = air.compute_transition(
-        &proof.trace_ood_frame_evaluations,
-        &challenges.rap_challenges,
+        &trace_ood_frame_evaluations,
+        &rap_challenges,
     );
 
     let divisors = air.transition_divisors();
@@ -257,8 +256,8 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
             air,
             &transition_ood_frame_evaluations,
             &divisors,
-            &challenges.transition_coeffs,
-            &challenges.z,
+            &transition_coeffs,
+            &z,
         );
 
     let composition_poly_ood_evaluation = &boundary_quotient_ood_evaluation
@@ -267,6 +266,32 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
             .fold(FieldElement::<F>::zero(), |acc, evaluation| {
                 acc + evaluation
             });
+
+    composition_poly_ood_evaluation
+}
+
+fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
+    air: &A,
+    proof: &StarkProof<F>,
+    domain: &Domain<F>,
+    public_input: &A::PublicInput,
+    challenges: &Challenges<F, A>,
+) -> bool {
+    // BEGIN TRACE <-> Composition poly consistency evaluation check
+    // These are H_1(z^2) and H_2(z^2)
+    let composition_poly_even_ood_evaluation = &proof.composition_poly_even_ood_evaluation;
+    let composition_poly_odd_ood_evaluation = &proof.composition_poly_odd_ood_evaluation;
+
+    let composition_poly_ood_evaluation = composition_poly_ood_evaluation_exact_from_trace(
+        air,
+        &proof.trace_ood_frame_evaluations,
+        domain,
+        public_input,
+        &challenges.z,
+        &challenges.rap_challenges,
+        &challenges.boundary_coeffs,
+        &challenges.transition_coeffs,
+    ); 
 
     let composition_poly_claimed_ood_evaluation =
         composition_poly_even_ood_evaluation + &challenges.z * composition_poly_odd_ood_evaluation;
@@ -490,12 +515,16 @@ where
 
     if !step_2_verify_claimed_composition_polynomial(air, proof, &domain, public_input, &challenges)
     {
+        println!("step 2 failed");
         return false;
     }
 
     if !step_3_verify_fri(air, proof, &domain, &challenges) {
+        println!("step 3 failed");
         return false;
     }
 
-    step_4_verify_deep_composition_polynomial(proof, &domain, &challenges)
+    let step_4_result = step_4_verify_deep_composition_polynomial(proof, &domain, &challenges);
+    println!("step 4 result {}", step_4_result);
+    step_4_result
 }

@@ -34,6 +34,7 @@ impl<F: IsField> ConstraintEvaluationTable<F> {
             .iter()
             .map(|row| row.iter().fold(FieldElement::zero(), |acc, d| acc + d))
             .collect();
+        println!("In compute_composition_poly: merged_evals.len() {}", merged_evals.len());
 
         Polynomial::interpolate_offset_fft(&merged_evals, offset).unwrap()
     }
