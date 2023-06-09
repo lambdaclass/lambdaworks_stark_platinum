@@ -120,8 +120,8 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
         let transition_exemptions = self.air.transition_exemptions();
         let trace_length = self.air.context().trace_length;
-        let boundary_term_degree_adjustment =
-            self.air.composition_poly_degree_bound() - trace_length;
+        let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
+        let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
 
         let transition_exemptions_evaluations: Vec<_> = transition_exemptions
             .iter()
@@ -136,20 +136,22 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             })
             .collect();
 
-        let transition_degrees_len = self.air.context().transition_degrees_len();
         let context = self.air.context();
-        let transition_degrees = context.transition_degrees();
-        let mut degree_adjustments = Vec::with_capacity(transition_degrees_len);
-        for transition_degree in transition_degrees.iter() {
-            let lde = &domain.lde_roots_of_unity_coset;
-            let mut transition_adjustment = Vec::with_capacity(lde.len());
-            for d in lde.iter() {
-                let degree_adjustment = self.air.composition_poly_degree_bound()
-                    - (trace_length * (transition_degree - 1));
-                transition_adjustment.push(d.pow(degree_adjustment));
-            }
-            degree_adjustments.push(transition_adjustment);
-        }
+        let degree_adjustments: Vec<Vec<FieldElement<F>>> = context
+            .transition_degrees()
+            .iter()
+            .map(|transition_degree| {
+                domain
+                    .lde_roots_of_unity_coset
+                    .iter()
+                    .map(|d| {
+                        let degree_adjustment = composition_poly_degree_bound
+                            - (trace_length * (transition_degree - 1));
+                        d.pow(degree_adjustment)
+                    })
+                    .collect()
+            })
+            .collect();
 
         let x_n = Polynomial::new_monomial(FieldElement::<F>::one(), trace_length);
         let x_n_1 = x_n - FieldElement::<F>::one();
