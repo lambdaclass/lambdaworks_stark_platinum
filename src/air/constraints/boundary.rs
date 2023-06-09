@@ -22,11 +22,8 @@ impl<F: IsField> BoundaryConstraint<F> {
 
     /// Used for creating boundary constraints for a trace with only one column
     pub fn new_simple(step: usize, value: FieldElement<F>) -> Self {
-        Self {
-            col: 0,
-            step,
-            value,
-        }
+        let col = 0;
+        Self { col, step, value }
     }
 }
 
@@ -67,11 +64,26 @@ impl<F: IsField> BoundaryConstraints<F> {
         primitive_root: &FieldElement<F>,
         count_cols_trace: usize,
     ) -> Vec<Vec<FieldElement<F>>> {
+        let max_s: usize = (0..count_cols_trace)
+            .map(|i| {
+                self.constraints
+                    .iter()
+                    .filter(move |v| v.col == i)
+                    .map(|c| c.step)
+            })
+            .flatten()
+            .max()
+            .unwrap_or_default();
+        let roots: Vec<_> =
+            core::iter::successors(Some(FieldElement::one()), |x| Some(x * primitive_root))
+                .take(max_s + 1)
+                .collect();
         (0..count_cols_trace)
             .map(|i| {
-                self.steps(i)
-                    .into_iter()
-                    .map(|s| primitive_root.pow(s))
+                self.constraints
+                    .iter()
+                    .filter(|v| v.col == i)
+                    .map(|c| roots[c.step].clone())
                     .collect()
             })
             .collect()
