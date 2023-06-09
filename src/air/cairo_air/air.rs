@@ -441,6 +441,9 @@ impl AIR for CairoAIR {
         // See section 9.9 of the Cairo whitepaper.
         add_missing_values_to_offsets_column(&mut main_trace, missing_values);
 
+        let mut memory_holes = get_memory_holes(&main_trace.cols()[FRAME_PC]);
+        fill_memory_holes_to_trace(&mut main_trace, &mut memory_holes);
+
         if self.context().trace_length < main_trace.n_rows() {
             return Err(ProvingError::WrongParameter(
                 "Trace length is not large enough.".to_string(),
@@ -904,7 +907,7 @@ fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
 /// as a consequence of interaction with builtins.
 /// IN: Vector of sorted addresses
 /// OUT: Vector of addresses that were not presents in the input vector (holes)
-fn get_memory_holes(sorted_addrs: Vec<FE>) -> Vec<FE> {
+fn get_memory_holes(sorted_addrs: &[FE]) -> Vec<FE> {
     let mut memory_holes = Vec::new();
 
     let initial_addr = sorted_addrs[0].clone();
@@ -934,6 +937,39 @@ fn get_memory_holes(sorted_addrs: Vec<FE>) -> Vec<FE> {
     memory_holes
 }
 
+/// Fill memory holes in each column of a trace with zeros or the missing address, depending on the
+/// trace column. If the trace column refers to memory addresses, it will be filled with the missing
+/// addresses. If not, it will be filled with zeros. The function fills with missing addresses by
+/// iterating each memory address column in an ascending order and fills with zeros when no more
+/// missing addresses are left.
+fn fill_memory_holes_to_trace(
+    trace: &mut TraceTable<Stark252PrimeField>,
+    memory_holes: &mut Vec<FE>,
+) {
+    const NUM_ADDR_COLS: usize = MEMORY_COLUMNS.len() / 2;
+    let memory_holes_len_next_multiple = (memory_holes.len() / NUM_ADDR_COLS + 1) * NUM_ADDR_COLS;
+
+    memory_holes.extend(vec![
+        FE::zero();
+        memory_holes_len_next_multiple - memory_holes.len()
+    ]);
+
+    for memory_holes_window in memory_holes.windows(NUM_ADDR_COLS) {
+        let mut last_row = trace.last_row().to_vec();
+
+        MEMORY_COLUMNS
+            .iter()
+            .take(NUM_ADDR_COLS)
+            .zip(memory_holes_window)
+            .for_each(|(memory_column_idx, memory_hole)| {
+                println!("{} -> {}", memory_column_idx, &memory_hole);
+                last_row[*memory_column_idx] = memory_hole.clone()
+            });
+
+        trace.table.append(&mut last_row);
+    }
+}
+
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
@@ -947,7 +983,9 @@ mod test {
         air::{
             cairo_air::air::{
                 add_program_in_public_input_section, evaluate_range_check_builtin_constraint,
-                CairoAIR, PublicInputs, OFF_DST, OFF_OP1,
+                fill_memory_holes_to_trace, CairoAIR, PublicInputs, DST_ADDR, FRAME_DST_ADDR,
+                FRAME_OP0_ADDR, FRAME_OP1_ADDR, FRAME_PC, FRAME_SELECTOR, OFF_DST, OFF_OP1,
+                OP0_ADDR, OP1_ADDR,
             },
             context::ProofOptions,
             debug::validate_trace,
@@ -1278,7 +1316,7 @@ mod test {
             FE::from(11),
             FE::from(12),
         ];
-        let calculated_memory_holes = get_memory_holes(addrs);
+        let calculated_memory_holes = get_memory_holes(&addrs);
 
         assert_eq!(expected_memory_holes, calculated_memory_holes);
     }
@@ -1288,8 +1326,41 @@ mod test {
         let addrs: Vec<FE> = (3..10).map(|n| FE::from(n)).collect();
 
         let expected_memory_holes = vec![FE::one(), FE::from(2)];
-        let calculated_memory_holes = get_memory_holes(addrs);
+        let calculated_memory_holes = get_memory_holes(&addrs);
 
         assert_eq!(expected_memory_holes, calculated_memory_holes);
+    }
+
+    #[test]
+    fn test_fill_memory_holes() {
+        const TRACE_COL_LEN: usize = 2;
+        const NUM_TRACE_COLS: usize = FRAME_SELECTOR + 1;
+
+        let mut trace_cols = vec![vec![FE::zero(); TRACE_COL_LEN]; NUM_TRACE_COLS];
+        trace_cols[FRAME_PC][0] = FE::one();
+        trace_cols[FRAME_DST_ADDR][0] = FE::from(2);
+        trace_cols[FRAME_OP0_ADDR][0] = FE::from(3);
+        trace_cols[FRAME_OP1_ADDR][0] = FE::from(5);
+        trace_cols[FRAME_PC][1] = FE::from(6);
+        trace_cols[FRAME_DST_ADDR][1] = FE::from(9);
+        trace_cols[FRAME_OP0_ADDR][1] = FE::from(10);
+        trace_cols[FRAME_OP1_ADDR][1] = FE::from(11);
+        let mut trace = TraceTable::new_from_cols(&trace_cols);
+
+        let mut memory_holes = vec![FE::from(4), FE::from(7), FE::from(8)];
+        fill_memory_holes_to_trace(&mut trace, &mut memory_holes);
+
+        let frame_pc = &trace.cols()[FRAME_PC];
+        let dst_addr = &trace.cols()[FRAME_DST_ADDR];
+        let op0_addr = &trace.cols()[FRAME_OP0_ADDR];
+        let op1_addr = &trace.cols()[FRAME_OP1_ADDR];
+        assert_eq!(frame_pc[0], FE::one());
+        assert_eq!(dst_addr[0], FE::from(2));
+        assert_eq!(op0_addr[0], FE::from(3));
+        assert_eq!(op1_addr[0], FE::from(5));
+        assert_eq!(frame_pc[1], FE::from(6));
+        assert_eq!(dst_addr[1], FE::from(9));
+        assert_eq!(op0_addr[1], FE::from(10));
+        assert_eq!(op1_addr[1], FE::from(11));
     }
 }
