@@ -192,7 +192,7 @@ impl PublicInputs {
         }
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CairoAIR {
     pub context: AirContext,
     pub number_steps: usize,

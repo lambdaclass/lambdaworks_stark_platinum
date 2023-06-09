@@ -14,9 +14,12 @@ use lambdaworks_stark::cairo_vm::cairo_trace::CairoTrace;
 use lambdaworks_stark::{
     air::context::{AirContext, ProofOptions},
     fri::FieldElement,
+    proof::convert_stark_proof_to_string,
     prover::prove,
     verifier::verify,
 };
+
+use std::fs;
 
 pub type FE = FieldElement<Stark252PrimeField>;
 
@@ -137,7 +140,6 @@ fn test_prove_quadratic() {
 fn test_prove_cairo_program(file_path: &str) {
     let (register_states, memory, program_size) =
         run_program(None, CairoLayout::Plain, file_path).unwrap();
-
     let proof_options = ProofOptions {
         blowup_factor: 4,
         fri_number_of_queries: 3,
@@ -153,9 +155,14 @@ fn test_prove_cairo_program(file_path: &str) {
     let padded_trace_length = (register_states.steps() + first_pad).next_power_of_two();
 
     let cairo_air = CairoAIR::new(proof_options, padded_trace_length, register_states.steps());
-
+    let cairo_air_2 = cairo_air.clone();
+    dbg!(cairo_air_2);
     let result = prove(&(register_states, memory), &cairo_air, &mut pub_inputs).unwrap();
-
+    let proof_copy = result.clone();
+    let proof_string = convert_stark_proof_to_string(proof_copy);
+    let json = serde_json::to_string_pretty(&proof_string).unwrap();
+    let path = "tests/proof.json";
+    fs::write(path, json).expect("Unable to write file");
     assert!(verify(&result, &cairo_air, &pub_inputs));
 }
 

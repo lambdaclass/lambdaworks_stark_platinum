@@ -8,8 +8,8 @@ use super::trace::TraceTable;
 #[derive(Clone, Debug)]
 pub struct Frame<F: IsFFTField> {
     // Vector of rows
-    data: Vec<FieldElement<F>>,
-    row_width: usize,
+    pub data: Vec<FieldElement<F>>,
+    pub row_width: usize,
 }
 
 impl<F: IsFFTField> Frame<F> {
