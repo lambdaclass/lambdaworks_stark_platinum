@@ -55,7 +55,7 @@ fn test_prove_fib() {
 
     let fibonacci_air = simple_fibonacci::FibonacciAIR::from(context);
 
-    let result = prove(&trace, &fibonacci_air, &mut (), false).unwrap();
+    let result = prove(&trace, &fibonacci_air, &mut (), false, false).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
 }
 
@@ -63,7 +63,7 @@ fn test_prove_fib() {
 fn test_prove_fib_evil() {
     let good_trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 32);
     let trace_length = good_trace[0].len();
-    let blowup_factor = 2;
+    let blowup_factor = 4;
 
     let context = AirContext {
         options: ProofOptions {
@@ -81,32 +81,64 @@ fn test_prove_fib_evil() {
 
     let fibonacci_air = simple_fibonacci::FibonacciAIR::from(context);
 
+    // sanity check
+    println!("Honest prover, good trace");
+    let result = prove(
+        &good_trace,
+        &fibonacci_air,
+        &mut (),
+        /*evil=*/false,
+        /*bad_trace=*/false,
+    )
+    .unwrap();
+    assert!(verify(&result, &fibonacci_air, &()));
+
+    println!("\nHonest prover, bad trace\n");
+
     // trying different bad_vals is just a way of fuzzing it.
     // It changes the fiat-shamir RNG, which causes different z and different
     // challenge points (including a different Deep consistency check point iota_0)
     // to be chosen.
-    let num_bad_vals_to_try = 20;
+    let num_bad_vals_to_try = 40;
 
     // Will the honest prover create a proof for a bad trace?
     let mut num_pwns: u32 = 0;
     for bad_val in 1..num_bad_vals_to_try {
         let mut bad_trace = good_trace.clone();
         bad_trace[0][5] = &bad_trace[0][5] + FE::from(bad_val);
-        let result = prove(&bad_trace, &fibonacci_air, &mut (), /*evil=*/false).unwrap();
+        let result = prove(
+            &bad_trace,
+            &fibonacci_air,
+            &mut (),
+            /*evil=*/false,
+            /*bad_trace=*/bad_val > 0,
+        )
+        .unwrap();
         num_pwns = num_pwns + verify(&result, &fibonacci_air, &()) as u32;
+        println!("");
     }
-    println!("num_pwns = {}", num_pwns);
+    println!("num_pwns = {}\n", num_pwns);
     assert_eq!(num_pwns, 0) ; // verifier fails at the H(z)  Schwartz-Zippel consistency check
     // https://lambdaclass.github.io/lambdaworks/proving_systems/starks/recap.html#consistency-check
     // which is quite strong so we expect no pwns
 
+    println!("\nEvil prover, bad trace\n");
+
     // Uh oh, evil prover has entered the chat
     let mut num_pwns: u32 = 0;
-    for bad_val in 1..num_bad_vals_to_try {
+    for bad_val in 1..=num_bad_vals_to_try {
         let mut bad_trace = good_trace.clone();
         bad_trace[0][5] = &bad_trace[0][5] + FE::from(bad_val);
-        let result = prove(&bad_trace, &fibonacci_air, &mut (), /*evil=*/true).unwrap();
+        let result = prove( 
+            &bad_trace,
+            &fibonacci_air,
+            &mut (),
+            /*evil=*/true,
+            /*bad_trace=*/bad_val > 0,
+        )
+        .unwrap();
         num_pwns = num_pwns + verify(&result, &fibonacci_air, &()) as u32;
+        println!("");
     }
     println!("num_pwns = {}, expected about {}", num_pwns, num_bad_vals_to_try / blowup_factor);
     // Evil prover should pwn the verifier with probability 1 / blowup_factor,
@@ -135,7 +167,7 @@ fn test_prove_fib17() {
 
     let fibonacci_air = fibonacci_f17::Fibonacci17AIR::from(context);
 
-    let result = prove(&trace, &fibonacci_air, &mut (), false).unwrap();
+    let result = prove(&trace, &fibonacci_air, &mut (), false, false).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
 }
 
@@ -160,7 +192,7 @@ fn test_prove_fib_2_cols() {
 
     let fibonacci_air = fibonacci_2_columns::Fibonacci2ColsAIR::from(context);
 
-    let result = prove(&trace_columns, &fibonacci_air, &mut (), false).unwrap();
+    let result = prove(&trace_columns, &fibonacci_air, &mut (), false, false).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
 }
 
@@ -184,7 +216,7 @@ fn test_prove_quadratic() {
 
     let quadratic_air = quadratic_air::QuadraticAIR::from(context);
 
-    let result = prove(&trace, &quadratic_air, &mut (), false).unwrap();
+    let result = prove(&trace, &quadratic_air, &mut (), false, false).unwrap();
     assert!(verify(&result, &quadratic_air, &()));
 }
 
@@ -207,7 +239,7 @@ fn test_prove_cairo_program(file_path: &str) {
 
     let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
 
-    let result = prove(&(register_states, memory), &cairo_air, &mut pub_inputs, false).unwrap();
+    let result = prove(&(register_states, memory), &cairo_air, &mut pub_inputs, false, false).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
 }
@@ -254,7 +286,7 @@ fn test_prove_rap_fib() {
 
     let fibonacci_rap = FibonacciRAP::new(context);
 
-    let result = prove(&trace_cols, &fibonacci_rap, &mut (), false).unwrap();
+    let result = prove(&trace_cols, &fibonacci_rap, &mut (), false, false).unwrap();
     assert!(verify(&result, &fibonacci_rap, &()));
 }
 
@@ -279,7 +311,7 @@ fn test_prove_dummy() {
 
     let dummy_air = dummy_air::DummyAIR::from(context);
 
-    let result = prove(&trace, &dummy_air, &mut (), false).unwrap();
+    let result = prove(&trace, &dummy_air, &mut (), false, false).unwrap();
     assert!(verify(&result, &dummy_air, &()));
 }
 
@@ -327,6 +359,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
         &cairo_air,
         &mut public_input,
         false,
+        false,
     )
     .unwrap();
 
@@ -370,7 +403,7 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
         num_steps: raw_trace.steps(),
     };
 
-    let result = prove(&(raw_trace, memory), &cairo_air, &mut public_input, false).unwrap();
+    let result = prove(&(raw_trace, memory), &cairo_air, &mut public_input, false, false).unwrap();
 
     public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);
     assert!(!verify(&result, &cairo_air, &public_input));
