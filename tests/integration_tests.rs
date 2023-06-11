@@ -17,6 +17,7 @@ use lambdaworks_stark::{
     prover::prove,
     verifier::verify,
 };
+use rand::Rng;
 
 pub type FE = FieldElement<Stark252PrimeField>;
 
@@ -99,19 +100,20 @@ fn test_prove_fib_evil() {
     // It changes the fiat-shamir RNG, which causes different z and different
     // challenge points (including a different Deep consistency check point iota_0)
     // to be chosen.
-    let num_bad_vals_to_try = 40;
+    let num_bad_traces_to_try = 20;
+    let mut rng = rand::thread_rng();
 
     // Will the honest prover create a proof for a bad trace?
     let mut num_pwns: u32 = 0;
-    for bad_val in 1..num_bad_vals_to_try {
-        let mut bad_trace = good_trace.clone();
-        bad_trace[0][5] = &bad_trace[0][5] + FE::from(bad_val);
+    for _ in 1..num_bad_traces_to_try {
+        let bad_trace = (0..trace_length).map(|_| FE::from(rng.gen::<u64>())).collect();
+        let bad_trace = vec![bad_trace];
         let result = prove(
             &bad_trace,
             &fibonacci_air,
             &mut (),
             /*evil=*/false,
-            /*bad_trace=*/bad_val > 0,
+            /*bad_trace=*/true,
         )
         .unwrap();
         num_pwns = num_pwns + verify(&result, &fibonacci_air, &()) as u32;
@@ -126,23 +128,23 @@ fn test_prove_fib_evil() {
 
     // Uh oh, evil prover has entered the chat
     let mut num_pwns: u32 = 0;
-    for bad_val in 1..=num_bad_vals_to_try {
-        let mut bad_trace = good_trace.clone();
-        bad_trace[0][5] = &bad_trace[0][5] + FE::from(bad_val);
+    for bad_val in 1..=num_bad_traces_to_try {
+        let bad_trace = (0..trace_length).map(|_| FE::from(rng.gen::<u64>())).collect();
+        let bad_trace = vec![bad_trace];
         let result = prove( 
             &bad_trace,
             &fibonacci_air,
             &mut (),
             /*evil=*/true,
-            /*bad_trace=*/bad_val > 0,
+            /*bad_trace=*/true,
         )
         .unwrap();
         num_pwns = num_pwns + verify(&result, &fibonacci_air, &()) as u32;
         println!("");
     }
-    println!("num_pwns = {}, expected about {}", num_pwns, num_bad_vals_to_try / blowup_factor);
+    println!("num_pwns = {}, expected about {}", num_pwns, num_bad_traces_to_try / blowup_factor);
     // Evil prover should pwn the verifier with probability 1 / blowup_factor,
-    // so we expect num_pwns \approx num_bad_vals_to_try / blowup_factor
+    // so we expect num_pwns \approx num_bad_traces_to_try / blowup_factor
     // REGARDLESS of fri_number_of_queries, because the verifier only requires ONE
     // consistency check on Deep(x)!!
 }
