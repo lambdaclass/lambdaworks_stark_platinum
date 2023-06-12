@@ -9,7 +9,6 @@ use crate::{
         traits::AIR,
     },
     fri::FieldElement,
-    prover::ProvingError,
     transcript_to_field,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
@@ -28,19 +27,16 @@ impl FibonacciRAP {
     }
 }
 
+pub fn build_main_trace(
+    raw_trace: &[Vec<FieldElement<Stark252PrimeField>>],
+) -> TraceTable<Stark252PrimeField> {
+    TraceTable::new_from_cols(raw_trace)
+}
+
 impl AIR for FibonacciRAP {
     type Field = Stark252PrimeField;
-    type RawTrace = Vec<Vec<FieldElement<Self::Field>>>;
     type RAPChallenges = FieldElement<Self::Field>;
     type PublicInput = ();
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable::new_from_cols(raw_trace))
-    }
 
     fn build_auxiliary_trace(
         &self,

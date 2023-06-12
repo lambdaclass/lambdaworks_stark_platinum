@@ -25,22 +25,19 @@ impl From<AirContext> for QuadraticAIR {
     }
 }
 
+pub fn build_main_trace(
+    raw_trace: &[FieldElement<Stark252PrimeField>],
+) -> TraceTable<Stark252PrimeField> {
+    TraceTable {
+        table: raw_trace.to_vec(),
+        n_cols: 1,
+    }
+}
+
 impl AIR for QuadraticAIR {
     type Field = Stark252PrimeField;
-    type RawTrace = Vec<FieldElement<Self::Field>>;
     type RAPChallenges = ();
     type PublicInput = ();
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable {
-            table: raw_trace.clone(),
-            n_cols: 1,
-        })
-    }
 
     fn build_auxiliary_trace(
         &self,

@@ -163,7 +163,7 @@ where
 
 fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T: Transcript>(
     air: &A,
-    raw_trace: &A::RawTrace,
+    main_trace: &TraceTable<F>,
     domain: &Domain<F>,
     public_input: &mut A::PublicInput,
     transcript: &mut T,
@@ -171,8 +171,6 @@ fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T
 where
     FieldElement<F>: ByteConversion,
 {
-    let main_trace = air.build_main_trace(raw_trace, public_input)?;
-
     let (mut trace_polys, mut evaluations, mut lde_trace_merkle_trees, mut lde_trace_merkle_roots) =
         interpolate_and_commit(&main_trace, domain, transcript);
 
@@ -487,7 +485,7 @@ where
 
 // FIXME remove unwrap() calls and return errors
 pub fn prove<F: IsFFTField, A: AIR<Field = F>>(
-    trace: &A::RawTrace,
+    main_trace: &TraceTable<F>,
     air: &A,
     public_input: &mut A::PublicInput,
 ) -> Result<StarkProof<F>, ProvingError>
@@ -506,7 +504,7 @@ where
 
     let round_1_result = round_1_randomized_air_with_preprocessing::<F, A, _>(
         air,
-        trace,
+        main_trace,
         &domain,
         public_input,
         &mut transcript,

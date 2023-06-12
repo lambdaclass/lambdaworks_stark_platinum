@@ -7,7 +7,6 @@ use crate::{
         traits::AIR,
     },
     fri::FieldElement,
-    prover::ProvingError,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
@@ -25,19 +24,16 @@ impl From<AirContext> for FibonacciAIR {
     }
 }
 
+pub fn build_main_trace(
+    raw_trace: &[Vec<FieldElement<Stark252PrimeField>>],
+) -> TraceTable<Stark252PrimeField> {
+    TraceTable::new_from_cols(raw_trace)
+}
+
 impl AIR for FibonacciAIR {
     type Field = Stark252PrimeField;
-    type RawTrace = Vec<Vec<FieldElement<Self::Field>>>;
     type RAPChallenges = ();
     type PublicInput = ();
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable::new_from_cols(raw_trace))
-    }
 
     fn composition_poly_degree_bound(&self) -> usize {
         self.context().trace_length
