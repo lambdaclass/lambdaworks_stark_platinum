@@ -165,8 +165,7 @@ fn test_prove_rap_fib() {
 #[test_log::test]
 fn test_prove_dummy() {
     let trace_length = 16;
-    let raw_trace = dummy_air::dummy_trace(trace_length);
-    let main_trace = dummy_air::build_main_trace(&raw_trace);
+    let trace = dummy_air::dummy_trace(trace_length);
 
     let context = AirContext {
         options: ProofOptions {
@@ -184,7 +183,7 @@ fn test_prove_dummy() {
 
     let dummy_air = dummy_air::DummyAIR::from(context);
 
-    let result = prove(&main_trace, &dummy_air, &mut ()).unwrap();
+    let result = prove(&trace, &dummy_air, &mut ()).unwrap();
     assert!(verify(&result, &dummy_air, &()));
 }
 

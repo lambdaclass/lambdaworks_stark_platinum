@@ -28,12 +28,6 @@ impl FibonacciRAP {
     }
 }
 
-pub fn build_main_trace(
-    raw_trace: &[Vec<FieldElement<Stark252PrimeField>>],
-) -> TraceTable<Stark252PrimeField> {
-    TraceTable::new_from_cols(raw_trace)
-}
-
 impl AIR for FibonacciRAP {
     type Field = Stark252PrimeField;
     type RAPChallenges = FieldElement<Self::Field>;

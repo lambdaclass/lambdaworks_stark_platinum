@@ -24,15 +24,6 @@ impl From<AirContext> for QuadraticAIR {
     }
 }
 
-pub fn build_main_trace(
-    raw_trace: &[FieldElement<Stark252PrimeField>],
-) -> TraceTable<Stark252PrimeField> {
-    TraceTable {
-        table: raw_trace.to_vec(),
-        n_cols: 1,
-    }
-}
-
 impl AIR for QuadraticAIR {
     type Field = Stark252PrimeField;
     type RAPChallenges = ();
