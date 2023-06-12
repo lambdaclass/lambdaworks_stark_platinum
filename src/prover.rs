@@ -172,11 +172,11 @@ where
     FieldElement<F>: ByteConversion,
 {
     let (mut trace_polys, mut evaluations, mut lde_trace_merkle_trees, mut lde_trace_merkle_roots) =
-        interpolate_and_commit(&main_trace, domain, transcript);
+        interpolate_and_commit(main_trace, domain, transcript);
 
     let rap_challenges = air.build_rap_challenges(transcript);
 
-    let aux_trace = air.build_auxiliary_trace(&main_trace, &rap_challenges, public_input);
+    let aux_trace = air.build_auxiliary_trace(main_trace, &rap_challenges, public_input);
 
     if !aux_trace.is_empty() {
         // Check that this is valid for interpolation
