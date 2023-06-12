@@ -153,20 +153,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             })
             .collect();
 
-        /*
-        let x_n = Polynomial::new_monomial(FieldElement::<F>::one(), trace_length);
-        let x_n_1 = x_n - FieldElement::<F>::one();
-
-        let mut zerofier_evaluations = evaluate_polynomial_on_lde_domain(
-            &x_n_1,
-            domain.blowup_factor,
-            domain.interpolation_domain_size,
-            &domain.coset_offset,
-        )
-        .unwrap();
-        println!("zerofier_evaluations v1: {:?}", zerofier_evaluations);
-        */
-        // ----------------------------------------
         let blowup_factor_log2 = u64::from(blowup_factor.trailing_zeros());
 
         let offset = FieldElement::<F>::from(self.air.context().options.coset_offset);
@@ -182,9 +168,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         .map(|v| v - &one)
         .collect::<Vec<_>>();
 
-        //println!("zerofier_evaluations v2: {:?}", zerofier_evaluations);
-
-        // ----------------------------------------
         FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
         let transition_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
             transition_exemptions_evaluations
