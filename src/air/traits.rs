@@ -51,7 +51,7 @@ pub trait AIR: Clone {
         public_input: &Self::PublicInput,
     ) -> BoundaryConstraints<Self::Field>;
 
-    fn transition_divisors(&self) -> Vec<Polynomial<FieldElement<Self::Field>>> {
+    fn transition_exemptions(&self) -> Vec<Polynomial<FieldElement<Self::Field>>> {
         let trace_length = self.context().trace_length;
         let roots_of_unity_order = trace_length.trailing_zeros();
         let roots_of_unity = get_powers_of_primitive_root_coset(
@@ -60,30 +60,31 @@ pub trait AIR: Clone {
             &FieldElement::<Self::Field>::one(),
         )
         .unwrap();
+        let root_of_unity_len = roots_of_unity.len();
 
-        let mut result = vec![];
-        let x_n = Polynomial::new_monomial(FieldElement::one(), trace_length);
         let x = Polynomial::new_monomial(FieldElement::one(), 1);
-        for transition_idx in 0..self.context().num_transition_constraints {
-            // X^(trace_length) - 1
-            let roots_of_unity_vanishing_polynomial = &x_n - FieldElement::one();
 
-            let mut exemptions_polynomial = Polynomial::new_monomial(FieldElement::one(), 0);
-
-            for i in 0..self.context().transition_exemptions[transition_idx] {
-                exemptions_polynomial =
-                    exemptions_polynomial * (&x - &roots_of_unity[roots_of_unity.len() - 1 - i])
-            }
-
-            result.push(roots_of_unity_vanishing_polynomial / exemptions_polynomial);
-        }
-
-        result
+        self.context()
+            .transition_exemptions
+            .iter()
+            .take(self.context().num_transition_constraints)
+            .map(|cant_take| {
+                roots_of_unity
+                    .iter()
+                    .take(root_of_unity_len)
+                    .rev()
+                    .take(*cant_take)
+                    .fold(
+                        Polynomial::new_monomial(FieldElement::one(), 0),
+                        |acc, root| acc * (&x - root),
+                    )
+            })
+            .collect()
     }
-    fn context(&self) -> AirContext;
+    fn context(&self) -> &AirContext;
 
-    fn options(&self) -> ProofOptions {
-        self.context().options
+    fn options(&self) -> &ProofOptions {
+        &self.context().options
     }
 
     fn blowup_factor(&self) -> u8 {

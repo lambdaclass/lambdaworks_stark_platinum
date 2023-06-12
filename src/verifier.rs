@@ -212,9 +212,9 @@ pub fn composition_poly_ood_evaluation_exact_from_trace<F: IsFFTField, A: AIR<Fi
 
     for trace_idx in 0..n_trace_cols {
         let trace_evaluation = &trace_ood_frame_evaluations.get_row(0)[trace_idx];
-        let boundary_constraints_domain = boundary_constraint_domains[trace_idx].clone();
+        let boundary_constraints_domain = &boundary_constraint_domains[trace_idx];
         let boundary_interpolating_polynomial =
-            &Polynomial::interpolate(&boundary_constraints_domain, &values[trace_idx])
+            &Polynomial::interpolate(boundary_constraints_domain, &values[trace_idx])
                 .expect("xs and ys have equal length and xs are unique");
 
         let boundary_zerofier =
@@ -232,9 +232,9 @@ pub fn composition_poly_ood_evaluation_exact_from_trace<F: IsFFTField, A: AIR<Fi
 
     // TODO: Get trace polys degrees in a better way. The degree may not be trace_length - 1 in some
     // special cases.
+    let trace_length = air.context().trace_length;
 
-    let boundary_term_degree_adjustment =
-        air.composition_poly_degree_bound() - air.context().trace_length;
+    let boundary_term_degree_adjustment = air.composition_poly_degree_bound() - trace_length;
 
     let boundary_quotient_ood_evaluations: Vec<FieldElement<F>> = boundary_c_i_evaluations
         .iter()
@@ -253,22 +253,38 @@ pub fn composition_poly_ood_evaluation_exact_from_trace<F: IsFFTField, A: AIR<Fi
         &rap_challenges,
     );
 
-    let divisors = air.transition_divisors();
-    let transition_c_i_evaluations =
-        ConstraintEvaluator::compute_constraint_composition_poly_evaluations(
-            air,
+    let transition_exemptions = air.transition_exemptions();
+
+    let x_n = Polynomial::new_monomial(FieldElement::<F>::one(), trace_length);
+    let x_n_1 = x_n - FieldElement::<F>::one();
+
+    let divisors = transition_exemptions
+        .into_iter()
+        .map(|exemption| x_n_1.clone() / exemption)
+        .collect::<Vec<Polynomial<FieldElement<F>>>>();
+
+    let mut denominators = Vec::with_capacity(divisors.len());
+    for divisor in divisors.iter() {
+        denominators.push(divisor.evaluate(&z));
+    }
+    FieldElement::inplace_batch_inverse(&mut denominators);
+
+    let mut degree_adjustments = Vec::with_capacity(divisors.len());
+    for transition_degree in air.context().transition_degrees().iter() {
+        let degree_adjustment = air.composition_poly_degree_bound()
+            - (air.context().trace_length * (transition_degree - 1));
+        degree_adjustments.push(z.pow(degree_adjustment));
+    }
+    let transition_c_i_evaluations_sum =
+        ConstraintEvaluator::<F, A>::compute_constraint_composition_poly_evaluations_sum(
             &transition_ood_frame_evaluations,
-            &divisors,
+            &denominators,
+            &degree_adjustments,
             &transition_coeffs,
-            &z,
         );
 
-    let composition_poly_ood_evaluation = &boundary_quotient_ood_evaluation
-        + transition_c_i_evaluations
-            .iter()
-            .fold(FieldElement::<F>::zero(), |acc, evaluation| {
-                acc + evaluation
-            });
+    let composition_poly_ood_evaluation =
+        &boundary_quotient_ood_evaluation + transition_c_i_evaluations_sum;
 
     composition_poly_ood_evaluation
 }

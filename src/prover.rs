@@ -54,7 +54,7 @@ struct Round2<F: IsFFTField> {
 }
 
 struct Round3<F: IsFFTField> {
-    trace_ood_frame_evaluations: Frame<F>,
+    trace_ood_evaluations: Vec<Vec<FieldElement<F>>>,
     composition_poly_even_ood_evaluation: FieldElement<F>,
     composition_poly_odd_ood_evaluation: FieldElement<F>,
 }
@@ -93,7 +93,7 @@ where
     (trees, roots)
 }
 
-fn evaluate_polynomial_on_lde_domain<F>(
+pub fn evaluate_polynomial_on_lde_domain<F>(
     p: &Polynomial<FieldElement<F>>,
     blowup_factor: usize,
     domain_size: usize,
@@ -226,7 +226,7 @@ where
 
     let constraint_evaluations = evaluator.evaluate(
         &round_1_result.lde_trace,
-        &domain.lde_roots_of_unity_coset,
+        domain,
         transition_coeffs,
         boundary_coeffs,
         &round_1_result.rap_challenges,
@@ -283,6 +283,8 @@ fn round_3_evaluate_polynomials_in_out_of_domain_element<F: IsFFTField, A: AIR<F
 where
     FieldElement<F>: ByteConversion,
 {
+    let z_squared = z.square();
+
     // Returns the Out of Domain Frame for the given trace polynomials, out of domain evaluation point (called `z` in the literature),
     // frame offsets given by the AIR and primitive root used for interpolating the trace polynomials.
     // An out of domain frame is nothing more than the evaluation of the trace polynomials in the points required by the
@@ -290,21 +292,19 @@ where
     //
     // In the fibonacci example, the ood frame is simply the evaluations `[t(z), t(z * g), t(z * g^2)]`, where `t` is the trace
     // polynomial and `g` is the primitive root of unity used when interpolating `t`.
-    let ood_trace_evaluations = Frame::get_trace_evaluations(
+    let trace_ood_evaluations = Frame::get_trace_evaluations(
         &round_1_result.trace_polys,
         z,
         &air.context().transition_offsets,
         &domain.trace_primitive_root,
     );
-    let trace_ood_frame_evaluations = Frame::new(
-        ood_trace_evaluations.into_iter().flatten().collect(),
-        round_1_result.trace_polys.len(),
-    );
-
-    let z_squared = z * z;
 
     // Evaluate H_1 and H_2 in z^2.
     let (composition_poly_even_ood_evaluation, composition_poly_odd_ood_evaluation) = if evil {
+        let trace_ood_frame_evaluations = Frame::new(
+            trace_ood_evaluations.iter().map(|y| y.clone()).flatten().collect(),
+            round_1_result.trace_polys.len(),
+        );
         let H_z_exact_from_trace = composition_poly_ood_evaluation_exact_from_trace(
             air,
             &trace_ood_frame_evaluations,
@@ -322,7 +322,7 @@ where
     };
 
     Round3 {
-        trace_ood_frame_evaluations,
+        trace_ood_evaluations,
         composition_poly_even_ood_evaluation,
         composition_poly_odd_ood_evaluation,
     }
@@ -345,6 +345,9 @@ fn round_4_compute_and_run_fri_on_the_deep_composition_polynomial<
 where
     FieldElement<F>: ByteConversion,
 {
+    let coset_offset_u64 = air.context().options.coset_offset;
+    let coset_offset = FieldElement::<F>::from(coset_offset_u64);
+
     // <<<< Receive challenges: 𝛾, 𝛾'
     let composition_poly_coeffients = [
         transcript_to_field(transcript),
@@ -370,14 +373,17 @@ where
         evil,
     );
 
+    let domain_size = domain.lde_roots_of_unity_coset.len();
+
     // FRI commit and query phases
     let (fri_last_value, fri_layers) = fri_commit_phase(
         domain.root_order as usize,
         deep_composition_poly,
-        &domain.lde_roots_of_unity_coset,
         transcript,
+        &coset_offset,
+        domain_size,
     );
-    let (query_list, iota_0) = fri_query_phase(air, domain, &fri_layers, transcript);
+    let (query_list, iota_0) = fri_query_phase(air, domain_size, &fri_layers, transcript);
     println!(
         "If Deep(x) consistency check point iota_0 < D / blowup_factor, \
         evil prover should pwn verifier. iota_0 = {}", iota_0);
@@ -433,17 +439,17 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     evil: bool,
 ) -> Polynomial<FieldElement<F>> {
     // Compute composition polynomial terms of the deep composition polynomial.
-    let x = Polynomial::new_monomial(FieldElement::one(), 1);
     let h_1 = &round_2_result.composition_poly_even;
     let h_1_z2 = &round_3_result.composition_poly_even_ood_evaluation;
     let h_2 = &round_2_result.composition_poly_odd;
     let h_2_z2 = &round_3_result.composition_poly_odd_ood_evaluation;
     let gamma = &composition_poly_gammas[0];
     let gamma_p = &composition_poly_gammas[1];
-    let z_squared = z * z;
+    let z_squared = z.square();
 
     // 𝛾 ( H₁ − H₁(z²) ) / ( X − z² )
     let h_1_term = if evil {
+        let x = Polynomial::new_monomial(FieldElement::one(), 1);
         let h_1_num = gamma * (h_1 - h_1_z2);
         let h_1_denom = &x - &z_squared;
         interp_from_num_denom(
@@ -452,11 +458,14 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
             domain,
         )
     } else {
-        gamma * (h_1 - h_1_z2) / (&x - &z_squared)
+        let mut h_1_term = gamma * (h_1 - h_1_z2);
+        h_1_term.ruffini_division_inplace(&z_squared);
+        h_1_term
     };
 
     // 𝛾' ( H₂ − H₂(z²) ) / ( X − z² )
     let h_2_term = if evil {
+        let x = Polynomial::new_monomial(FieldElement::one(), 1);
         let h_2_num = gamma_p * (h_2 - h_2_z2);
         let h_2_denom = &x - &z_squared;
         interp_from_num_denom(
@@ -465,31 +474,40 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
             domain,
         )
     } else {
-        gamma_p * (h_2 - h_2_z2) / (&x - &z_squared)
+        let mut h_2_term = gamma_p * (h_2 - h_2_z2);
+        h_2_term.ruffini_division_inplace(&z_squared);
+        h_2_term
     };
 
     // Get trace evaluations needed for the trace terms of the deep composition polynomial
-    let transition_offsets = air.context().transition_offsets;
-    let trace_frame_evaluations =
-        Frame::get_trace_evaluations(trace_polys, z, &transition_offsets, primitive_root);
+    let transition_offsets = &air.context().transition_offsets;
+    let trace_frame_evaluations = &round_3_result.trace_ood_evaluations;
 
     // Compute the sum of all the trace terms of the deep composition polynomial.
     // There is one term for every trace polynomial and for every row in the frame.
     // ∑ ⱼₖ [ 𝛾ₖ ( tⱼ − tⱼ(z) ) / ( X − zgᵏ )]
+
+    // @@@ this could be const
     let mut trace_terms = Polynomial::zero();
     for (i, t_j) in trace_polys.iter().enumerate() {
-        for (j, (evaluations, offset)) in trace_frame_evaluations
+        let i_times_trace_frame_evaluation = i * trace_frame_evaluations.len();
+        let iter_trace_gammas = trace_terms_gammas
             .iter()
-            .zip(&transition_offsets)
-            .enumerate()
+            .skip(i_times_trace_frame_evaluation);
+        for ((evaluations, offset), elemen_trace_gamma) in trace_frame_evaluations
+            .iter()
+            .zip(transition_offsets)
+            .zip(iter_trace_gammas)
         {
+            // @@@ we can avoid this clone
             let t_j_z = evaluations[i].clone();
+            // @@@ this can be pre-computed
             let z_shifted = z * primitive_root.pow(*offset);
             // Trace terms are low degree even if the trace is invalid.
             // There's no need for the evil prover to spoof trace terms by interpolation.
-            let poly = (t_j - t_j_z) / (&x - z_shifted);
-            trace_terms =
-                trace_terms + poly * &trace_terms_gammas[i * trace_frame_evaluations.len() + j];
+            let mut poly = t_j - t_j_z;
+            poly.ruffini_division_inplace(&z_shifted);
+            trace_terms = trace_terms + poly * elemen_trace_gamma;
         }
     }
 
@@ -655,8 +673,8 @@ where
             .to_bytes_be(),
     );
     // >>>> Send values: tⱼ(zgᵏ)
-    for i in 0..round_3_result.trace_ood_frame_evaluations.num_rows() {
-        for element in round_3_result.trace_ood_frame_evaluations.get_row(i).iter() {
+    for row in round_3_result.trace_ood_evaluations.iter() {
+        for element in row.iter() {
             transcript.append(&element.to_bytes_be());
         }
     }
@@ -681,11 +699,20 @@ where
 
     info!("End proof generation");
 
+    let trace_ood_frame_evaluations = Frame::new(
+        round_3_result
+            .trace_ood_evaluations
+            .into_iter()
+            .flatten()
+            .collect(),
+        round_1_result.trace_polys.len(),
+    );
+
     Ok(StarkProof {
         // [tⱼ]
         lde_trace_merkle_roots: round_1_result.lde_trace_merkle_roots,
         // tⱼ(zgᵏ)
-        trace_ood_frame_evaluations: round_3_result.trace_ood_frame_evaluations,
+        trace_ood_frame_evaluations,
         // [H₁]
         composition_poly_even_root: round_2_result.composition_poly_even_root,
         // H₁(z²)

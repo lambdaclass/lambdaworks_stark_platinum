@@ -80,8 +80,8 @@ impl AIR for FibonacciAIR {
         0
     }
 
-    fn context(&self) -> air::context::AirContext {
-        self.context.clone()
+    fn context(&self) -> &air::context::AirContext {
+        &self.context
     }
 }
 

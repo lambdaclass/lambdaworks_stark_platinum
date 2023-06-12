@@ -82,8 +82,8 @@ impl AIR for Fibonacci2ColsAIR {
         BoundaryConstraints::from_constraints(vec![a0, a1])
     }
 
-    fn context(&self) -> air::context::AirContext {
-        self.context.clone()
+    fn context(&self) -> &air::context::AirContext {
+        &self.context
     }
 
     fn composition_poly_degree_bound(&self) -> usize {
