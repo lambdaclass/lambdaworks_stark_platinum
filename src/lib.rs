@@ -26,6 +26,10 @@ pub struct ProofConfig {
 pub type PrimeField = Stark252PrimeField;
 pub type FE = FieldElement<PrimeField>;
 
+
+/// Uses randomness from the transcript to create a FieldElement
+/// One bit less than the max used by the FieldElement is used as randomness. For StarkFields, this would be 251 bits randomness.
+/// Randomness is interpreted as limbs in LittleEndian, and each Limb is ordered in LittleEndian 
 pub fn transcript_to_field<F: IsPrimeField, T: Transcript>(transcript: &mut T) -> FieldElement<F>
 where
     FieldElement<F>: ByteConversion,
