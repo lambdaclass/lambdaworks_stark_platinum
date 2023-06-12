@@ -56,7 +56,7 @@ where
 
     let pre_mask: u8 = 1 << bits_to_clear;
     let mask: u8 = pre_mask.wrapping_sub(1);
-    randomness[i] = randomness[i] & mask;
+    randomness[i] &= mask;
 
     FieldElement::from_bytes_le(randomness).unwrap()
 }
