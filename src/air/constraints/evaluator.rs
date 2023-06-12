@@ -1,3 +1,4 @@
+use lambdaworks_fft::roots_of_unity::get_powers_of_primitive_root_coset;
 use lambdaworks_math::{
     field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
@@ -18,7 +19,6 @@ pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
     trace_polys: &'poly [Polynomial<FieldElement<F>>],
     primitive_root: FieldElement<F>,
 }
-
 impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F, A> {
     pub fn new(
         air: &A,
@@ -153,6 +153,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             })
             .collect();
 
+        /*
         let x_n = Polynomial::new_monomial(FieldElement::<F>::one(), trace_length);
         let x_n_1 = x_n - FieldElement::<F>::one();
 
@@ -163,7 +164,27 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             &domain.coset_offset,
         )
         .unwrap();
+        println!("zerofier_evaluations v1: {:?}", zerofier_evaluations);
+        */
+        // ----------------------------------------
+        let blowup_factor_log2 = u64::from(blowup_factor.trailing_zeros());
 
+        let offset = FieldElement::<F>::from(self.air.context().options.coset_offset);
+        let offset_pow = offset.pow(trace_length);
+        let one = FieldElement::<F>::one();
+        let mut zerofier_evaluations = get_powers_of_primitive_root_coset(
+            blowup_factor_log2,
+            blowup_factor as usize,
+            &offset_pow,
+        )
+        .unwrap()
+        .iter()
+        .map(|v| v - &one)
+        .collect::<Vec<_>>();
+
+        //println!("zerofier_evaluations v2: {:?}", zerofier_evaluations);
+
+        // ----------------------------------------
         FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
         let transition_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
             transition_exemptions_evaluations
@@ -171,6 +192,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .map(|row| {
                     zerofier_evaluations
                         .iter()
+                        .cycle()
                         .zip(row.iter())
                         .map(|(c1, c2)| c1 * c2)
                         .collect()
