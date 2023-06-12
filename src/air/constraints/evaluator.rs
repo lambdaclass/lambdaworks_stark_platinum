@@ -153,13 +153,13 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             })
             .collect();
 
-        let blowup_factor_log2 = u64::from(blowup_factor.trailing_zeros());
+        let blowup_factor_order = u64::from(blowup_factor.trailing_zeros());
 
         let offset = FieldElement::<F>::from(self.air.context().options.coset_offset);
         let offset_pow = offset.pow(trace_length);
         let one = FieldElement::<F>::one();
         let mut zerofier_evaluations = get_powers_of_primitive_root_coset(
-            blowup_factor_log2,
+            blowup_factor_order,
             blowup_factor as usize,
             &offset_pow,
         )
