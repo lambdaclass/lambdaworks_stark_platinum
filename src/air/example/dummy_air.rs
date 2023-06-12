@@ -80,8 +80,8 @@ impl AIR for DummyAIR {
         0
     }
 
-    fn context(&self) -> air::context::AirContext {
-        self.context.clone()
+    fn context(&self) -> &air::context::AirContext {
+        &self.context
     }
 
     fn composition_poly_degree_bound(&self) -> usize {

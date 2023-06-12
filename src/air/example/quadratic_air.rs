@@ -78,8 +78,8 @@ impl AIR for QuadraticAIR {
         BoundaryConstraints::from_constraints(vec![a0])
     }
 
-    fn context(&self) -> air::context::AirContext {
-        self.context.clone()
+    fn context(&self) -> &air::context::AirContext {
+        &self.context
     }
 
     fn composition_poly_degree_bound(&self) -> usize {
