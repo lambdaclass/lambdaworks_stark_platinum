@@ -485,17 +485,9 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
         {
             let t_j_z = evaluations[i].clone();
             let z_shifted = z * primitive_root.pow(*offset);
-            let poly = if evil {
-                let poly_num = t_j - t_j_z;
-                let poly_denom = &x - &z_shifted;
-                interp_from_num_denom(
-                    &poly_num,
-                    &poly_denom,
-                    domain,
-                )
-            } else {
-                (t_j - &t_j_z) / (&x - &z_shifted)
-            };
+            // Trace terms are low degree even if the trace is invalid.
+            // There's no need for the evil prover to spoof trace terms by interpolation.
+            let poly = (t_j - &t_j_z) / (&x - &z_shifted);
  
             trace_terms =
                 trace_terms + poly * &trace_terms_gammas[i * trace_frame_evaluations.len() + j];
