@@ -199,14 +199,14 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             // TODO: Remove clones
             let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
                 .iter()
-                .map(|zerofier_evals| zerofier_evals[i].clone())
+                .map(|zerofier_evals| &zerofier_evals[i])
                 .collect();
             let degree_adjustments: Vec<_> = degree_adjustments
                 .iter()
-                .map(|transition_adjustments| transition_adjustments[i].clone())
+                .map(|transition_adjustments| &transition_adjustments[i])
                 .collect();
 
-            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
+            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum_ref(
                 &evaluations_transition,
                 &denominators,
                 &degree_adjustments,
@@ -222,11 +222,11 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             .map(
                 |(index, (boundary_poly_evaluation, zerofier_inverse_evaluation))| {
                     let (boundary_alpha, boundary_beta) =
-                        alpha_and_beta_boundary_coefficients[index].clone();
+                        &alpha_and_beta_boundary_coefficients[index];
 
                     &boundary_poly_evaluation[i]
                         * &zerofier_inverse_evaluation[i]
-                        * (&boundary_alpha * &d_adjustment_power + &boundary_beta)
+                        * (boundary_alpha * &d_adjustment_power + boundary_beta)
                 },
             )
             .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
@@ -271,6 +271,27 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         {
             let zerofied_eval = eval * inverse_denominator;
             let result = zerofied_eval * (alpha * degree_adjustment + beta);
+            ret += result;
+        }
+
+        ret
+    }
+
+    pub fn compute_constraint_composition_poly_evaluations_sum_ref(
+        evaluations: &[FieldElement<F>],
+        inverse_denominators: &[&FieldElement<F>],
+        degree_adjustments: &[&FieldElement<F>],
+        constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
+    ) -> FieldElement<F> {
+        let mut ret = FieldElement::<F>::zero();
+        for (((eval, degree_adjustment), inverse_denominator), (alpha, beta)) in evaluations
+            .iter()
+            .zip(degree_adjustments)
+            .zip(inverse_denominators)
+            .zip(constraint_coeffs)
+        {
+            let zerofied_eval = eval * *inverse_denominator;
+            let result = zerofied_eval * (alpha * *degree_adjustment + beta);
             ret += result;
         }
 
