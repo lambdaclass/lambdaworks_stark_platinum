@@ -6,9 +6,9 @@ pub fn generate_cairo_trace(filename: &str) -> (RegisterStates, CairoMemory) {
     let trace_path = format!("{base_dir}/{filename}.trace");
     let memory_path = format!("{base_dir}/{filename}.memory");
 
-    let raw_trace =
+    let register_states =
         RegisterStates::from_file(&trace_path).expect("Cairo trace binary file not found");
     let memory = CairoMemory::from_file(&memory_path).expect("Cairo memory binary file not found");
 
-    (raw_trace, memory)
+    (register_states, memory)
 }

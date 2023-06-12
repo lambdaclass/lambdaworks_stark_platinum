@@ -89,11 +89,11 @@ pub fn run_program(
 
     //TO DO: Better error handling
     let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();
-    let cairo_trace = RegisterStates::from_bytes_le(&trace_vec).unwrap();
+    let register_states = RegisterStates::from_bytes_le(&trace_vec).unwrap();
 
     let data_len = cairo_runner.get_program().data_len();
 
-    Ok((cairo_trace, cairo_mem, data_len))
+    Ok((register_states, cairo_mem, data_len))
 }
 
 pub fn generate_prover_args(
@@ -152,11 +152,11 @@ mod tests {
         super::run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
 
         // read trace from file
-        let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
+        let register_states = RegisterStates::from_file(&dir_trace).unwrap();
         // read memory from file
         let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
-        let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
+        let execution_trace = build_cairo_execution_trace(&register_states, &memory);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&vec![
