@@ -1,8 +1,7 @@
 use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
-use lambdaworks_math::helpers::resize_to_next_power_of_two;
-use lambdaworks_stark::air::example::fibonacci_rap::{self, fibonacci_rap_trace, FibonacciRAP};
+use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP};
 use lambdaworks_stark::air::example::{
     dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
 };
@@ -18,9 +17,8 @@ pub type FE = FieldElement<Stark252PrimeField>;
 
 #[test_log::test]
 fn test_prove_fib() {
-    let raw_trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
-    let trace_length = raw_trace[0].len();
-    let main_trace = simple_fibonacci::build_main_trace(&raw_trace);
+    let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
+    let trace_length = trace.n_rows();
 
     let context = AirContext {
         options: ProofOptions {
@@ -38,14 +36,14 @@ fn test_prove_fib() {
 
     let fibonacci_air = simple_fibonacci::FibonacciAIR::from(context);
 
-    let result = prove(&main_trace, &fibonacci_air, &mut ()).unwrap();
+    let result = prove(&trace, &fibonacci_air, &mut ()).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
 }
 
 #[test_log::test]
 fn test_prove_fib17() {
-    let raw_trace = simple_fibonacci::fibonacci_trace([FE17::from(1), FE17::from(1)], 4);
-    let main_trace = fibonacci_f17::build_main_trace(&raw_trace);
+    let trace = simple_fibonacci::fibonacci_trace([FE17::from(1), FE17::from(1)], 4);
+    let trace_length = trace.n_rows();
 
     let context = AirContext {
         options: ProofOptions {
@@ -53,7 +51,7 @@ fn test_prove_fib17() {
             fri_number_of_queries: 1,
             coset_offset: 3,
         },
-        trace_length: raw_trace[0].len(),
+        trace_length,
         trace_columns: 1,
         transition_degrees: vec![1],
         transition_exemptions: vec![2],
@@ -63,15 +61,14 @@ fn test_prove_fib17() {
 
     let fibonacci_air = fibonacci_f17::Fibonacci17AIR::from(context);
 
-    let result = prove(&main_trace, &fibonacci_air, &mut ()).unwrap();
+    let result = prove(&trace, &fibonacci_air, &mut ()).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
 }
 
 #[test_log::test]
 fn test_prove_fib_2_cols() {
-    let trace_columns =
-        fibonacci_2_columns::fibonacci_trace_2_columns([FE::from(1), FE::from(1)], 16);
-    let main_trace = fibonacci_2_columns::build_main_trace(&trace_columns);
+    let trace = fibonacci_2_columns::fibonacci_trace_2_columns([FE::from(1), FE::from(1)], 16);
+    let trace_length = trace.n_rows();
 
     let context = AirContext {
         options: ProofOptions {
@@ -79,7 +76,7 @@ fn test_prove_fib_2_cols() {
             fri_number_of_queries: 7,
             coset_offset: 3,
         },
-        trace_length: trace_columns[0].len(),
+        trace_length,
         transition_degrees: vec![1, 1],
         transition_exemptions: vec![1, 1],
         transition_offsets: vec![0, 1],
@@ -89,14 +86,14 @@ fn test_prove_fib_2_cols() {
 
     let fibonacci_air = fibonacci_2_columns::Fibonacci2ColsAIR::from(context);
 
-    let result = prove(&main_trace, &fibonacci_air, &mut ()).unwrap();
+    let result = prove(&trace, &fibonacci_air, &mut ()).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
 }
 
 #[test_log::test]
 fn test_prove_quadratic() {
-    let raw_trace = quadratic_air::quadratic_trace(FE::from(3), 4);
-    let main_trace = quadratic_air::build_main_trace(&raw_trace);
+    let trace = quadratic_air::quadratic_trace(FE::from(3), 4);
+    let trace_length = trace.n_rows();
 
     let context = AirContext {
         options: ProofOptions {
@@ -104,7 +101,7 @@ fn test_prove_quadratic() {
             fri_number_of_queries: 1,
             coset_offset: 3,
         },
-        trace_length: raw_trace.len(),
+        trace_length,
         trace_columns: 1,
         transition_degrees: vec![2],
         transition_exemptions: vec![1],
@@ -114,7 +111,7 @@ fn test_prove_quadratic() {
 
     let quadratic_air = quadratic_air::QuadraticAIR::from(context);
 
-    let result = prove(&main_trace, &quadratic_air, &mut ()).unwrap();
+    let result = prove(&trace, &quadratic_air, &mut ()).unwrap();
     assert!(verify(&result, &quadratic_air, &()));
 }
 
@@ -140,12 +137,10 @@ fn test_prove_cairo_fibonacci_5() {
 #[test_log::test]
 fn test_prove_rap_fib() {
     let trace_length = 16;
-    let raw_trace = fibonacci_rap_trace([FE::from(1), FE::from(1)], trace_length);
-    let mut trace_cols = vec![raw_trace[0].clone(), raw_trace[1].clone()];
-    resize_to_next_power_of_two(&mut trace_cols);
+    let trace = fibonacci_rap_trace([FE::from(1), FE::from(1)], trace_length);
+    let trace_cols = trace.cols();
     let power_of_two_len = trace_cols[0].len();
     let exemptions = 3 + power_of_two_len - trace_length - 1;
-    let main_trace = fibonacci_rap::build_main_trace(&trace_cols);
 
     let context = AirContext {
         options: ProofOptions {
@@ -163,7 +158,7 @@ fn test_prove_rap_fib() {
 
     let fibonacci_rap = FibonacciRAP::new(context);
 
-    let result = prove(&main_trace, &fibonacci_rap, &mut ()).unwrap();
+    let result = prove(&trace, &fibonacci_rap, &mut ()).unwrap();
     assert!(verify(&result, &fibonacci_rap, &()));
 }
 

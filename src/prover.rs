@@ -663,7 +663,6 @@ mod tests {
         air::{
             context::{AirContext, ProofOptions},
             example::simple_fibonacci,
-            trace::TraceTable,
         },
         Domain,
     };
@@ -675,8 +674,7 @@ mod tests {
     #[test]
     fn test_domain_constructor() {
         let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
-        let trace_length = trace[0].len();
-        let trace_table = TraceTable::new_from_cols(&trace);
+        let trace_length = trace.n_rows();
         let coset_offset = 3;
         let blowup_factor: usize = 2;
 
@@ -687,7 +685,7 @@ mod tests {
                 coset_offset,
             },
             trace_length,
-            trace_columns: trace_table.n_cols,
+            trace_columns: trace.n_cols,
             transition_degrees: vec![1],
             transition_exemptions: vec![2],
             transition_offsets: vec![0, 1, 2],
@@ -724,9 +722,8 @@ mod tests {
     #[test]
     fn test_evaluate_polynomial_on_lde_domain_on_trace_polys() {
         let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
-        let trace_length = trace[0].len();
-        let trace_table = TraceTable::new_from_cols(&trace);
-        let trace_polys = trace_table.compute_trace_polys();
+        let trace_length = trace.n_rows();
+        let trace_polys = trace.compute_trace_polys();
         let coset_offset = FE::from(3);
         let blowup_factor: usize = 2;
         let domain_size = 8;

@@ -12,8 +12,9 @@ use crate::{
     transcript_to_field,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::field::{
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsFFTField,
+use lambdaworks_math::{
+    field::{fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsFFTField},
+    helpers::resize_to_next_power_of_two,
 };
 
 #[derive(Clone)]
@@ -126,7 +127,7 @@ impl AIR for FibonacciRAP {
 pub fn fibonacci_rap_trace<F: IsFFTField>(
     initial_values: [FieldElement<F>; 2],
     trace_length: usize,
-) -> Vec<Vec<FieldElement<F>>> {
+) -> TraceTable<F> {
     let mut fib_seq: Vec<FieldElement<F>> = vec![];
 
     fib_seq.push(initial_values[0].clone());
@@ -143,8 +144,10 @@ pub fn fibonacci_rap_trace<F: IsFFTField>(
 
     fib_seq.push(FieldElement::<F>::zero());
     fib_permuted.push(FieldElement::<F>::zero());
+    let mut trace_cols = vec![fib_seq, fib_permuted];
+    resize_to_next_power_of_two(&mut trace_cols);
 
-    vec![fib_seq, fib_permuted]
+    TraceTable::new_from_cols(&trace_cols)
 }
 
 #[cfg(test)]
@@ -161,7 +164,7 @@ mod test {
         // https://hackmd.io/@aztec-network/plonk-arithmetiization-air#RAPs---PAIRs-with-interjected-verifier-randomness
 
         let trace = fibonacci_rap_trace([FE17::from(1), FE17::from(1)], 8);
-        let expected_trace = vec![
+        let mut expected_trace = vec![
             vec![
                 FE17::one(),
                 FE17::one(),
@@ -185,16 +188,18 @@ mod test {
                 FE17::zero(),
             ],
         ];
+        resize_to_next_power_of_two(&mut expected_trace);
 
-        assert_eq!(trace, expected_trace);
+        assert_eq!(trace.cols(), expected_trace);
     }
 
     #[test]
     fn aux_col() {
         let trace = fibonacci_rap_trace([FE17::from(1), FE17::from(1)], 64);
+        let trace_cols = trace.cols();
 
-        let not_perm = trace[0].clone();
-        let perm = trace[1].clone();
+        let not_perm = trace_cols[0].clone();
+        let perm = trace_cols[1].clone();
         let gamma = FE17::from(10);
 
         assert_eq!(perm.len(), not_perm.len());

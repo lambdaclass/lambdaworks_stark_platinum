@@ -10,7 +10,7 @@ use crate::{
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsField,
+    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsFFTField,
 };
 
 #[derive(Clone)]
@@ -83,10 +83,10 @@ impl AIR for QuadraticAIR {
     }
 }
 
-pub fn quadratic_trace<F: IsField>(
+pub fn quadratic_trace<F: IsFFTField>(
     initial_value: FieldElement<F>,
     trace_length: usize,
-) -> Vec<FieldElement<F>> {
+) -> TraceTable<F> {
     let mut ret: Vec<FieldElement<F>> = vec![];
 
     ret.push(initial_value);
@@ -95,5 +95,5 @@ pub fn quadratic_trace<F: IsField>(
         ret.push(ret[i - 1].clone() * ret[i - 1].clone());
     }
 
-    ret
+    TraceTable::new_from_cols(&[ret])
 }

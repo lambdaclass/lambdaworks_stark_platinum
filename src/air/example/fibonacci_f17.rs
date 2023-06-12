@@ -22,10 +22,6 @@ impl From<AirContext> for Fibonacci17AIR {
     }
 }
 
-pub fn build_main_trace(raw_trace: &[Vec<FieldElement<F17>>]) -> TraceTable<F17> {
-    TraceTable::new_from_cols(raw_trace)
-}
-
 impl AIR for Fibonacci17AIR {
     type Field = F17;
     type RAPChallenges = ();

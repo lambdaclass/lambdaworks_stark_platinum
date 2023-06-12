@@ -10,7 +10,7 @@ use crate::{
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsField,
+    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsFFTField,
 };
 
 #[derive(Clone)]
@@ -22,12 +22,6 @@ impl From<AirContext> for FibonacciAIR {
     fn from(context: AirContext) -> Self {
         Self { context }
     }
-}
-
-pub fn build_main_trace(
-    raw_trace: &[Vec<FieldElement<Stark252PrimeField>>],
-) -> TraceTable<Stark252PrimeField> {
-    TraceTable::new_from_cols(raw_trace)
 }
 
 impl AIR for FibonacciAIR {
@@ -81,10 +75,10 @@ impl AIR for FibonacciAIR {
     }
 }
 
-pub fn fibonacci_trace<F: IsField>(
+pub fn fibonacci_trace<F: IsFFTField>(
     initial_values: [FieldElement<F>; 2],
     trace_length: usize,
-) -> Vec<Vec<FieldElement<F>>> {
+) -> TraceTable<F> {
     let mut ret: Vec<FieldElement<F>> = vec![];
 
     ret.push(initial_values[0].clone());
@@ -94,5 +88,5 @@ pub fn fibonacci_trace<F: IsField>(
         ret.push(ret[i - 1].clone() + ret[i - 2].clone());
     }
 
-    vec![ret]
+    TraceTable::new_from_cols(&[ret])
 }

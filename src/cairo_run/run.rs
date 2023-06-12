@@ -159,7 +159,7 @@ mod tests {
         let execution_trace = build_cairo_execution_trace(&register_states, &memory);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
-        let expected_trace = TraceTable::new_from_cols(&vec![
+        let expected_trace = TraceTable::new_from_cols(&[
             // col 0
             vec![FE::zero(), FE::zero(), FE::one()],
             // col 1
