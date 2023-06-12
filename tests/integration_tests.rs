@@ -10,7 +10,7 @@ use lambdaworks_stark::air::example::{
 use lambdaworks_stark::cairo_run::cairo_layout::CairoLayout;
 use lambdaworks_stark::cairo_run::run::run_program;
 use lambdaworks_stark::cairo_vm::cairo_mem::CairoMemory;
-use lambdaworks_stark::cairo_vm::cairo_trace::CairoTrace;
+use lambdaworks_stark::cairo_vm::cairo_trace::RegisterStates;
 use lambdaworks_stark::cairo_vm::execution_trace::build_main_trace;
 use lambdaworks_stark::{
     air::context::{AirContext, ProofOptions},
@@ -21,7 +21,7 @@ use lambdaworks_stark::{
 
 pub type FE = FieldElement<Stark252PrimeField>;
 
-pub fn load_cairo_trace_and_memory(program_name: &str) -> (CairoTrace, CairoMemory) {
+pub fn load_cairo_trace_and_memory(program_name: &str) -> (RegisterStates, CairoMemory) {
     let base_dir = env!("CARGO_MANIFEST_DIR");
     let dir_trace = format!("{}/src/cairo_vm/test_data/{}.trace", base_dir, program_name);
     let dir_memory = format!(
@@ -29,7 +29,7 @@ pub fn load_cairo_trace_and_memory(program_name: &str) -> (CairoTrace, CairoMemo
         base_dir, program_name
     );
 
-    let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
+    let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
     let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
     (raw_trace, memory)
@@ -142,7 +142,6 @@ fn test_prove_quadratic() {
 fn test_prove_cairo_program(file_path: &str) {
     let (register_states, memory, program_size) =
         run_program(None, CairoLayout::Plain, file_path).unwrap();
-    let register_states_steps = register_states.steps();
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -152,9 +151,9 @@ fn test_prove_cairo_program(file_path: &str) {
 
     let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
 
-    let main_trace = build_main_trace(&(register_states, memory), &mut pub_inputs).unwrap();
+    let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
-    let cairo_air = CairoAIR::new(proof_options, main_trace.n_rows(), register_states_steps);
+    let cairo_air = CairoAIR::new(proof_options, main_trace.n_rows(), register_states.steps());
 
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 

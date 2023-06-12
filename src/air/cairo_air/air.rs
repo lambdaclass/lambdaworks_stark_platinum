@@ -11,7 +11,7 @@ use crate::{
         trace::TraceTable,
         traits::AIR,
     },
-    cairo_vm::{cairo_mem::CairoMemory, cairo_trace::CairoTrace},
+    cairo_vm::{cairo_mem::CairoMemory, cairo_trace::RegisterStates},
     transcript_to_field, FE,
 };
 
@@ -150,7 +150,7 @@ impl PublicInputs {
     /// - In the future we should use the output of the Cairo Runner. This is not currently supported in Cairo RS
     /// - RangeChecks are not filled, and the prover mutates them inside the prove function. This works but also should be loaded from the Cairo RS output
     pub fn from_regs_and_mem(
-        register_states: &CairoTrace,
+        register_states: &RegisterStates,
         memory: &CairoMemory,
         program_size: usize,
     ) -> Self {
@@ -744,7 +744,7 @@ mod test {
         },
         cairo_run::run::Error,
         cairo_vm::{
-            cairo_mem::CairoMemory, cairo_trace::CairoTrace, execution_trace::build_main_trace,
+            cairo_mem::CairoMemory, cairo_trace::RegisterStates, execution_trace::build_main_trace,
         },
         Domain,
     };
@@ -775,7 +775,7 @@ mod test {
         let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
         let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
 
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
+        let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
         let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
         let mut program = Vec::new();
@@ -806,7 +806,7 @@ mod test {
             num_steps: raw_trace.steps(),
         };
 
-        let main_trace = build_main_trace(&(raw_trace, memory), &mut public_input).unwrap();
+        let main_trace = build_main_trace(&raw_trace, &memory, &mut public_input);
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);

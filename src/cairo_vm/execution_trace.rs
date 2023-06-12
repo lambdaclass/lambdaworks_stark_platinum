@@ -1,6 +1,6 @@
 use super::{
     cairo_mem::CairoMemory,
-    cairo_trace::CairoTrace,
+    cairo_trace::RegisterStates,
     instruction_flags::{
         aux_get_last_nim_of_field_element, ApUpdate, CairoOpcode, DstReg, Op0Reg, Op1Src, PcUpdate,
         ResLogic,
@@ -15,7 +15,6 @@ use crate::{
         trace::TraceTable,
     },
     cairo_vm::{instruction_flags::CairoInstructionFlags, instruction_offsets::InstructionOffsets},
-    prover::ProvingError,
     FE,
 };
 use lambdaworks_math::field::{
@@ -50,48 +49,51 @@ pub const MEMORY_COLUMNS: [usize; 8] = [
 //
 
 pub fn build_main_trace(
-    raw_trace: &(CairoTrace, CairoMemory),
+    register_states: &RegisterStates,
+    memory: &CairoMemory,
     public_input: &mut PublicInputs,
-) -> Result<TraceTable<Stark252PrimeField>, ProvingError> {
-    let mut main_trace = build_cairo_execution_trace(&raw_trace.0, &raw_trace.1);
+) -> TraceTable<Stark252PrimeField> {
+    let mut main_trace = build_cairo_execution_trace(register_states, memory);
 
-    // First pad is needed by the prover to validate the program bytecode
-    let first_pad = (public_input.program.len() >> 2) + 1;
-    pad_with_last_row(
-        &mut main_trace,
-        (public_input.program.len() >> 2) + 1,
-        &MEMORY_COLUMNS,
-    );
+    add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
 
-    let (missing_values, rc_min, rc_max) =
-        get_missing_values_offset_columns(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);
+    let (rc_holes, rc_min, rc_max) = get_rc_holes(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);
     public_input.range_check_min = Some(rc_min);
     public_input.range_check_max = Some(rc_max);
 
-    add_missing_values_to_offsets_column(&mut main_trace, missing_values);
+    fill_rc_holes(&mut main_trace, rc_holes);
 
-    // The second one is a padding to next power of two
-    let padded_trace_length = (raw_trace.0.steps() + first_pad).next_power_of_two();
+    let trace_len_next_power_of_two = main_trace.n_rows().next_power_of_two();
+    let padding = trace_len_next_power_of_two - main_trace.n_rows();
+    pad_with_last_row(&mut main_trace, padding);
 
-    if padded_trace_length < main_trace.n_rows() {
-        return Err(ProvingError::WrongParameter(
-            "Trace length is not large enough.".to_string(),
-        ));
-    }
-
-    let padding = padded_trace_length - main_trace.n_rows();
-    pad_with_last_row(&mut main_trace, padding, &MEMORY_COLUMNS);
-
-    Ok(main_trace)
+    main_trace
 }
 
-fn pad_with_last_row<F: IsFFTField>(
+fn add_pub_memory_dummy_accesses<F: IsFFTField>(
+    main_trace: &mut TraceTable<F>,
+    program_len: usize,
+) {
+    pad_with_last_row_and_zeros(main_trace, (program_len >> 2) + 1, &MEMORY_COLUMNS)
+}
+
+fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usize) {
+    let last_row = trace.last_row().to_vec();
+    let mut pad: Vec<_> = std::iter::repeat(&last_row)
+        .take(number_rows)
+        .flatten()
+        .cloned()
+        .collect();
+    trace.table.append(&mut pad);
+}
+
+fn pad_with_last_row_and_zeros<F: IsFFTField>(
     trace: &mut TraceTable<F>,
     number_rows: usize,
-    exception_columns: &[usize],
+    zero_pad_columns: &[usize],
 ) {
     let mut last_row = trace.last_row().to_vec();
-    for excemption_column in exception_columns.iter() {
+    for excemption_column in zero_pad_columns.iter() {
         last_row[*excemption_column] = FieldElement::zero();
     }
     let mut pad: Vec<_> = std::iter::repeat(&last_row)
@@ -102,7 +104,7 @@ fn pad_with_last_row<F: IsFFTField>(
     trace.table.append(&mut pad);
 }
 
-fn get_missing_values_offset_columns<F>(
+fn get_rc_holes<F>(
     trace: &TraceTable<F>,
     columns_indices: &[usize],
 ) -> (Vec<FieldElement<F>>, u16, u16)
@@ -141,10 +143,7 @@ where
     )
 }
 
-fn add_missing_values_to_offsets_column<F: IsFFTField>(
-    trace: &mut TraceTable<F>,
-    missing_values: Vec<FieldElement<F>>,
-) {
+fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, missing_values: Vec<FieldElement<F>>) {
     let zeros_left = vec![FieldElement::zero(); OFF_DST];
     let zeros_right = vec![FieldElement::zero(); trace.n_cols - OFF_OP1 - 1];
 
@@ -160,7 +159,7 @@ fn add_missing_values_to_offsets_column<F: IsFFTField>(
 /// The constraints of the Cairo AIR are defined over this trace rather than the raw trace
 /// obtained from the Cairo VM, this is why this function is needed.
 pub fn build_cairo_execution_trace(
-    raw_trace: &CairoTrace,
+    raw_trace: &RegisterStates,
     memory: &CairoMemory,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
@@ -315,7 +314,7 @@ fn compute_res(flags: &[CairoInstructionFlags], op0s: &[FE], op1s: &[FE], dsts: 
 fn compute_dst(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
-    raw_trace: &CairoTrace,
+    raw_trace: &RegisterStates,
     memory: &CairoMemory,
 ) -> (Vec<FE>, Vec<FE>) {
     /* Cairo whitepaper, page 33 - https://eprint.iacr.org/2021/1063.pdf
@@ -349,7 +348,7 @@ fn compute_dst(
 pub fn compute_op0(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
-    raw_trace: &CairoTrace,
+    raw_trace: &RegisterStates,
     memory: &CairoMemory,
 ) -> (Vec<FE>, Vec<FE>) {
     /* Cairo whitepaper, page 33 - https://eprint.iacr.org/2021/1063.pdf
@@ -383,7 +382,7 @@ pub fn compute_op0(
 pub fn compute_op1(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
-    raw_trace: &CairoTrace,
+    raw_trace: &RegisterStates,
     memory: &CairoMemory,
     op0s: &[FE],
 ) -> (Vec<FE>, Vec<FE>) {
@@ -441,7 +440,7 @@ pub fn compute_op1(
 /// This function updates op0s, dst, res in place when the conditions hold.
 fn update_values(
     flags: &[CairoInstructionFlags],
-    raw_trace: &CairoTrace,
+    raw_trace: &RegisterStates,
     op0s: &mut [FE],
     dst: &mut [FE],
     res: &mut [FE],
@@ -504,7 +503,7 @@ mod test {
         let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
         let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
 
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
+        let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
         let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
         let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
@@ -614,7 +613,7 @@ mod test {
         let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.trace";
         let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.memory";
 
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
+        let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
         let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
         let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
@@ -988,7 +987,7 @@ mod test {
         ];
         let table = TraceTable::<Stark252PrimeField>::new_from_cols(&columns);
 
-        let (col, rc_min, rc_max) = get_missing_values_offset_columns(&table, &[0, 1, 2]);
+        let (col, rc_min, rc_max) = get_rc_holes(&table, &[0, 1, 2]);
         assert_eq!(col, expected_col);
         assert_eq!(rc_min, 1);
         assert_eq!(rc_max, 7);
@@ -1008,7 +1007,7 @@ mod test {
             FieldElement::from(5),
             FieldElement::from(6),
         ];
-        add_missing_values_to_offsets_column(&mut main_trace, missing_values);
+        fill_rc_holes(&mut main_trace, missing_values);
 
         let mut expected: Vec<_> = (0..34 * 2).map(FieldElement::from).collect();
         expected.append(&mut vec![FieldElement::zero(); OFF_DST]);

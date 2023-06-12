@@ -1,5 +1,5 @@
 use crate::cairo_vm::cairo_mem::CairoMemory;
-use crate::cairo_vm::cairo_trace::CairoTrace;
+use crate::cairo_vm::cairo_trace::RegisterStates;
 
 use super::cairo_layout::CairoLayout;
 use super::vec_writer::VecWriter;
@@ -43,7 +43,7 @@ pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
     filename: &str,
-) -> Result<(CairoTrace, CairoMemory, usize), Error> {
+) -> Result<(RegisterStates, CairoMemory, usize), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
@@ -84,7 +84,7 @@ pub fn run_program(
 
     //TO DO: Better error handling
     let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();
-    let cairo_trace = CairoTrace::from_bytes_le(&trace_vec).unwrap();
+    let cairo_trace = RegisterStates::from_bytes_le(&trace_vec).unwrap();
 
     let data_len = cairo_runner.get_program().data_len();
 
@@ -96,7 +96,7 @@ mod tests {
     use crate::air::trace::TraceTable;
     use crate::cairo_run::cairo_layout::CairoLayout;
     use crate::cairo_vm::cairo_mem::CairoMemory;
-    use crate::cairo_vm::cairo_trace::CairoTrace;
+    use crate::cairo_vm::cairo_trace::RegisterStates;
     use crate::cairo_vm::execution_trace::build_cairo_execution_trace;
     use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::MontgomeryConfigStark252PrimeField;
     use lambdaworks_math::field::{
@@ -119,7 +119,7 @@ mod tests {
         super::run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
 
         // read trace from file
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
+        let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
         // read memory from file
         let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
