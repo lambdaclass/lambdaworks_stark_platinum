@@ -731,21 +731,16 @@ fn frame_inst_size(frame_row: &[FE]) -> FE {
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
-    use cairo_vm::{cairo_run, types::program::Program};
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
     use lambdaworks_math::field::element::FieldElement;
 
     use crate::{
         air::{
-            cairo_air::air::{add_program_in_public_input_section, CairoAIR, PublicInputs},
-            context::ProofOptions,
+            cairo_air::air::{add_program_in_public_input_section, PublicInputs},
             debug::validate_trace,
             traits::AIR,
         },
-        cairo_run::run::Error,
-        cairo_vm::{
-            cairo_mem::CairoMemory, cairo_trace::RegisterStates, execution_trace::build_main_trace,
-        },
+        cairo_run::run::{generate_prover_args, program_path},
         Domain,
     };
 
@@ -754,59 +749,10 @@ mod test {
         CairoRAPChallenges,
     };
 
-    #[ignore]
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
-        let base_dir = env!("CARGO_MANIFEST_DIR");
-
-        let cairo_run_config = cairo_run::CairoRunConfig {
-            entrypoint: "main",
-            trace_enabled: true,
-            relocate_mem: true,
-            layout: "all_cairo",
-            proof_mode: false,
-            secure_run: None,
-        };
-        let json_filename = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.json";
-        let program_content = std::fs::read(json_filename).map_err(Error::IO).unwrap();
-        let cairo_program =
-            Program::from_bytes(&program_content, Some(cairo_run_config.entrypoint)).unwrap();
-
-        let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
-
-        let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
-
-        let mut program = Vec::new();
-        for i in 1..=cairo_program.data_len() as u64 {
-            program.push(memory.get(&i).unwrap().clone());
-        }
-
-        let proof_options = ProofOptions {
-            blowup_factor: 4,
-            fri_number_of_queries: 1,
-            coset_offset: 3,
-        };
-
-        let cairo_air = CairoAIR::new(proof_options, 128, raw_trace.steps());
-
-        // PC FINAL AND AP FINAL are not computed correctly since they are extracted after padding to
-        // power of two and therefore are zero
-        let last_register_state = &raw_trace.rows[raw_trace.steps() - 1];
-        let mut public_input = PublicInputs {
-            program,
-            ap_final: FieldElement::from(last_register_state.ap),
-            pc_final: FieldElement::from(last_register_state.pc),
-            pc_init: FieldElement::from(raw_trace.rows[0].pc),
-            ap_init: FieldElement::from(raw_trace.rows[0].ap),
-            fp_init: FieldElement::from(raw_trace.rows[0].fp),
-            range_check_max: None,
-            range_check_min: None,
-            num_steps: raw_trace.steps(),
-        };
-
-        let main_trace = build_main_trace(&raw_trace, &memory, &mut public_input);
+        let (main_trace, cairo_air, public_input) =
+            generate_prover_args(&program_path("simple_program.json"));
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);

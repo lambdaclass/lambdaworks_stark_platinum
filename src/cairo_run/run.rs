@@ -1,5 +1,9 @@
+use crate::air::cairo_air::air::{CairoAIR, PublicInputs};
+use crate::air::context::ProofOptions;
+use crate::air::trace::TraceTable;
 use crate::cairo_vm::cairo_mem::CairoMemory;
 use crate::cairo_vm::cairo_trace::RegisterStates;
+use crate::cairo_vm::execution_trace::build_main_trace;
 
 use super::cairo_layout::CairoLayout;
 use super::vec_writer::VecWriter;
@@ -8,6 +12,7 @@ use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_def
 use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
 use cairo_vm::vm::errors::trace_errors::TraceError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
+use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -89,6 +94,34 @@ pub fn run_program(
     let data_len = cairo_runner.get_program().data_len();
 
     Ok((cairo_trace, cairo_mem, data_len))
+}
+
+pub fn generate_prover_args(
+    file_path: &str,
+) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
+    let (register_states, memory, program_size) =
+        run_program(None, CairoLayout::Plain, file_path).unwrap();
+
+    let proof_options = ProofOptions {
+        blowup_factor: 4,
+        fri_number_of_queries: 3,
+        coset_offset: 3,
+    };
+
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+
+    let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
+
+    let cairo_air = CairoAIR::new(proof_options, main_trace.n_rows(), register_states.steps());
+
+    (main_trace, cairo_air, pub_inputs)
+}
+
+pub fn program_path(program_name: &str) -> String {
+    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
+    const PROGRAM_BASE_REL_PATH: &str = "/src/cairo_vm/test_data/";
+    let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
+    program_base_path + program_name
 }
 
 #[cfg(test)]
