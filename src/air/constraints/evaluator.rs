@@ -56,8 +56,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             boundary_constraints.generate_roots_of_unity(&self.primitive_root, n_trace_colums);
         let values = boundary_constraints.values(n_trace_colums);
 
-        println!("domains[0].len() {}", domains[0].len());
-
         let boundary_polys: Vec<Polynomial<FieldElement<F>>> = zip(domains, values)
             .zip(self.trace_polys)
             .map(|((xs, ys), trace_poly)| {
@@ -164,11 +162,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             let zerofied_eval = eval / div.evaluate(x);
             let degree_adjustment = air.composition_poly_degree_bound()
                 - (air.context().trace_length * (transition_degree - 1));
-            // println!("div.coefficients.len(), air.composition_poly_degree_bound(), transition_degree, degree_adjustment, {}, {} {} {}",
-            //     div.coefficients.len(), air.composition_poly_degree_bound(), transition_degree, degree_adjustment);
-            // Example for trace_len 32:
-            // trace is degree 31, divisor aka zerofier is degree 30, adjustment (according to code here) is degree 32,
-            // so composition poly is degree 33 (composition_poly.coefficients.len() 34)
             let result = zerofied_eval * (alpha * x.pow(degree_adjustment) + beta);
             ret.push(result);
         }

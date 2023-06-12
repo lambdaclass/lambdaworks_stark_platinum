@@ -177,13 +177,9 @@ where
     let (mut trace_polys, mut evaluations, mut lde_trace_merkle_trees, mut lde_trace_merkle_roots) =
         interpolate_and_commit(&main_trace, domain, transcript);
 
-    println!("trace_polys[0].coefficients.len() {}", trace_polys[0].coefficients.len());
-
     let rap_challenges = air.build_rap_challenges(transcript);
 
     let aux_trace = air.build_auxiliary_trace(&main_trace, &rap_challenges, public_input);
-
-    println!("aux_trace.is_empty() {}", aux_trace.is_empty());
 
     if !aux_trace.is_empty() {
         // Check that this is valid for interpolation
@@ -250,7 +246,6 @@ where
     // It would still need to be a coset domain, to avoid zeros in denoms
     // (e.g. a coarser LDE domain would work).
     let composition_poly = constraint_evaluations.compute_composition_poly(&domain.coset_offset);
-    println!("composition_poly.coefficients.len() {}", composition_poly.coefficients.len());
     let (composition_poly_even, composition_poly_odd) = composition_poly.even_odd_decomposition();
 
     let lde_composition_poly_even_evaluations = evaluate_polynomial_on_lde_domain(
@@ -364,7 +359,6 @@ fn round_4_compute_and_run_fri_on_the_deep_composition_polynomial<
     z: &FieldElement<F>,
     transcript: &mut T,
     evil: bool,
-    bad_trace: bool,
 ) -> Round4<F>
 where
     FieldElement<F>: ByteConversion,
@@ -392,7 +386,6 @@ where
         &composition_poly_coeffients,
         &trace_poly_coeffients,
         evil,
-        bad_trace,
     );
 
     // FRI commit and query phases
@@ -403,7 +396,9 @@ where
         transcript,
     );
     let (query_list, iota_0) = fri_query_phase(air, domain, &fri_layers, transcript);
-    println!("iota_0 {}", iota_0);
+    println!(
+        "If Deep(x) consistency check point iota_0 < D / blowup_factor, \
+        evil prover should pwn verifier. iota_0 = {}", iota_0);
 
     let fri_layers_merkle_roots: Vec<_> = fri_layers
         .iter()
@@ -425,30 +420,17 @@ fn interp_from_num_denom<F: IsFFTField>(
     num: &Polynomial<FieldElement<F>>,
     denom: &Polynomial<FieldElement<F>>,
     domain: &Domain<F>,
-    poly_sanity_check: &Polynomial<FieldElement<F>>,
-    evil: bool,
-    bad_trace: bool,
 ) -> Polynomial<FieldElement<F>> {
-    let target_deg = if evil || !bad_trace {
-        domain.lde_roots_of_unity_coset.len() / domain.blowup_factor as usize
-    } else {
-        domain.lde_roots_of_unity_coset.len() / 2 as usize
-    };
+    let target_deg = domain.lde_roots_of_unity_coset.len() / domain.blowup_factor as usize;
     let num_evals = evaluate_polynomial_on_lde_domain(
         &num, domain.blowup_factor, domain.interpolation_domain_size, &domain.coset_offset).unwrap();
     let denom_evals = evaluate_polynomial_on_lde_domain(
         &denom, domain.blowup_factor, domain.interpolation_domain_size, &domain.coset_offset).unwrap();
     let evals: Vec<_> = num_evals.iter().zip(denom_evals).map(|(num, denom)| num / denom).collect();
-    // [..target_deg + 1] yields num_pwns=0 and "step 3 failed" in each fuzzing attempt
-    // so FRI appears strong enough to reject polys whose degree is even slightly too high
     let result = Polynomial::interpolate(
         &domain.lde_roots_of_unity_coset[..target_deg], &evals[..target_deg]).unwrap();
-    // sanity checks that interpolated poly has the expected relationship to non-interpreted poly
-    if !evil {
-        for (coeff_interp, coeff) in result.coefficients.iter().zip(&poly_sanity_check.coefficients) {
-            assert_eq!(coeff_interp, coeff);
-        }
-    }
+    println!("num.coefficients.len(), denom.coefficients.len(), result.coefficients.len() = {}, {}, {}",
+        num.coefficients.len(), denom.coefficients.len(), result.coefficients.len());
     result
 }
 
@@ -467,7 +449,6 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     composition_poly_gammas: &[FieldElement<F>; 2],
     trace_terms_gammas: &[FieldElement<F>],
     evil: bool,
-    bad_trace: bool,
 ) -> Polynomial<FieldElement<F>> {
     // Compute composition polynomial terms of the deep composition polynomial.
     let x = Polynomial::new_monomial(FieldElement::one(), 1);
@@ -480,34 +461,30 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     let z_squared = z * z;
 
     // 𝛾 ( H₁ − H₁(z²) ) / ( X − z² )
-    let h_1_term = gamma * (h_1 - h_1_z2) / (&x - &z_squared);
-    let h_1_num = gamma * (h_1 - h_1_z2);
-    let h_1_denom = &x - &z_squared;
-    let h_1_from_interp = interp_from_num_denom(
-        &h_1_num,
-        &h_1_denom,
-        domain,
-        &h_1_term,
-        evil,
-        bad_trace);
-    println!("evil {} bad_trace {}", evil, bad_trace);
-    println!("h_1.coefficients.len() {}", h_1.coefficients.len());
-    println!("h_1_term.coefficients.len() {}", h_1_term.coefficients.len());
-    println!("h_1_from_interp.coefficientsl.len() {}", h_1_from_interp.coefficients.len());
+    let h_1_term = if evil {
+        let h_1_num = gamma * (h_1 - h_1_z2);
+        let h_1_denom = &x - &z_squared;
+        interp_from_num_denom(
+            &h_1_num,
+            &h_1_denom,
+            domain,
+        )
+    } else {
+        gamma * (h_1 - h_1_z2) / (&x - &z_squared)
+    };
 
     // 𝛾' ( H₂ − H₂(z²) ) / ( X − z² )
-    let h_2_term = gamma_p * (h_2 - h_2_z2) / (&x - &z_squared);
-
-    let h_2_num = gamma_p * (h_2 - h_2_z2);
-    let h_2_denom = &x - &z_squared;
-    let h_2_from_interp = interp_from_num_denom(
-        &h_2_num,
-        &h_2_denom,
-        domain,
-        &h_2_term,
-        evil,
-        bad_trace,
-    );
+    let h_2_term = if evil {
+        let h_2_num = gamma_p * (h_2 - h_2_z2);
+        let h_2_denom = &x - &z_squared;
+        interp_from_num_denom(
+            &h_2_num,
+            &h_2_denom,
+            domain,
+        )
+    } else {
+        gamma_p * (h_2 - h_2_z2) / (&x - &z_squared)
+    };
 
     // Get trace evaluations needed for the trace terms of the deep composition polynomial
     let transition_offsets = air.context().transition_offsets;
@@ -518,7 +495,6 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
     // There is one term for every trace polynomial and for every row in the frame.
     // ∑ ⱼₖ [ 𝛾ₖ ( tⱼ − tⱼ(z) ) / ( X − zgᵏ )]
     let mut trace_terms = Polynomial::zero();
-    let mut trace_terms_from_interp = Polynomial::<FieldElement<F>>::zero();
     for (i, t_j) in trace_polys.iter().enumerate() {
         for (j, (evaluations, offset)) in trace_frame_evaluations
             .iter()
@@ -527,36 +503,24 @@ fn compute_deep_composition_poly<A: AIR, F: IsFFTField>(
         {
             let t_j_z = evaluations[i].clone();
             let z_shifted = z * primitive_root.pow(*offset);
-            let poly = (t_j - &t_j_z) / (&x - &z_shifted);
-
-            let poly_num = t_j - t_j_z;
-            let poly_denom = &x - &z_shifted;
-            let poly_from_interp = interp_from_num_denom(
-                &poly_num,
-                &poly_denom,
-                domain,
-                &poly,
-                evil,
-                bad_trace
-            );
+            let poly = if evil {
+                let poly_num = t_j - t_j_z;
+                let poly_denom = &x - &z_shifted;
+                interp_from_num_denom(
+                    &poly_num,
+                    &poly_denom,
+                    domain,
+                )
+            } else {
+                (t_j - &t_j_z) / (&x - &z_shifted)
+            };
  
             trace_terms =
                 trace_terms + poly * &trace_terms_gammas[i * trace_frame_evaluations.len() + j];
-
-            trace_terms_from_interp =
-                trace_terms_from_interp + poly_from_interp * &trace_terms_gammas[i * trace_frame_evaluations.len() + j];
         }
     }
 
-    let deep = h_1_term + h_2_term + trace_terms;
-    let deep_from_interp = h_1_from_interp + h_2_from_interp + trace_terms_from_interp;
-    if evil {
-        println!("deep_from_interp.coefficients.len() {}", deep_from_interp.coefficients.len());
-        println!("deep.coefficients.len() {}", deep.coefficients.len());
-        deep_from_interp
-    } else {
-        deep
-    }
+    h_1_term + h_2_term + trace_terms
 }
 
 fn open_deep_composition_poly<F: IsFFTField, A: AIR<Field = F>>(
@@ -625,7 +589,6 @@ pub fn prove<F: IsFFTField, A: AIR<Field = F>>(
     air: &A,
     public_input: &mut A::PublicInput,
     evil: bool,
-    bad_trace: bool,
 ) -> Result<StarkProof<F>, ProvingError>
 where
     FieldElement<F>: ByteConversion,
@@ -633,10 +596,6 @@ where
     info!("Starting proof generation...");
 
     let domain = Domain::new(air);
-
-    println!("domain.root_order {}", domain.root_order);
-    println!("domain.lde_roots_of_unity_coset.len() {}", domain.lde_roots_of_unity_coset.len());
-    println!("domain.interpolation_domain_size {}", domain.interpolation_domain_size);
 
     let mut transcript = round_0_transcript_initialization();
 
@@ -686,9 +645,6 @@ where
         .into_iter()
         .zip(transition_coeffs_betas)
         .collect();
-
-    // boundary_coeffs[0] is (FieldElement<_>, FieldElement<_>)
-    // println!("{}", boundary_coeffs[0].0);
 
     let round_2_result = round_2_compute_composition_polynomial(
         air,
@@ -763,7 +719,6 @@ where
         &z,
         &mut transcript,
         evil,
-        bad_trace,
     );
 
     info!("End proof generation");

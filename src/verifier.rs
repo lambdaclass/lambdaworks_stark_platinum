@@ -185,6 +185,9 @@ where
     }
 }
 
+// This function is exposed for convenience, so the prover can also evaluate H(z)
+// from the trace polys without duplicating code.
+// It doesn't change the verifier's operations at all.
 pub fn composition_poly_ood_evaluation_exact_from_trace<F: IsFFTField, A: AIR<Field = F>>(
     air: &A,
     trace_ood_frame_evaluations: &Frame<F>,
