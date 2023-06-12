@@ -1,3 +1,4 @@
+use lambdaworks_fft::roots_of_unity::get_powers_of_primitive_root_coset;
 use lambdaworks_math::{
     field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
@@ -18,7 +19,6 @@ pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
     trace_polys: &'poly [Polynomial<FieldElement<F>>],
     primitive_root: FieldElement<F>,
 }
-
 impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F, A> {
     pub fn new(
         air: &A,
@@ -153,16 +153,20 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             })
             .collect();
 
-        let x_n = Polynomial::new_monomial(FieldElement::<F>::one(), trace_length);
-        let x_n_1 = x_n - FieldElement::<F>::one();
+        let blowup_factor_order = u64::from(blowup_factor.trailing_zeros());
 
-        let mut zerofier_evaluations = evaluate_polynomial_on_lde_domain(
-            &x_n_1,
-            domain.blowup_factor,
-            domain.interpolation_domain_size,
-            &domain.coset_offset,
+        let offset = FieldElement::<F>::from(self.air.context().options.coset_offset);
+        let offset_pow = offset.pow(trace_length);
+        let one = FieldElement::<F>::one();
+        let mut zerofier_evaluations = get_powers_of_primitive_root_coset(
+            blowup_factor_order,
+            blowup_factor as usize,
+            &offset_pow,
         )
-        .unwrap();
+        .unwrap()
+        .iter()
+        .map(|v| v - &one)
+        .collect::<Vec<_>>();
 
         FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
         let transition_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
@@ -171,6 +175,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .map(|row| {
                     zerofier_evaluations
                         .iter()
+                        .cycle()
                         .zip(row.iter())
                         .map(|(c1, c2)| c1 * c2)
                         .collect()
