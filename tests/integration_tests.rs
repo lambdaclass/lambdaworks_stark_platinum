@@ -128,7 +128,7 @@ fn test_prove_fib_evil() {
 
     // Uh oh, evil prover has entered the chat
     let mut num_pwns: u32 = 0;
-    for bad_val in 1..=num_bad_traces_to_try {
+    for _ in 1..=num_bad_traces_to_try {
         let bad_trace = (0..trace_length).map(|_| FE::from(rng.gen::<u64>())).collect();
         let bad_trace = vec![bad_trace];
         let result = prove( 

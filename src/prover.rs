@@ -68,13 +68,11 @@ struct Round4<F: IsFFTField> {
 
 #[cfg(feature = "test_fiat_shamir")]
 fn round_0_transcript_initialization() -> TestTranscript {
-    println!("using TestTranscript");
     TestTranscript::new()
 }
 
 #[cfg(not(feature = "test_fiat_shamir"))]
 fn round_0_transcript_initialization() -> DefaultTranscript {
-    println!("using DefaultTranscript");
     // TODO: add strong fiat shamir
     DefaultTranscript::new()
 }
@@ -252,6 +250,7 @@ where
     // It would still need to be a coset domain, to avoid zeros in denoms
     // (e.g. a coarser LDE domain would work).
     let composition_poly = constraint_evaluations.compute_composition_poly(&domain.coset_offset);
+    println!("composition_poly.coefficients.len() {}", composition_poly.coefficients.len());
     let (composition_poly_even, composition_poly_odd) = composition_poly.even_odd_decomposition();
 
     let lde_composition_poly_even_evaluations = evaluate_polynomial_on_lde_domain(
@@ -329,7 +328,7 @@ where
 
     // Evaluate H_1 and H_2 in z^2.
     let (composition_poly_even_ood_evaluation, composition_poly_odd_ood_evaluation) = if evil {
-        let exact_from_trace = composition_poly_ood_evaluation_exact_from_trace(
+        let H_z_exact_from_trace = composition_poly_ood_evaluation_exact_from_trace(
             air,
             &trace_ood_frame_evaluations,
             domain,
@@ -339,7 +338,7 @@ where
             boundary_coeffs,
             transition_coeffs,
         );
-        (exact_from_trace, FieldElement::<F>::from(0))
+        (H_z_exact_from_trace, FieldElement::<F>::from(0))
     } else {
         (round_2_result.composition_poly_even.evaluate(&z_squared),
             round_2_result.composition_poly_odd.evaluate(&z_squared))
@@ -440,6 +439,8 @@ fn interp_from_num_denom<F: IsFFTField>(
     let denom_evals = evaluate_polynomial_on_lde_domain(
         &denom, domain.blowup_factor, domain.interpolation_domain_size, &domain.coset_offset).unwrap();
     let evals: Vec<_> = num_evals.iter().zip(denom_evals).map(|(num, denom)| num / denom).collect();
+    // [..target_deg + 1] yields num_pwns=0 and "step 3 failed" in each fuzzing attempt
+    // so FRI appears strong enough to reject polys whose degree is even slightly too high
     let result = Polynomial::interpolate(
         &domain.lde_roots_of_unity_coset[..target_deg], &evals[..target_deg]).unwrap();
     // sanity checks that interpolated poly has the expected relationship to non-interpreted poly
