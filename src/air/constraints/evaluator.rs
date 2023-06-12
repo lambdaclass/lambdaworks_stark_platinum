@@ -206,7 +206,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .map(|transition_adjustments| &transition_adjustments[i])
                 .collect();
 
-            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum_ref(
+            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
                 &evaluations_transition,
                 &denominators,
                 &degree_adjustments,
@@ -257,27 +257,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     ///
     /// Returns the sum of the evaluations computed.
     pub fn compute_constraint_composition_poly_evaluations_sum(
-        evaluations: &[FieldElement<F>],
-        inverse_denominators: &[FieldElement<F>],
-        degree_adjustments: &[FieldElement<F>],
-        constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
-    ) -> FieldElement<F> {
-        let mut ret = FieldElement::<F>::zero();
-        for (((eval, degree_adjustment), inverse_denominator), (alpha, beta)) in evaluations
-            .iter()
-            .zip(degree_adjustments)
-            .zip(inverse_denominators)
-            .zip(constraint_coeffs)
-        {
-            let zerofied_eval = eval * inverse_denominator;
-            let result = zerofied_eval * (alpha * degree_adjustment + beta);
-            ret += result;
-        }
-
-        ret
-    }
-
-    pub fn compute_constraint_composition_poly_evaluations_sum_ref(
         evaluations: &[FieldElement<F>],
         inverse_denominators: &[&FieldElement<F>],
         degree_adjustments: &[&FieldElement<F>],
