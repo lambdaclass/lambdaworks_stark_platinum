@@ -233,18 +233,6 @@ where
     );
 
     // Get the composition poly H
-    // https://lambdaclass.github.io/lambdaworks/proving_systems/starks/recap.html#consistency-check
-    // H Consistency Note 1:
-    // H is computed by FFT-interpolating evals of RHS(B(t(x)), C(t(x)), x) on the lde domain*.
-    // So the computed H is unavoidably a polynomial of bounded degree.
-    // But if the constraints are not satisfied, RHS(x) is not a polynomial of bounded degree.
-    // Therefore, when we later sample a random point z and compare the (interpolation-derived) H(z)
-    // with the (exact) RHS(B(t(z), C(t(z)), z), they will not match.
-    //
-    // *In our case for an honest proof i think the full lde domain is more points than needed.
-    // In our case deg(H) <= trace len so a domain the size of the trace domain would suffice.
-    // It would still need to be a coset domain, to avoid zeros in denoms
-    // (e.g. a coarser LDE domain would work).
     let composition_poly = constraint_evaluations.compute_composition_poly(&domain.coset_offset);
     let (composition_poly_even, composition_poly_odd) = composition_poly.even_odd_decomposition();
 
@@ -302,12 +290,6 @@ where
     //
     // In the fibonacci example, the ood frame is simply the evaluations `[t(z), t(z * g), t(z * g^2)]`, where `t` is the trace
     // polynomial and `g` is the primitive root of unity used when interpolating `t`.
-    //
-    // H Consistency Note 2:
-    // ...but if we're faking a proof, what if we just ignore our interpolation-derived H(z)
-    // and submit a H_claimed(z) == (exact) RHS(z)?
-    // Then in theory Deep(x) = gamma_1 * (H(x) - H_claimed(z) / (x - z)) + ...
-    // is not a low-degree polynomial, so the FRI check on Deep(x) should fail.
     let ood_trace_evaluations = Frame::get_trace_evaluations(
         &round_1_result.trace_polys,
         z,
@@ -567,21 +549,6 @@ where
         lde_trace_evaluations,
     }
 }
-
-// https://doc.rust-lang.org/reference/items/associated-items.html#associated-constants-examples
-struct NotEvil;
-struct Evil;
-trait EvilOrNot {
-    const IS_EVIL: bool;
-}
-impl EvilOrNot for NotEvil {
-    const IS_EVIL: bool = false;
-}
-impl EvilOrNot for Evil {
-    const IS_EVIL: bool = true;
-}
-// ^ this doesn't help, compiler doesn't let me specify default for a function's (prove's) generic type parameter
-// pub fn prove<F: IsFFTField, A: AIR<Field = F>, E = NotEvil>(
 
 // FIXME remove unwrap() calls and return errors
 pub fn prove<F: IsFFTField, A: AIR<Field = F>>(
