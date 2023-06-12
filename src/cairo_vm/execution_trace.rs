@@ -314,7 +314,7 @@ fn compute_res(flags: &[CairoInstructionFlags], op0s: &[FE], op1s: &[FE], dsts: 
 fn compute_dst(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
-    raw_trace: &RegisterStates,
+    register_states: &RegisterStates,
     memory: &CairoMemory,
 ) -> (Vec<FE>, Vec<FE>) {
     /* Cairo whitepaper, page 33 - https://eprint.iacr.org/2021/1063.pdf
@@ -328,7 +328,7 @@ fn compute_dst(
     flags
         .iter()
         .zip(offsets)
-        .zip(raw_trace.rows.iter())
+        .zip(register_states.rows.iter())
         .map(|((f, o), t)| match f.dst_reg {
             DstReg::AP => {
                 let addr = t.ap.checked_add_signed(o.off_dst.into()).unwrap();
@@ -348,7 +348,7 @@ fn compute_dst(
 pub fn compute_op0(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
-    raw_trace: &RegisterStates,
+    register_states: &RegisterStates,
     memory: &CairoMemory,
 ) -> (Vec<FE>, Vec<FE>) {
     /* Cairo whitepaper, page 33 - https://eprint.iacr.org/2021/1063.pdf
@@ -362,7 +362,7 @@ pub fn compute_op0(
     flags
         .iter()
         .zip(offsets)
-        .zip(raw_trace.rows.iter())
+        .zip(register_states.rows.iter())
         .map(|((f, o), t)| match f.op0_reg {
             Op0Reg::AP => {
                 let addr = t.ap.checked_add_signed(o.off_op0.into()).unwrap();
@@ -382,7 +382,7 @@ pub fn compute_op0(
 pub fn compute_op1(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
-    raw_trace: &RegisterStates,
+    register_states: &RegisterStates,
     memory: &CairoMemory,
     op0s: &[FE],
 ) -> (Vec<FE>, Vec<FE>) {
@@ -409,7 +409,7 @@ pub fn compute_op1(
         .iter()
         .zip(offsets)
         .zip(op0s)
-        .zip(raw_trace.rows.iter())
+        .zip(register_states.rows.iter())
         .map(|(((flag, offset), op0), trace_state)| match flag.op1_src {
             Op1Src::Op0 => {
                 let addr = aux_get_last_nim_of_field_element(op0)
@@ -440,7 +440,7 @@ pub fn compute_op1(
 /// This function updates op0s, dst, res in place when the conditions hold.
 fn update_values(
     flags: &[CairoInstructionFlags],
-    raw_trace: &RegisterStates,
+    register_states: &RegisterStates,
     op0s: &mut [FE],
     dst: &mut [FE],
     res: &mut [FE],
@@ -452,8 +452,8 @@ fn update_values(
             } else {
                 1
             };
-            op0s[i] = (raw_trace.rows[i].pc + instruction_size).into();
-            dst[i] = raw_trace.rows[i].fp.into();
+            op0s[i] = (register_states.rows[i].pc + instruction_size).into();
+            dst[i] = register_states.rows[i].fp.into();
         } else if f.opcode == CairoOpcode::AssertEq {
             res[i] = dst[i].clone();
         }
@@ -503,10 +503,10 @@ mod test {
         let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
         let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
 
-        let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
+        let register_states = RegisterStates::from_file(&dir_trace).unwrap();
         let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
-        let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
+        let execution_trace = build_cairo_execution_trace(&register_states, &memory);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&[
@@ -613,10 +613,10 @@ mod test {
         let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.trace";
         let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.memory";
 
-        let raw_trace = RegisterStates::from_file(&dir_trace).unwrap();
+        let register_states = RegisterStates::from_file(&dir_trace).unwrap();
         let memory = CairoMemory::from_file(&dir_memory).unwrap();
 
-        let execution_trace = build_cairo_execution_trace(&raw_trace, &memory);
+        let execution_trace = build_cairo_execution_trace(&register_states, &memory);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&[

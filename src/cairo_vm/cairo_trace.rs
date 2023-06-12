@@ -122,7 +122,7 @@ mod tests {
 
         let bytes = hex::decode("080000000000000008000000000000000100000000000000090000000000000008000000000000000300000000000000090000000000000008000000000000000500000000000000").unwrap();
 
-        let trace = RegisterStates::from_bytes_le(&bytes);
+        let register_states = RegisterStates::from_bytes_le(&bytes);
 
         let expected_state0 = RegistersState {
             ap: 8,
@@ -142,11 +142,11 @@ mod tests {
             pc: 5,
         };
 
-        let expected_trace = RegisterStates {
+        let expected_reg_states = RegisterStates {
             rows: [expected_state0, expected_state1, expected_state2].to_vec(),
         };
 
-        assert_eq!(trace.unwrap(), expected_trace)
+        assert_eq!(register_states.unwrap(), expected_reg_states)
     }
 
     #[test]
@@ -166,7 +166,7 @@ mod tests {
         dbg!(base_dir);
         let dir = base_dir.to_owned() + "/src/cairo_vm/test_data/mul_trace.out";
 
-        let trace = RegisterStates::from_file(&dir).unwrap();
+        let register_states = RegisterStates::from_file(&dir).unwrap();
 
         let expected_state0 = RegistersState {
             ap: 8,
@@ -186,11 +186,11 @@ mod tests {
             pc: 5,
         };
 
-        let expected_trace = RegisterStates {
+        let expected_reg_states = RegisterStates {
             rows: [expected_state0, expected_state1, expected_state2].to_vec(),
         };
 
-        assert_eq!(trace, expected_trace);
+        assert_eq!(register_states, expected_reg_states);
     }
 
     #[test]
