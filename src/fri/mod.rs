@@ -4,9 +4,9 @@ mod fri_functions;
 use crate::air::traits::AIR;
 use crate::fri::fri_commitment::FriLayer;
 use crate::{transcript_to_field, transcript_to_usize};
-use lambdaworks_crypto::hash::sha3::Sha3Hasher;
 
 pub use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use lambdaworks_crypto::merkle_tree::merkle::FieldElementBackend;
 pub use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
 use lambdaworks_math::field::traits::{IsFFTField, IsField};
 use lambdaworks_math::traits::ByteConversion;
@@ -18,8 +18,9 @@ pub use lambdaworks_math::{
 use self::fri_decommit::FriDecommitment;
 use self::fri_functions::fold_polynomial;
 
-pub type FriMerkleTree<F> = MerkleTree<F>;
-pub(crate) const HASHER: Sha3Hasher = Sha3Hasher::new();
+pub type Commitment = [u8; 32];
+pub type FriMerkleBackend<F> = FieldElementBackend<F>;
+pub type FriMerkleTree<F> = MerkleTree<FieldElementBackend<F>>;
 
 pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     number_layers: usize,
@@ -38,7 +39,7 @@ where
     fri_layer_list.push(current_layer.clone());
 
     // >>>> Send commitment: [p₀]
-    transcript.append(&current_layer.merkle_tree.root.to_bytes_be());
+    transcript.append(&current_layer.merkle_tree.root);
 
     let mut coset_offset = coset_offset.clone();
 
@@ -51,7 +52,7 @@ where
         // Compute layer polynomial and domain
         let next_poly = fold_polynomial(&current_layer.poly, &zeta);
         current_layer = FriLayer::new(next_poly, &coset_offset, domain_size);
-        let new_data = &current_layer.merkle_tree.root.to_bytes_be();
+        let new_data = &current_layer.merkle_tree.root;
         fri_layer_list.push(current_layer.clone()); // TODO: remove this clone
 
         // >>>> Send commitment: [pₖ]
