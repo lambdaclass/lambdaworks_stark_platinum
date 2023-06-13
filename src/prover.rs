@@ -350,7 +350,7 @@ where
 
     // FRI commit and query phases
     let (fri_last_value, fri_layers) = fri_commit_phase(
-        domain.root_order as usize,
+        domain.lde_root_order as usize,
         deep_composition_poly,
         transcript,
         &coset_offset,
