@@ -12,7 +12,7 @@ use air::traits::AIR;
 use lambdaworks_crypto::{
     fiat_shamir::transcript::Transcript, merkle_tree::traits::IsMerkleTreeBackend,
 };
-use lambdaworks_fft::roots_of_unity::get_powers_of_primitive_root_coset;
+use lambdaworks_math::fft::roots_of_unity::get_powers_of_primitive_root_coset;
 use lambdaworks_math::{
     field::{
         element::FieldElement,

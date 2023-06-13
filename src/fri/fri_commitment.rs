@@ -7,7 +7,7 @@ use lambdaworks_math::{
 };
 
 pub use super::{FriMerkleTree, Polynomial};
-use lambdaworks_fft::polynomial::FFTPoly;
+use lambdaworks_math::fft::polynomial::FFTPoly;
 
 #[derive(Clone)]
 pub struct FriLayer<F>
