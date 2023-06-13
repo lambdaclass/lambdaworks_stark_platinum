@@ -14,6 +14,5 @@ To be added:
 - Grinding
 - Skipping FRI layers
 - Optimizing verifier operations
-- Batch proofs in Merkle trees
 - Range check and Pedersen built-ins
 - Different layouts

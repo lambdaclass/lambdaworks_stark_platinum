@@ -6,17 +6,22 @@ pub mod proof;
 pub mod prover;
 pub mod verifier;
 
+use std::marker::PhantomData;
+
 use air::traits::AIR;
-use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use lambdaworks_crypto::{
+    fiat_shamir::transcript::Transcript, merkle_tree::traits::IsMerkleTreeBackend,
+};
 use lambdaworks_fft::roots_of_unity::get_powers_of_primitive_root_coset;
 use lambdaworks_math::{
     field::{
         element::FieldElement,
         fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-        traits::{IsFFTField, IsPrimeField},
+        traits::{IsFFTField, IsField, IsPrimeField},
     },
     traits::ByteConversion,
 };
+use sha3::{Digest, Sha3_256};
 
 pub struct ProofConfig {
     pub count_queries: usize,
@@ -142,6 +147,50 @@ impl<F: IsFFTField> Domain<F> {
             coset_offset,
             interpolation_domain_size,
         }
+    }
+}
+
+/// A Merkle tree backend for vectors of field elements.
+/// This is used by the Stark prover to commit to
+/// multiple trace columns using a single Merkle tree.
+#[derive(Clone)]
+pub struct BatchStarkProverBackend<F> {
+    phantom: PhantomData<F>,
+}
+
+impl<F> Default for BatchStarkProverBackend<F> {
+    fn default() -> Self {
+        Self {
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<F> IsMerkleTreeBackend for BatchStarkProverBackend<F>
+where
+    F: IsField,
+    FieldElement<F>: ByteConversion,
+{
+    type Node = [u8; 32];
+    type Data = Vec<FieldElement<F>>;
+
+    fn hash_data(&self, input: &Vec<FieldElement<F>>) -> [u8; 32] {
+        let mut hasher = Sha3_256::new();
+        for element in input.iter() {
+            hasher.update(element.to_bytes_be());
+        }
+        let mut result_hash = [0_u8; 32];
+        result_hash.copy_from_slice(&hasher.finalize());
+        result_hash
+    }
+
+    fn hash_new_parent(&self, left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
+        let mut hasher = Sha3_256::new();
+        hasher.update(left);
+        hasher.update(right);
+        let mut result_hash = [0_u8; 32];
+        result_hash.copy_from_slice(&hasher.finalize());
+        result_hash
     }
 }
 
