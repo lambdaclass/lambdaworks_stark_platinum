@@ -3,9 +3,10 @@ pub mod fri_decommit;
 mod fri_functions;
 use crate::air::traits::AIR;
 use crate::fri::fri_commitment::FriLayer;
-use crate::{transcript_to_field, transcript_to_usize, StarkProverBackend};
+use crate::{transcript_to_field, transcript_to_usize};
 
 pub use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use lambdaworks_crypto::merkle_tree::merkle::FieldElementBackend;
 pub use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
 use lambdaworks_math::field::traits::{IsFFTField, IsField};
 use lambdaworks_math::traits::ByteConversion;
@@ -18,8 +19,8 @@ use self::fri_decommit::FriDecommitment;
 use self::fri_functions::fold_polynomial;
 
 pub type Commitment = [u8; 32];
-pub type FriMerkleBackend<F> = StarkProverBackend<F>;
-pub type FriMerkleTree<F> = MerkleTree<StarkProverBackend<F>>;
+pub type FriMerkleBackend<F> = FieldElementBackend<F>;
+pub type FriMerkleTree<F> = MerkleTree<FieldElementBackend<F>>;
 
 pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     number_layers: usize,
