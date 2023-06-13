@@ -63,8 +63,6 @@ pub fn build_main_trace(
         .table;
     address_cols.sort_by(|x, y| x.representative().cmp(&y.representative()));
 
-    add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
-
     let (rc_holes, rc_min, rc_max) = get_rc_holes(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);
     public_input.range_check_min = Some(rc_min);
     public_input.range_check_max = Some(rc_max);
@@ -73,6 +71,8 @@ pub fn build_main_trace(
 
     let mut memory_holes = get_memory_holes(&address_cols);
     fill_memory_holes_to_trace(&mut main_trace, &mut memory_holes);
+
+    add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
 
     let trace_len_next_power_of_two = main_trace.n_rows().next_power_of_two();
     let padding = trace_len_next_power_of_two - main_trace.n_rows();
@@ -228,6 +228,11 @@ fn fill_memory_holes_to_trace(
             .for_each(|(memory_column_idx, memory_hole)| {
                 last_row[*memory_column_idx] = memory_hole.clone()
             });
+
+        MEMORY_COLUMNS
+            .iter()
+            .skip(NUM_ADDR_COLS)
+            .for_each(|memory_column_idx| last_row[*memory_column_idx] = FE::zero());
 
         trace.table.append(&mut last_row);
     }
