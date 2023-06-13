@@ -334,13 +334,11 @@ pub fn build_cairo_execution_trace(
 
     let mut rc_trace_columns = decompose_rc_values_into_trace_columns(&range_checked_values);
 
-    rc_trace_columns
-        .iter_mut()
-        .for_each(|column| column.resize(trace_cols[0].len(), FE::zero()));
-
-    rc_trace_columns
-        .iter()
-        .for_each(|column| trace_cols.push(column.clone()));
+    // rc decomposition columns are appended with zeros and then pushed to the trace table
+    rc_trace_columns.iter_mut().for_each(|column| {
+        column.resize(trace_cols[0].len(), FE::zero());
+        trace_cols.push(column.to_vec())
+    });
 
     let mut rc_values_dereferenced: Vec<FE> =
         range_checked_values.iter().map(|&x| x.clone()).collect();
@@ -606,7 +604,7 @@ pub fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8]
 mod test {
     use lambdaworks_math::field::element::FieldElement;
 
-    use crate::air::cairo_air::air::{OFF_DST, OFF_OP1, FRAME_SELECTOR};
+    use crate::air::cairo_air::air::{FRAME_SELECTOR, OFF_DST, OFF_OP1};
 
     use super::*;
 

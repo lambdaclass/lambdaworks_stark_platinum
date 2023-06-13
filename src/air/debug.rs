@@ -44,7 +44,7 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
 
             if boundary_value != trace_value {
                 ret = false;
-                error!("Boundary constraint inconsistency - Expected value {:?} in step {} and column {}, found: {:?}", boundary_value, step, col, trace_value);
+                error!("Boundary constraint inconsistency - Expected value {} in step {} and column {}, found: {}", boundary_value.representative(), step, col, trace_value.representative());
             }
         });
 
