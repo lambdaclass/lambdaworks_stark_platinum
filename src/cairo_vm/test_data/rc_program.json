@@ -5,12 +5,6 @@
     ],
     "compiler_version": "0.11.2",
     "data": [
-        "0x40780017fff7fff",
-        "0x1",
-        "0x1104800180018000",
-        "0x8",
-        "0x10780017fff7fff",
-        "0x0",
         "0x400380007ffc7ffd",
         "0x482680017ffc8000",
         "0x1",
@@ -20,87 +14,23 @@
         "0x5",
         "0x1104800180018000",
         "0x800000000000010fffffffffffffffffffffffffffffffffffffffffffffffa",
+        "0x480680017fff8000",
+        "0x2",
+        "0x1104800180018000",
+        "0x800000000000010fffffffffffffffffffffffffffffffffffffffffffffff6",
         "0x208b7fff7fff7ffe"
     ],
     "debug_info": {
-        "file_contents": {
-            "<start>": "__start__:\nap += main.Args.SIZE + main.ImplicitArgs.SIZE;\ncall main;\n\n__end__:\njmp rel 0;\n"
-        },
+        "file_contents": {},
         "instruction_locations": {
             "0": {
-                "accessible_scopes": [
-                    "__main__"
-                ],
-                "flow_tracking_data": {
-                    "ap_tracking": {
-                        "group": 0,
-                        "offset": 0
-                    },
-                    "reference_ids": {}
-                },
-                "hints": [],
-                "inst": {
-                    "end_col": 46,
-                    "end_line": 2,
-                    "input_file": {
-                        "filename": "<start>"
-                    },
-                    "start_col": 1,
-                    "start_line": 2
-                }
-            },
-            "2": {
-                "accessible_scopes": [
-                    "__main__"
-                ],
-                "flow_tracking_data": {
-                    "ap_tracking": {
-                        "group": 0,
-                        "offset": 1
-                    },
-                    "reference_ids": {}
-                },
-                "hints": [],
-                "inst": {
-                    "end_col": 10,
-                    "end_line": 3,
-                    "input_file": {
-                        "filename": "<start>"
-                    },
-                    "start_col": 1,
-                    "start_line": 3
-                }
-            },
-            "4": {
-                "accessible_scopes": [
-                    "__main__"
-                ],
-                "flow_tracking_data": {
-                    "ap_tracking": {
-                        "group": 1,
-                        "offset": 0
-                    },
-                    "reference_ids": {}
-                },
-                "hints": [],
-                "inst": {
-                    "end_col": 10,
-                    "end_line": 6,
-                    "input_file": {
-                        "filename": "<start>"
-                    },
-                    "start_col": 1,
-                    "start_line": 6
-                }
-            },
-            "6": {
                 "accessible_scopes": [
                     "starkware.cairo.common.math",
                     "starkware.cairo.common.math.assert_nn"
                 ],
                 "flow_tracking_data": {
                     "ap_tracking": {
-                        "group": 2,
+                        "group": 0,
                         "offset": 0
                     },
                     "reference_ids": {
@@ -132,14 +62,14 @@
                     "start_line": 47
                 }
             },
-            "7": {
+            "1": {
                 "accessible_scopes": [
                     "starkware.cairo.common.math",
                     "starkware.cairo.common.math.assert_nn"
                 ],
                 "flow_tracking_data": {
                     "ap_tracking": {
-                        "group": 2,
+                        "group": 0,
                         "offset": 0
                     },
                     "reference_ids": {
@@ -182,14 +112,14 @@
                     "start_line": 48
                 }
             },
-            "9": {
+            "3": {
                 "accessible_scopes": [
                     "starkware.cairo.common.math",
                     "starkware.cairo.common.math.assert_nn"
                 ],
                 "flow_tracking_data": {
                     "ap_tracking": {
-                        "group": 2,
+                        "group": 0,
                         "offset": 1
                     },
                     "reference_ids": {
@@ -208,14 +138,14 @@
                     "start_line": 49
                 }
             },
-            "10": {
+            "4": {
                 "accessible_scopes": [
                     "__main__",
                     "__main__.main"
                 ],
                 "flow_tracking_data": {
                     "ap_tracking": {
-                        "group": 3,
+                        "group": 1,
                         "offset": 0
                     },
                     "reference_ids": {
@@ -257,14 +187,14 @@
                     "start_line": 5
                 }
             },
-            "11": {
+            "5": {
                 "accessible_scopes": [
                     "__main__",
                     "__main__.main"
                 ],
                 "flow_tracking_data": {
                     "ap_tracking": {
-                        "group": 3,
+                        "group": 1,
                         "offset": 1
                     },
                     "reference_ids": {
@@ -282,14 +212,14 @@
                     "start_line": 6
                 }
             },
-            "13": {
+            "7": {
                 "accessible_scopes": [
                     "__main__",
                     "__main__.main"
                 ],
                 "flow_tracking_data": {
                     "ap_tracking": {
-                        "group": 3,
+                        "group": 1,
                         "offset": 2
                     },
                     "reference_ids": {
@@ -307,14 +237,14 @@
                     "start_line": 6
                 }
             },
-            "15": {
+            "9": {
                 "accessible_scopes": [
                     "__main__",
                     "__main__.main"
                 ],
                 "flow_tracking_data": {
                     "ap_tracking": {
-                        "group": 3,
+                        "group": 1,
                         "offset": 5
                     },
                     "reference_ids": {
@@ -323,7 +253,32 @@
                 },
                 "hints": [],
                 "inst": {
-                    "end_col": 15,
+                    "end_col": 16,
+                    "end_line": 7,
+                    "input_file": {
+                        "filename": "cairo_programs/assert_nn_new.cairo"
+                    },
+                    "start_col": 15,
+                    "start_line": 7
+                }
+            },
+            "11": {
+                "accessible_scopes": [
+                    "__main__",
+                    "__main__.main"
+                ],
+                "flow_tracking_data": {
+                    "ap_tracking": {
+                        "group": 1,
+                        "offset": 6
+                    },
+                    "reference_ids": {
+                        "__main__.main.range_check_ptr": 4
+                    }
+                },
+                "hints": [],
+                "inst": {
+                    "end_col": 17,
                     "end_line": 7,
                     "input_file": {
                         "filename": "cairo_programs/assert_nn_new.cairo"
@@ -331,11 +286,36 @@
                     "start_col": 5,
                     "start_line": 7
                 }
+            },
+            "13": {
+                "accessible_scopes": [
+                    "__main__",
+                    "__main__.main"
+                ],
+                "flow_tracking_data": {
+                    "ap_tracking": {
+                        "group": 1,
+                        "offset": 9
+                    },
+                    "reference_ids": {
+                        "__main__.main.range_check_ptr": 5
+                    }
+                },
+                "hints": [],
+                "inst": {
+                    "end_col": 15,
+                    "end_line": 8,
+                    "input_file": {
+                        "filename": "cairo_programs/assert_nn_new.cairo"
+                    },
+                    "start_col": 5,
+                    "start_line": 8
+                }
             }
         }
     },
     "hints": {
-        "6": [
+        "0": [
             {
                 "accessible_scopes": [
                     "starkware.cairo.common.math",
@@ -344,7 +324,7 @@
                 "code": "from starkware.cairo.common.math_utils import assert_integer\nassert_integer(ids.a)\nassert 0 <= ids.a % PRIME < range_check_builtin.bound, f'a = {ids.a} is out of range.'",
                 "flow_tracking_data": {
                     "ap_tracking": {
-                        "group": 2,
+                        "group": 0,
                         "offset": 0
                     },
                     "reference_ids": {
@@ -356,21 +336,13 @@
         ]
     },
     "identifiers": {
-        "__main__.__end__": {
-            "pc": 4,
-            "type": "label"
-        },
-        "__main__.__start__": {
-            "pc": 0,
-            "type": "label"
-        },
         "__main__.assert_nn": {
             "destination": "starkware.cairo.common.math.assert_nn",
             "type": "alias"
         },
         "__main__.main": {
             "decorators": [],
-            "pc": 10,
+            "pc": 4,
             "type": "function"
         },
         "__main__.main.Args": {
@@ -404,18 +376,26 @@
             "references": [
                 {
                     "ap_tracking_data": {
-                        "group": 3,
+                        "group": 1,
                         "offset": 0
                     },
-                    "pc": 10,
+                    "pc": 4,
                     "value": "[cast(fp + (-3), felt*)]"
                 },
                 {
                     "ap_tracking_data": {
-                        "group": 3,
+                        "group": 1,
                         "offset": 5
                     },
-                    "pc": 15,
+                    "pc": 9,
+                    "value": "[cast(ap + (-1), felt*)]"
+                },
+                {
+                    "ap_tracking_data": {
+                        "group": 1,
+                        "offset": 9
+                    },
+                    "pc": 13,
                     "value": "[cast(ap + (-1), felt*)]"
                 }
             ],
@@ -439,7 +419,7 @@
         },
         "starkware.cairo.common.math.assert_nn": {
             "decorators": [],
-            "pc": 6,
+            "pc": 0,
             "type": "function"
         },
         "starkware.cairo.common.math.assert_nn.Args": {
@@ -478,10 +458,10 @@
             "references": [
                 {
                     "ap_tracking_data": {
-                        "group": 2,
+                        "group": 0,
                         "offset": 0
                     },
-                    "pc": 6,
+                    "pc": 0,
                     "value": "[cast(fp + (-3), felt*)]"
                 }
             ],
@@ -493,18 +473,18 @@
             "references": [
                 {
                     "ap_tracking_data": {
-                        "group": 2,
+                        "group": 0,
                         "offset": 0
                     },
-                    "pc": 6,
+                    "pc": 0,
                     "value": "[cast(fp + (-4), felt*)]"
                 },
                 {
                     "ap_tracking_data": {
-                        "group": 2,
+                        "group": 0,
                         "offset": 0
                     },
-                    "pc": 7,
+                    "pc": 1,
                     "value": "cast([fp + (-4)] + 1, felt)"
                 }
             ],
@@ -517,42 +497,50 @@
         "references": [
             {
                 "ap_tracking_data": {
-                    "group": 2,
+                    "group": 0,
                     "offset": 0
                 },
-                "pc": 6,
+                "pc": 0,
                 "value": "[cast(fp + (-3), felt*)]"
             },
             {
                 "ap_tracking_data": {
-                    "group": 2,
+                    "group": 0,
                     "offset": 0
                 },
-                "pc": 6,
+                "pc": 0,
                 "value": "[cast(fp + (-4), felt*)]"
             },
             {
                 "ap_tracking_data": {
-                    "group": 2,
+                    "group": 0,
                     "offset": 0
                 },
-                "pc": 7,
+                "pc": 1,
                 "value": "cast([fp + (-4)] + 1, felt)"
             },
             {
                 "ap_tracking_data": {
-                    "group": 3,
+                    "group": 1,
                     "offset": 0
                 },
-                "pc": 10,
+                "pc": 4,
                 "value": "[cast(fp + (-3), felt*)]"
             },
             {
                 "ap_tracking_data": {
-                    "group": 3,
+                    "group": 1,
                     "offset": 5
                 },
-                "pc": 15,
+                "pc": 9,
+                "value": "[cast(ap + (-1), felt*)]"
+            },
+            {
+                "ap_tracking_data": {
+                    "group": 1,
+                    "offset": 9
+                },
+                "pc": 13,
                 "value": "[cast(ap + (-1), felt*)]"
             }
         ]

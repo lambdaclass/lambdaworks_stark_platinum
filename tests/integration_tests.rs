@@ -118,8 +118,9 @@ fn test_prove_quadratic() {
 
 #[ignore = "metal"]
 /// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
-fn test_prove_cairo_program(file_path: &str) {
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path);
+fn test_prove_cairo_program(file_path: &str, has_range_check_builtin: bool) {
+    let (main_trace, cairo_air, mut pub_inputs) =
+        generate_prover_args(file_path, has_range_check_builtin);
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -127,17 +128,17 @@ fn test_prove_cairo_program(file_path: &str) {
 
 #[test_log::test]
 fn test_prove_cairo_simple_program() {
-    test_prove_cairo_program(&program_path("simple_program.json"));
+    test_prove_cairo_program(&program_path("simple_program.json"), false);
 }
 
 #[test_log::test]
 fn test_prove_cairo_fibonacci_5() {
-    test_prove_cairo_program(&program_path("fibonacci_5.json"));
+    test_prove_cairo_program(&program_path("fibonacci_5.json"), false);
 }
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
-    test_prove_cairo_program(&program_path("rc_program.json"));
+    test_prove_cairo_program(&program_path("rc_program.json"), true);
 }
 
 #[test_log::test]
@@ -196,7 +197,7 @@ fn test_prove_dummy() {
 #[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"));
+        generate_prover_args(&program_path("simple_program.json"), false);
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     // We modify the original program and verify using this new "corrupted" version
@@ -212,7 +213,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_range_bounds() {
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"));
+        generate_prover_args(&program_path("simple_program.json"), false);
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);

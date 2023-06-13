@@ -138,6 +138,10 @@ pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3: usize = 60;
 pub const MEM_P_TRACE_OFFSET: usize = 17;
 pub const MEM_A_TRACE_OFFSET: usize = 19;
 
+// If Cairo AIR doesn't implement builtins, the auxiliary columns should have a smaller
+// index.
+const BUILTIN_OFFSET: usize = 9;
+
 // TODO: For memory constraints and builtins, the commented fields may be useful.
 #[derive(Clone)]
 pub struct PublicInputs {
@@ -186,8 +190,8 @@ impl PublicInputs {
             ap_final: FieldElement::from(last_step.ap),
             range_check_min: None,
             range_check_max: None,
-            range_check_builtin_start_addr: 1563,
-            range_check_builtin_stop_addr: 1564,
+            range_check_builtin_start_addr: 25,
+            range_check_builtin_stop_addr: 26,
             program,
             num_steps: register_states.steps(),
         }
@@ -197,6 +201,7 @@ impl PublicInputs {
 pub struct CairoAIR {
     pub context: AirContext,
     pub number_steps: usize,
+    has_range_check_builtin: bool,
 }
 
 impl CairoAIR {
@@ -204,7 +209,7 @@ impl CairoAIR {
     /// full_trace_length: Padding to 2^n
     /// number_steps: Number of steps of the execution / register steps / rows in cairo runner trace
     #[rustfmt::skip]
-    pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize) -> Self {
+    pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize, has_range_check_builtin: bool) -> Self {
         let context = AirContext {
             options: proof_options,
             trace_length: full_trace_length,
@@ -240,6 +245,7 @@ impl CairoAIR {
         Self {
             context,
             number_steps,
+            has_range_check_builtin
         }
     }
 }
@@ -467,6 +473,12 @@ impl AIR for CairoAIR {
         // Auxiliary constraint: permutation argument final value
         let final_index = self.context.trace_length - 1;
 
+        let builtin_offset = if self.has_range_check_builtin {
+            0
+        } else {
+            BUILTIN_OFFSET
+        };
+
         let mut cumulative_product = FieldElement::one();
         for (i, value) in public_input.program.iter().enumerate() {
             cumulative_product = cumulative_product
@@ -475,20 +487,26 @@ impl AIR for CairoAIR {
         }
         let permutation_final =
             rap_challenges.z_memory.pow(public_input.program.len()) / cumulative_product;
-        let permutation_final_constraint =
-            BoundaryConstraint::new(PERMUTATION_ARGUMENT_COL_3, final_index, permutation_final);
+        let permutation_final_constraint = BoundaryConstraint::new(
+            PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
+            final_index,
+            permutation_final,
+        );
 
         let one: FieldElement<Self::Field> = FieldElement::one();
-        let range_check_final_constraint =
-            BoundaryConstraint::new(PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3, final_index, one);
+        let range_check_final_constraint = BoundaryConstraint::new(
+            PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3 - builtin_offset,
+            final_index,
+            one,
+        );
 
         let range_check_min = BoundaryConstraint::new(
-            RANGE_CHECK_COL_1,
+            RANGE_CHECK_COL_1 - builtin_offset,
             0,
             FieldElement::from(public_input.range_check_min.unwrap() as u64),
         );
         let range_check_max = BoundaryConstraint::new(
-            RANGE_CHECK_COL_3,
+            RANGE_CHECK_COL_3 - builtin_offset,
             final_index,
             FieldElement::from(public_input.range_check_max.unwrap() as u64),
         );

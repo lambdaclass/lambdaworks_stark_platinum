@@ -55,8 +55,14 @@ pub fn build_main_trace(
     register_states: &RegisterStates,
     memory: &CairoMemory,
     public_input: &mut PublicInputs,
+    has_range_check_builtin: bool,
 ) -> TraceTable<Stark252PrimeField> {
-    let mut main_trace = build_cairo_execution_trace(register_states, memory, &public_input);
+    let mut main_trace = build_cairo_execution_trace(
+        register_states,
+        memory,
+        &public_input,
+        has_range_check_builtin,
+    );
 
     let mut address_cols = main_trace
         .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
@@ -69,8 +75,10 @@ pub fn build_main_trace(
 
     fill_rc_holes(&mut main_trace, rc_holes);
 
-    let mut memory_holes = get_memory_holes(&address_cols);
-    fill_memory_holes_to_trace(&mut main_trace, &mut memory_holes);
+    if has_range_check_builtin {
+        let mut memory_holes = get_memory_holes(&address_cols);
+        fill_memory_holes_to_trace(&mut main_trace, &mut memory_holes);
+    }
 
     add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
 
@@ -246,6 +254,7 @@ pub fn build_cairo_execution_trace(
     raw_trace: &RegisterStates,
     memory: &CairoMemory,
     public_inputs: &PublicInputs,
+    has_range_check_builtin: bool,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
 
@@ -329,6 +338,18 @@ pub fn build_cairo_execution_trace(
     trace_cols.push(mul);
     trace_cols.push(selector);
 
+    if has_range_check_builtin {
+        add_rc_builtin_columns(&mut trace_cols, public_inputs, memory);
+    }
+
+    TraceTable::new_from_cols(&trace_cols)
+}
+
+fn add_rc_builtin_columns(
+    trace_cols: &mut Vec<Vec<FE>>,
+    public_inputs: &PublicInputs,
+    memory: &CairoMemory,
+) {
     // Build range-check builtin columns: rc_0, rc_1, ... , rc_7, rc_value
     let range_check_builtin_start = public_inputs.range_check_builtin_start_addr.clone();
     let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr.clone();
@@ -336,7 +357,6 @@ pub fn build_cairo_execution_trace(
     let range_checked_values: Vec<&FE> = (range_check_builtin_start..range_check_builtin_stop)
         .map(|addr| memory.get(&addr).unwrap())
         .collect();
-
     let mut rc_trace_columns = decompose_rc_values_into_trace_columns(&range_checked_values);
 
     // rc decomposition columns are appended with zeros and then pushed to the trace table
@@ -350,8 +370,6 @@ pub fn build_cairo_execution_trace(
     rc_values_dereferenced.resize(trace_cols[0].len(), FE::zero());
 
     trace_cols.push(rc_values_dereferenced);
-
-    TraceTable::new_from_cols(&trace_cols)
 }
 
 /// Returns the vector of res values.
