@@ -7,11 +7,10 @@ use crate::{
         traits::AIR,
     },
     fri::FieldElement,
-    prover::ProvingError,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsField,
+    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsFFTField,
 };
 
 #[derive(Clone)]
@@ -27,20 +26,8 @@ impl From<AirContext> for QuadraticAIR {
 
 impl AIR for QuadraticAIR {
     type Field = Stark252PrimeField;
-    type RawTrace = Vec<FieldElement<Self::Field>>;
     type RAPChallenges = ();
     type PublicInput = ();
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable {
-            table: raw_trace.clone(),
-            n_cols: 1,
-        })
-    }
 
     fn build_auxiliary_trace(
         &self,
@@ -87,10 +74,10 @@ impl AIR for QuadraticAIR {
     }
 }
 
-pub fn quadratic_trace<F: IsField>(
+pub fn quadratic_trace<F: IsFFTField>(
     initial_value: FieldElement<F>,
     trace_length: usize,
-) -> Vec<FieldElement<F>> {
+) -> TraceTable<F> {
     let mut ret: Vec<FieldElement<F>> = vec![];
 
     ret.push(initial_value);
@@ -99,5 +86,5 @@ pub fn quadratic_trace<F: IsField>(
         ret.push(ret[i - 1].clone() * ret[i - 1].clone());
     }
 
-    ret
+    TraceTable::new_from_cols(&[ret])
 }

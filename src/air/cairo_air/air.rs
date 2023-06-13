@@ -1,8 +1,6 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
-    element::FieldElement,
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-    traits::{IsFFTField, IsPrimeField},
+    element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
 };
 
 use crate::{
@@ -13,11 +11,7 @@ use crate::{
         trace::TraceTable,
         traits::AIR,
     },
-    cairo_vm::{
-        cairo_mem::CairoMemory, cairo_trace::CairoTrace,
-        execution_trace::build_cairo_execution_trace,
-    },
-    prover::ProvingError,
+    cairo_vm::{cairo_mem::CairoMemory, cairo_trace::RegisterStates},
     transcript_to_field, FE,
 };
 
@@ -126,17 +120,6 @@ pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1: usize = 49;
 pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2: usize = 50;
 pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3: usize = 51;
 
-pub const MEMORY_COLUMNS: [usize; 8] = [
-    FRAME_PC,
-    FRAME_DST_ADDR,
-    FRAME_OP0_ADDR,
-    FRAME_OP1_ADDR,
-    FRAME_INST,
-    FRAME_DST,
-    FRAME_OP0,
-    FRAME_OP1,
-];
-
 // Trace layout
 pub const MEM_P_TRACE_OFFSET: usize = 17;
 pub const MEM_A_TRACE_OFFSET: usize = 19;
@@ -167,7 +150,7 @@ impl PublicInputs {
     /// - In the future we should use the output of the Cairo Runner. This is not currently supported in Cairo RS
     /// - RangeChecks are not filled, and the prover mutates them inside the prove function. This works but also should be loaded from the Cairo RS output
     pub fn from_regs_and_mem(
-        register_states: &CairoTrace,
+        register_states: &RegisterStates,
         memory: &CairoMemory,
         program_size: usize,
     ) -> Self {
@@ -319,113 +302,10 @@ fn generate_range_check_permutation_argument_column(
     permutation_col
 }
 
-fn pad_with_last_row<F: IsFFTField>(
-    trace: &mut TraceTable<F>,
-    number_rows: usize,
-    exception_columns: &[usize],
-) {
-    let mut last_row = trace.last_row().to_vec();
-    for excemption_column in exception_columns.iter() {
-        last_row[*excemption_column] = FieldElement::zero();
-    }
-    let mut pad: Vec<_> = std::iter::repeat(&last_row)
-        .take(number_rows)
-        .flatten()
-        .cloned()
-        .collect();
-    trace.table.append(&mut pad);
-}
-
-fn get_missing_values_offset_columns<F>(
-    trace: &TraceTable<F>,
-    columns_indices: &[usize],
-) -> (Vec<FieldElement<F>>, u16, u16)
-where
-    F: IsFFTField + IsPrimeField,
-    u16: From<F::RepresentativeType>,
-{
-    let offset_columns = trace.get_cols(columns_indices).table;
-
-    let mut sorted_offset_representatives: Vec<u16> = offset_columns
-        .iter()
-        .map(|x| x.representative().into())
-        .collect();
-    sorted_offset_representatives.sort();
-
-    let mut all_missing_values: Vec<FieldElement<F>> = Vec::new();
-
-    for window in sorted_offset_representatives.windows(2) {
-        if window[1] != window[0] {
-            let mut missing_range: Vec<_> = ((window[0] + 1)..window[1])
-                .map(|x| FieldElement::from(x as u64))
-                .collect();
-            all_missing_values.append(&mut missing_range);
-        }
-    }
-
-    let multiple_of_three_padding =
-        ((all_missing_values.len() + 2) / 3) * 3 - all_missing_values.len();
-    let padding_element = FieldElement::from(*sorted_offset_representatives.last().unwrap() as u64);
-    all_missing_values.append(&mut vec![padding_element; multiple_of_three_padding]);
-
-    (
-        all_missing_values,
-        sorted_offset_representatives[0],
-        sorted_offset_representatives.last().cloned().unwrap(),
-    )
-}
-
-fn add_missing_values_to_offsets_column<F: IsFFTField>(
-    trace: &mut TraceTable<F>,
-    missing_values: Vec<FieldElement<F>>,
-) {
-    let zeros_left = vec![FieldElement::zero(); OFF_DST];
-    let zeros_right = vec![FieldElement::zero(); trace.n_cols - OFF_OP1 - 1];
-
-    for i in (0..missing_values.len()).step_by(3) {
-        trace.table.append(&mut zeros_left.clone());
-        trace.table.append(&mut missing_values[i..(i + 3)].to_vec());
-        trace.table.append(&mut zeros_right.clone());
-    }
-}
-
 impl AIR for CairoAIR {
     type Field = Stark252PrimeField;
-    type RawTrace = (CairoTrace, CairoMemory);
     type RAPChallenges = CairoRAPChallenges;
     type PublicInput = PublicInputs;
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        let mut main_trace = build_cairo_execution_trace(&raw_trace.0, &raw_trace.1);
-
-        pad_with_last_row(
-            &mut main_trace,
-            (public_input.program.len() >> 2) + 1,
-            &MEMORY_COLUMNS,
-        );
-
-        let (missing_values, rc_min, rc_max) =
-            get_missing_values_offset_columns(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);
-        public_input.range_check_min = Some(rc_min);
-        public_input.range_check_max = Some(rc_max);
-
-        add_missing_values_to_offsets_column(&mut main_trace, missing_values);
-
-        if self.context().trace_length < main_trace.n_rows() {
-            return Err(ProvingError::WrongParameter(
-                "Trace length is not large enough.".to_string(),
-            ));
-        }
-
-        let padding = self.context().trace_length - main_trace.n_rows();
-        pad_with_last_row(&mut main_trace, padding, &MEMORY_COLUMNS);
-
-        Ok(main_trace)
-    }
 
     fn build_auxiliary_trace(
         &self,
@@ -851,86 +731,28 @@ fn frame_inst_size(frame_row: &[FE]) -> FE {
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
-    use cairo_vm::{cairo_run, types::program::Program};
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-    use lambdaworks_math::field::{
-        element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-    };
+    use lambdaworks_math::field::element::FieldElement;
 
     use crate::{
         air::{
-            cairo_air::air::{
-                add_program_in_public_input_section, CairoAIR, PublicInputs, OFF_DST, OFF_OP1,
-            },
-            context::ProofOptions,
+            cairo_air::air::{add_program_in_public_input_section, PublicInputs},
             debug::validate_trace,
-            trace::TraceTable,
             traits::AIR,
         },
-        cairo_run::run::Error,
-        cairo_vm::{cairo_mem::CairoMemory, cairo_trace::CairoTrace},
+        cairo_run::run::{generate_prover_args, program_path},
         Domain,
     };
 
     use super::{
-        add_missing_values_to_offsets_column, generate_memory_permutation_argument_column,
-        get_missing_values_offset_columns, sort_columns_by_memory_address, CairoRAPChallenges,
+        generate_memory_permutation_argument_column, sort_columns_by_memory_address,
+        CairoRAPChallenges,
     };
 
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
-        let base_dir = env!("CARGO_MANIFEST_DIR");
-
-        let cairo_run_config = cairo_run::CairoRunConfig {
-            entrypoint: "main",
-            trace_enabled: true,
-            relocate_mem: true,
-            layout: "all_cairo",
-            proof_mode: false,
-            secure_run: None,
-        };
-        let json_filename = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.json";
-        let program_content = std::fs::read(json_filename).map_err(Error::IO).unwrap();
-        let cairo_program =
-            Program::from_bytes(&program_content, Some(cairo_run_config.entrypoint)).unwrap();
-
-        let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
-
-        let raw_trace = CairoTrace::from_file(&dir_trace).unwrap();
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
-
-        let mut program = Vec::new();
-        for i in 1..=cairo_program.data_len() as u64 {
-            program.push(memory.get(&i).unwrap().clone());
-        }
-
-        let proof_options = ProofOptions {
-            blowup_factor: 4,
-            fri_number_of_queries: 1,
-            coset_offset: 3,
-        };
-
-        let cairo_air = CairoAIR::new(proof_options, 128, raw_trace.steps());
-
-        // PC FINAL AND AP FINAL are not computed correctly since they are extracted after padding to
-        // power of two and therefore are zero
-        let last_register_state = &raw_trace.rows[raw_trace.steps() - 1];
-        let mut public_input = PublicInputs {
-            program,
-            ap_final: FieldElement::from(last_register_state.ap),
-            pc_final: FieldElement::from(last_register_state.pc),
-            pc_init: FieldElement::from(raw_trace.rows[0].pc),
-            ap_init: FieldElement::from(raw_trace.rows[0].ap),
-            fp_init: FieldElement::from(raw_trace.rows[0].fp),
-            range_check_max: None,
-            range_check_min: None,
-            num_steps: raw_trace.steps(),
-        };
-
-        let main_trace = cairo_air
-            .build_main_trace(&(raw_trace, memory), &mut public_input)
-            .unwrap();
+        let (main_trace, cairo_air, public_input) =
+            generate_prover_args(&program_path("simple_program.json"));
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
@@ -1088,64 +910,5 @@ mod test {
                 FieldElement::one(),
             ]
         );
-    }
-
-    #[test]
-    fn test_fill_range_check_values() {
-        let columns = vec![
-            vec![FieldElement::from(1); 3],
-            vec![FieldElement::from(4); 3],
-            vec![FieldElement::from(7); 3],
-        ];
-        let expected_col = vec![
-            FieldElement::from(2),
-            FieldElement::from(3),
-            FieldElement::from(5),
-            FieldElement::from(6),
-            FieldElement::from(7),
-            FieldElement::from(7),
-        ];
-        let table = TraceTable::<Stark252PrimeField>::new_from_cols(&columns);
-
-        let (col, rc_min, rc_max) = get_missing_values_offset_columns(&table, &[0, 1, 2]);
-        assert_eq!(col, expected_col);
-        assert_eq!(rc_min, 1);
-        assert_eq!(rc_max, 7);
-    }
-
-    #[test]
-    fn test_add_missing_values_to_offsets_column() {
-        let mut main_trace = TraceTable::<Stark252PrimeField> {
-            table: (0..34 * 2).map(FieldElement::from).collect(),
-            n_cols: 34,
-        };
-        let missing_values = vec![
-            FieldElement::from(1),
-            FieldElement::from(2),
-            FieldElement::from(3),
-            FieldElement::from(4),
-            FieldElement::from(5),
-            FieldElement::from(6),
-        ];
-        add_missing_values_to_offsets_column(&mut main_trace, missing_values);
-
-        let mut expected: Vec<_> = (0..34 * 2).map(FieldElement::from).collect();
-        expected.append(&mut vec![FieldElement::zero(); OFF_DST]);
-        expected.append(&mut vec![
-            FieldElement::from(1),
-            FieldElement::from(2),
-            FieldElement::from(3),
-        ]);
-        expected.append(&mut vec![FieldElement::zero(); 34 - OFF_OP1 - 1]);
-        expected.append(&mut vec![FieldElement::zero(); OFF_DST]);
-        expected.append(&mut vec![
-            FieldElement::from(4),
-            FieldElement::from(5),
-            FieldElement::from(6),
-        ]);
-        expected.append(&mut vec![FieldElement::zero(); 34 - OFF_OP1 - 1]);
-        assert_eq!(main_trace.table, expected);
-        assert_eq!(main_trace.n_cols, 34);
-        assert_eq!(main_trace.table.len(), 34 * 4);
     }
 }

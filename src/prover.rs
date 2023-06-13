@@ -163,7 +163,7 @@ where
 
 fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T: Transcript>(
     air: &A,
-    raw_trace: &A::RawTrace,
+    main_trace: &TraceTable<F>,
     domain: &Domain<F>,
     public_input: &mut A::PublicInput,
     transcript: &mut T,
@@ -171,14 +171,12 @@ fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T
 where
     FieldElement<F>: ByteConversion,
 {
-    let main_trace = air.build_main_trace(raw_trace, public_input)?;
-
     let (mut trace_polys, mut evaluations, main_merkle_tree, main_merkle_root) =
-        interpolate_and_commit(&main_trace, domain, transcript);
+        interpolate_and_commit(main_trace, domain, transcript);
 
     let rap_challenges = air.build_rap_challenges(transcript);
 
-    let aux_trace = air.build_auxiliary_trace(&main_trace, &rap_challenges, public_input);
+    let aux_trace = air.build_auxiliary_trace(main_trace, &rap_challenges, public_input);
 
     let mut lde_trace_merkle_trees = vec![main_merkle_tree];
     let mut lde_trace_merkle_roots = vec![main_merkle_root];
@@ -493,7 +491,7 @@ where
 
 // FIXME remove unwrap() calls and return errors
 pub fn prove<F: IsFFTField, A: AIR<Field = F>>(
-    trace: &A::RawTrace,
+    main_trace: &TraceTable<F>,
     air: &A,
     public_input: &mut A::PublicInput,
 ) -> Result<StarkProof<F>, ProvingError>
@@ -512,7 +510,7 @@ where
 
     let round_1_result = round_1_randomized_air_with_preprocessing::<F, A, _>(
         air,
-        trace,
+        main_trace,
         &domain,
         public_input,
         &mut transcript,
@@ -668,7 +666,6 @@ mod tests {
         air::{
             context::{AirContext, ProofOptions},
             example::simple_fibonacci,
-            trace::TraceTable,
         },
         Domain,
     };
@@ -680,8 +677,7 @@ mod tests {
     #[test]
     fn test_domain_constructor() {
         let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
-        let trace_length = trace[0].len();
-        let trace_table = TraceTable::new_from_cols(&trace);
+        let trace_length = trace.n_rows();
         let coset_offset = 3;
         let blowup_factor: usize = 2;
 
@@ -692,7 +688,7 @@ mod tests {
                 coset_offset,
             },
             trace_length,
-            trace_columns: trace_table.n_cols,
+            trace_columns: trace.n_cols,
             transition_degrees: vec![1],
             transition_exemptions: vec![2],
             transition_offsets: vec![0, 1, 2],
@@ -729,9 +725,8 @@ mod tests {
     #[test]
     fn test_evaluate_polynomial_on_lde_domain_on_trace_polys() {
         let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
-        let trace_length = trace[0].len();
-        let trace_table = TraceTable::new_from_cols(&trace);
-        let trace_polys = trace_table.compute_trace_polys();
+        let trace_length = trace.n_rows();
+        let trace_polys = trace.compute_trace_polys();
         let coset_offset = FE::from(3);
         let blowup_factor: usize = 2;
         let domain_size = 8;

@@ -4,8 +4,6 @@ use lambdaworks_math::{
     polynomial::Polynomial,
 };
 
-use crate::prover::ProvingError;
-
 use super::{
     constraints::boundary::BoundaryConstraints,
     context::{AirContext, ProofOptions},
@@ -16,15 +14,8 @@ use crate::get_powers_of_primitive_root_coset;
 /// AIR is a representation of the Constraints
 pub trait AIR: Clone {
     type Field: IsFFTField;
-    type RawTrace;
     type RAPChallenges;
     type PublicInput;
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError>;
 
     fn build_auxiliary_trace(
         &self,

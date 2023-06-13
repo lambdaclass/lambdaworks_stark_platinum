@@ -30,11 +30,11 @@ impl RegistersState {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub struct CairoTrace {
+pub struct RegisterStates {
     pub rows: Vec<RegistersState>,
 }
 
-impl CairoTrace {
+impl RegisterStates {
     pub fn steps(&self) -> usize {
         self.rows.len()
     }
@@ -122,7 +122,7 @@ mod tests {
 
         let bytes = hex::decode("080000000000000008000000000000000100000000000000090000000000000008000000000000000300000000000000090000000000000008000000000000000500000000000000").unwrap();
 
-        let trace = CairoTrace::from_bytes_le(&bytes);
+        let register_states = RegisterStates::from_bytes_le(&bytes);
 
         let expected_state0 = RegistersState {
             ap: 8,
@@ -142,18 +142,18 @@ mod tests {
             pc: 5,
         };
 
-        let expected_trace = CairoTrace {
+        let expected_reg_states = RegisterStates {
             rows: [expected_state0, expected_state1, expected_state2].to_vec(),
         };
 
-        assert_eq!(trace.unwrap(), expected_trace)
+        assert_eq!(register_states.unwrap(), expected_reg_states)
     }
 
     #[test]
     fn wrong_amount_of_bytes_gives_err() {
         let bytes = hex::decode("080000000000").unwrap();
 
-        match CairoTrace::from_bytes_le(&bytes) {
+        match RegisterStates::from_bytes_le(&bytes) {
             Err(CairoImportError::IncorrectNumberOfBytes) => (),
             Err(_) => panic!(),
             Ok(_) => panic!(),
@@ -166,7 +166,7 @@ mod tests {
         dbg!(base_dir);
         let dir = base_dir.to_owned() + "/src/cairo_vm/test_data/mul_trace.out";
 
-        let trace = CairoTrace::from_file(&dir).unwrap();
+        let register_states = RegisterStates::from_file(&dir).unwrap();
 
         let expected_state0 = RegistersState {
             ap: 8,
@@ -186,11 +186,11 @@ mod tests {
             pc: 5,
         };
 
-        let expected_trace = CairoTrace {
+        let expected_reg_states = RegisterStates {
             rows: [expected_state0, expected_state1, expected_state2].to_vec(),
         };
 
-        assert_eq!(trace, expected_trace);
+        assert_eq!(register_states, expected_reg_states);
     }
 
     #[test]
@@ -212,7 +212,7 @@ mod tests {
             pc: 2,
         };
 
-        let trace = CairoTrace {
+        let trace = RegisterStates {
             rows: [state1, state2].to_vec(),
         };
 

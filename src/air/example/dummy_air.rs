@@ -7,11 +7,10 @@ use crate::{
         traits::AIR,
     },
     fri::FieldElement,
-    prover::ProvingError,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsField,
+    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsFFTField,
 };
 
 #[derive(Clone)]
@@ -27,17 +26,8 @@ impl From<AirContext> for DummyAIR {
 
 impl AIR for DummyAIR {
     type Field = Stark252PrimeField;
-    type RawTrace = Vec<Vec<FieldElement<Self::Field>>>;
     type RAPChallenges = ();
     type PublicInput = ();
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable::new_from_cols(raw_trace))
-    }
 
     fn build_auxiliary_trace(
         &self,
@@ -89,7 +79,7 @@ impl AIR for DummyAIR {
     }
 }
 
-pub fn dummy_trace<F: IsField>(trace_length: usize) -> Vec<Vec<FieldElement<F>>> {
+pub fn dummy_trace<F: IsFFTField>(trace_length: usize) -> TraceTable<F> {
     let mut ret: Vec<FieldElement<F>> = vec![];
 
     let a0 = FieldElement::one();
@@ -102,5 +92,5 @@ pub fn dummy_trace<F: IsField>(trace_length: usize) -> Vec<Vec<FieldElement<F>>>
         ret.push(ret[i - 1].clone() + ret[i - 2].clone());
     }
 
-    vec![vec![FieldElement::<F>::one(); trace_length], ret]
+    TraceTable::new_from_cols(&[vec![FieldElement::<F>::one(); trace_length], ret])
 }

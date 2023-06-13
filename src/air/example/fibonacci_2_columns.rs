@@ -7,11 +7,10 @@ use crate::{
         traits::AIR,
     },
     fri::FieldElement,
-    prover::ProvingError,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsField,
+    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::IsFFTField,
 };
 
 #[derive(Clone, Debug)]
@@ -27,17 +26,8 @@ impl From<AirContext> for Fibonacci2ColsAIR {
 
 impl AIR for Fibonacci2ColsAIR {
     type Field = Stark252PrimeField;
-    type RawTrace = Vec<Vec<FieldElement<Self::Field>>>;
     type RAPChallenges = ();
     type PublicInput = ();
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable::new_from_cols(raw_trace))
-    }
 
     fn build_auxiliary_trace(
         &self,
@@ -91,10 +81,10 @@ impl AIR for Fibonacci2ColsAIR {
     }
 }
 
-pub fn fibonacci_trace_2_columns<F: IsField>(
+pub fn fibonacci_trace_2_columns<F: IsFFTField>(
     initial_values: [FieldElement<F>; 2],
     trace_length: usize,
-) -> Vec<Vec<FieldElement<F>>> {
+) -> TraceTable<F> {
     let mut ret1: Vec<FieldElement<F>> = vec![];
     let mut ret2: Vec<FieldElement<F>> = vec![];
 
@@ -107,5 +97,5 @@ pub fn fibonacci_trace_2_columns<F: IsField>(
         ret2.push(new_val + ret2[i - 1].clone());
     }
 
-    vec![ret1, ret2]
+    TraceTable::new_from_cols(&[ret1, ret2])
 }

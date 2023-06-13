@@ -7,7 +7,6 @@ use crate::{
         traits::AIR,
     },
     fri::FieldElement,
-    prover::ProvingError,
 };
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::fields::u64_prime_field::F17;
@@ -25,17 +24,8 @@ impl From<AirContext> for Fibonacci17AIR {
 
 impl AIR for Fibonacci17AIR {
     type Field = F17;
-    type RawTrace = Vec<Vec<FieldElement<Self::Field>>>;
     type RAPChallenges = ();
     type PublicInput = ();
-
-    fn build_main_trace(
-        &self,
-        raw_trace: &Self::RawTrace,
-        _public_input: &mut Self::PublicInput,
-    ) -> Result<TraceTable<Self::Field>, ProvingError> {
-        Ok(TraceTable::new_from_cols(raw_trace))
-    }
 
     fn build_auxiliary_trace(
         &self,
