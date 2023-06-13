@@ -191,6 +191,7 @@ where
         result_hash
     }
 }
+
 #[cfg(test)]
 mod tests {
     use lambdaworks_math::{
