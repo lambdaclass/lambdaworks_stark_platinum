@@ -37,8 +37,8 @@ where
     randomness_to_field(&mut randomness)
 }
 
-/// Transforms some random bytes to a bit
-/// Slicing the randomness to one bit less than what the max number of the field is
+/// Transforms some random bytes to a field
+/// Slicing the randomness to one bit less than what the max number of the field is to ensure each random element has the same probability of appearing
 fn randomness_to_field<F: IsPrimeField>(randomness: &mut [u8; 32]) -> FieldElement<F>
 where
     FieldElement<F>: ByteConversion,
