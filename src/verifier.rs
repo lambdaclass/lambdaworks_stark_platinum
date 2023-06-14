@@ -3,8 +3,11 @@ use super::{
     sample_z_ood,
 };
 use crate::{
-    air::traits::AIR, batch_sample_challenges, fri::HASHER, proof::StarkProof, transcript_to_field,
-    transcript_to_usize, Domain,
+    air::traits::AIR,
+    batch_sample_challenges,
+    fri::{Commitment, FriMerkleBackend},
+    proof::StarkProof,
+    transcript_to_field, transcript_to_usize, BatchStarkProverBackend, Domain,
 };
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -62,21 +65,15 @@ where
     // ==========|   Round 1   |==========
     // ===================================
 
-    let n_trace_cols = air.context().trace_columns;
-
     // <<<< Receive commitments:[tⱼ]
-    let total_columns = proof.lde_trace_merkle_roots.len();
-    let aux_columns = air.number_auxiliary_rap_columns();
-    let main_columns = total_columns - aux_columns;
+    let total_columns = air.context().trace_columns;
 
-    for root in proof.lde_trace_merkle_roots.iter().take(main_columns) {
-        transcript.append(&root.to_bytes_be());
-    }
+    transcript.append(&proof.lde_trace_merkle_roots[0]);
 
     let rap_challenges = air.build_rap_challenges(transcript);
 
-    for root in proof.lde_trace_merkle_roots.iter().skip(main_columns) {
-        transcript.append(&root.to_bytes_be());
+    if let Some(root) = proof.lde_trace_merkle_roots.get(1) {
+        transcript.append(root);
     }
 
     // ===================================
@@ -85,9 +82,9 @@ where
 
     // These are the challenges alpha^B_j and beta^B_j
     // >>>> Send challenges: 𝛼_j^B
-    let boundary_coeffs_alphas = batch_sample_challenges(n_trace_cols, transcript);
+    let boundary_coeffs_alphas = batch_sample_challenges(total_columns, transcript);
     // >>>> Send  challenges: 𝛽_j^B
-    let boundary_coeffs_betas = batch_sample_challenges(n_trace_cols, transcript);
+    let boundary_coeffs_betas = batch_sample_challenges(total_columns, transcript);
     // >>>> Send challenges: 𝛼_j^T
     let transition_coeffs_alphas =
         batch_sample_challenges(air.context().num_transition_constraints, transcript);
@@ -105,8 +102,7 @@ where
         .collect();
 
     // <<<< Receive commitments: [H₁], [H₂]
-    transcript.append(&proof.composition_poly_even_root.to_bytes_be());
-    transcript.append(&proof.composition_poly_odd_root.to_bytes_be());
+    transcript.append(&proof.composition_poly_root);
 
     // ===================================
     // ==========|   Round 3   |==========
@@ -142,7 +138,7 @@ where
     // Get the number of trace terms the DEEP composition poly will have.
     // One coefficient will be sampled for each of them.
     // TODO: try remove this, call transcript inside for and move gamma declarations
-    let trace_term_coeffs = (0..n_trace_cols)
+    let trace_term_coeffs = (0..total_columns)
         .map(|_| {
             (0..air.context().transition_offsets.len())
                 .map(|_| transcript_to_field(transcript))
@@ -154,9 +150,8 @@ where
     let mut zetas: Vec<FieldElement<F>> = Vec::new();
     let merkle_roots = &proof.fri_layers_merkle_roots;
     for root in merkle_roots.iter() {
-        let root_bytes = root.to_bytes_be();
         // <<<< Receive commitment: [pₖ] (the first one is [p₀])
-        transcript.append(&root_bytes);
+        transcript.append(root);
 
         // >>>> Send challenge 𝜁ₖ
         let zeta = transcript_to_field(transcript);
@@ -321,6 +316,7 @@ where
 }
 
 fn step_4_verify_deep_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
+    air: &A,
     proof: &StarkProof<F>,
     domain: &Domain<F>,
     challenges: &Challenges<F, A>,
@@ -332,38 +328,37 @@ where
 
     let iota_0 = challenges.iotas[0];
 
-    // Verify opening Open(H₁(D_LDE, 𝜐₀)
+    let evaluations = vec![
+        proof
+            .deep_poly_openings
+            .lde_composition_poly_even_evaluation
+            .clone(),
+        proof
+            .deep_poly_openings
+            .lde_composition_poly_odd_evaluation
+            .clone(),
+    ];
+    // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
     result &= proof
         .deep_poly_openings
-        .lde_composition_poly_even_proof
-        .verify(
-            &proof.composition_poly_even_root,
-            iota_0,
-            &proof
-                .deep_poly_openings
-                .lde_composition_poly_even_evaluation,
-            &HASHER,
-        );
+        .lde_composition_poly_proof
+        .verify::<BatchStarkProverBackend<F>>(&proof.composition_poly_root, iota_0, &evaluations);
 
-    // Verify opening Open(H₂(D_LDE, 𝜐₀),
-    result &= proof
-        .deep_poly_openings
-        .lde_composition_poly_odd_proof
-        .verify(
-            &proof.composition_poly_odd_root,
-            iota_0,
-            &proof.deep_poly_openings.lde_composition_poly_odd_evaluation,
-            &HASHER,
-        );
+    let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
+    let lde_trace_evaluations = vec![
+        proof.deep_poly_openings.lde_trace_evaluations[..num_main_columns].to_vec(),
+        proof.deep_poly_openings.lde_trace_evaluations[num_main_columns..].to_vec(),
+    ];
 
     // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
     for ((merkle_root, merkle_proof), evaluation) in proof
         .lde_trace_merkle_roots
         .iter()
         .zip(&proof.deep_poly_openings.lde_trace_merkle_proofs)
-        .zip(&proof.deep_poly_openings.lde_trace_evaluations)
+        .zip(lde_trace_evaluations)
     {
-        result &= merkle_proof.verify(merkle_root, iota_0, evaluation, &HASHER);
+        result &=
+            merkle_proof.verify::<BatchStarkProverBackend<F>>(merkle_root, iota_0, &evaluation);
     }
 
     // DEEP consistency check
@@ -378,7 +373,7 @@ where
 
 fn verify_query_and_sym_openings<F: IsField + IsFFTField, A: AIR<Field = F>>(
     air: &A,
-    fri_layers_merkle_roots: &[FieldElement<F>],
+    fri_layers_merkle_roots: &[Commitment],
     fri_last_value: &FieldElement<F>,
     zetas: &[FieldElement<F>],
     iota: usize,
@@ -389,12 +384,14 @@ where
     FieldElement<F>: ByteConversion,
 {
     // Verify opening Open(p₀(D₀), 𝜐ₛ)
-    if !fri_decommitment.first_layer_auth_path.verify(
-        &fri_layers_merkle_roots[0],
-        iota,
-        &fri_decommitment.first_layer_evaluation,
-        &HASHER,
-    ) {
+    if !fri_decommitment
+        .first_layer_auth_path
+        .verify::<FriMerkleBackend<F>>(
+            &fri_layers_merkle_roots[0],
+            iota,
+            &fri_decommitment.first_layer_evaluation,
+        )
+    {
         return false;
     }
 
@@ -436,11 +433,10 @@ where
         let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
 
         // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
-        if !auth_path.verify(
+        if !auth_path.verify::<FriMerkleBackend<F>>(
             merkle_root,
             layer_evaluation_index_sym,
             evaluation_sym,
-            &HASHER,
         ) {
             return false;
         }
@@ -516,7 +512,7 @@ where
         return false;
     }
 
-    if !step_4_verify_deep_composition_polynomial(proof, &domain, &challenges) {
+    if !step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges) {
         error!("DEEP Composition Polynomial verification failed");
         return false;
     }

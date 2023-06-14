@@ -6,12 +6,15 @@ use lambdaworks_math::{
     traits::ByteConversion,
 };
 
-use super::HASHER;
 pub use super::{FriMerkleTree, Polynomial};
-use lambdaworks_fft::polynomial::FFTPoly;
+use lambdaworks_math::fft::polynomial::FFTPoly;
 
 #[derive(Clone)]
-pub struct FriLayer<F: IsField> {
+pub struct FriLayer<F>
+where
+    F: IsField,
+    FieldElement<F>: ByteConversion,
+{
     pub poly: Polynomial<FieldElement<F>>,
     pub evaluation: Vec<FieldElement<F>>,
     pub merkle_tree: FriMerkleTree<F>,
@@ -33,7 +36,7 @@ where
             .evaluate_offset_fft(1, Some(domain_size), coset_offset)
             .unwrap(); // TODO: return error
 
-        let merkle_tree = FriMerkleTree::build(&evaluation, Box::new(HASHER));
+        let merkle_tree = FriMerkleTree::build(&evaluation);
 
         Self {
             poly,
