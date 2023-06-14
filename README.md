@@ -28,3 +28,16 @@ For example, if you have a `program.json` in the project folder, you can use:
 or
 
 `cargo run --release program.json`
+## Compiling Cairo Programs to prove
+
+You can compile a program using `cairo-compile`, which requires `python3.9` and `cairo-lang`
+
+As an alternative, you can use the `Dockerfile` provided. 
+
+Build it with:
+
+`make docker_build_cairo_compiler`
+
+and compile programs with:
+
+`make docker_compile_cairo PROGRAM=program.cairo OUTPUT=program.json`
