@@ -16,3 +16,15 @@ To be added:
 - Optimizing verifier operations
 - Range check and Pedersen built-ins
 - Different layouts
+
+## How to try it
+
+You can generate a proof for a compiled program with Cairo 0.11 and verify using `make run` or `cairo run`
+
+For example, if you have a `program.json` in the project folder, you can use:
+
+`make run PATH=program.json`
+
+or
+
+`cargo run --release program.json`
