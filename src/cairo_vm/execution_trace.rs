@@ -175,13 +175,14 @@ where
     )
 }
 
-fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, missing_values: Vec<FieldElement<F>>) {
+/// Fills holes found in the range-checked columns.
+fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldElement<F>>) {
     let zeros_left = vec![FieldElement::zero(); OFF_DST];
     let zeros_right = vec![FieldElement::zero(); trace.n_cols - OFF_OP1 - 1];
 
-    for i in (0..missing_values.len()).step_by(3) {
+    for i in (0..holes.len()).step_by(3) {
         trace.table.append(&mut zeros_left.clone());
-        trace.table.append(&mut missing_values[i..(i + 3)].to_vec());
+        trace.table.append(&mut holes[i..(i + 3)].to_vec());
         trace.table.append(&mut zeros_right.clone());
     }
 }
