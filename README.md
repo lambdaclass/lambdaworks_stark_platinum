@@ -23,7 +23,7 @@ To be added:
   
 ## How to try it
 
-## Using Docker compiler
+### Using Docker compiler
 
 Build the compiler image with:
 
@@ -33,7 +33,7 @@ Then for example, if you have a `program.json` in the project folder, you can us
 
 `make docker_compile_and_run PROGRAM=program_name.cairo`
 
-## Using cairo-compile
+### Using cairo-compile
 
 If you have `cairo-lang`installed, you can use it instead of the Dockerfile
 
