@@ -129,6 +129,13 @@ fn pad_with_last_row_and_zeros<F: IsFFTField>(
     trace.table.append(&mut pad);
 }
 
+/// Gets holes from the range-checked columns. These holes must be filled for the
+/// permutation range-checks, as can be read in section 9.9 of the Cairo whitepaper.
+/// Receives the trace and the indexes of the range-checked columns.
+/// Outputs the holes that must be filled to make the range continuous and the extreme
+/// values rc_min and rc_max, corresponding to the minimum and maximum values of the range.
+/// NOTE: These extreme values should be received as public inputs in the future and not
+/// calculated here.
 fn get_rc_holes<F>(
     trace: &TraceTable<F>,
     columns_indices: &[usize],
