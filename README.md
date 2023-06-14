@@ -19,7 +19,7 @@ To be added:
 
 ## Requirements
 
-- Cargo 1.69
+- Cargo 1.69+
   
 ## How to try it
 ## Using Docker compiler
