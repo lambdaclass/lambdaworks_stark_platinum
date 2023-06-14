@@ -16,3 +16,17 @@ To be added:
 - Optimizing verifier operations
 - Range check and Pedersen built-ins
 - Different layouts
+
+## Compiling Cairo Programs to prove
+
+You can compile program using `cairo-compile`, which requires `python3.9` and `cairo-lang`
+
+As an alternative, you can use the `Dockerfile` provided. 
+
+Build it with:
+
+`make docker_build_cairo_compiler`
+
+and compile programs with:
+
+`make docker_compile_cairo PROGRAM=program.cairo OUTPUT=program.json`
