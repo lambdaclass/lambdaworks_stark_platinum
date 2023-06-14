@@ -243,7 +243,11 @@ impl CairoAIR {
                 0, // range-check builtin exemption
             ],
             transition_offsets: vec![0, 1],
-            num_transition_constraints: 49 + 1, // range-check builtin value decomposition constraint
+            num_transition_constraints: if has_range_check_builtin {
+                49 + 1 // range-check builtin value decomposition constraint
+            } else {
+                49
+            },
         };
 
         Self {
