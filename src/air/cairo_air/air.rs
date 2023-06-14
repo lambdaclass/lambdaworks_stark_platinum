@@ -210,44 +210,45 @@ impl CairoAIR {
     /// number_steps: Number of steps of the execution / register steps / rows in cairo runner trace
     #[rustfmt::skip]
     pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize, has_rc_builtin: bool) -> Self {
+        let mut trace_columns = 34 + 3 + 12 + 3;
+        let mut transition_degrees = vec![
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
+            1, // Flag 15
+            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
+            2, 2, 2, 2, // Increasing memory auxiliary constraints.
+            2, 2, 2, 2, // Consistent memory auxiliary constraints.
+            2, 2, 2, 2, // Permutation auxiliary constraints.
+            2, 2, 2, // Permutation auxiliary constraints.
+        ];
+        let mut transition_exemptions = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
+            0, // inst (1)
+            0, 0, 0, // operand consraints (3)
+            1, 1, 1, 1, 0, 0, // register constraints (6)
+            0, 0, 0, 0, 0, // opcode constraints (5)
+            0, 0, 0, 1, // memory continuous (4)
+            0, 0, 0, 1, // memory value consistency (4)
+            0, 0, 0, 1, // memory permutation argument (4)
+            0, 0, 1, // range check continuous (3)
+            0, 0, 0, // range check permutation argument (3)
+        ];
+        let mut num_transition_constraints = 49;
+
+        if has_rc_builtin {
+            trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
+            transition_degrees.push(1); // Range check builtin constraint
+            transition_exemptions.push(0); // range-check builtin exemption
+            num_transition_constraints += 1; // range-check builtin value decomposition constraint
+        }
+
         let context = AirContext {
             options: proof_options,
             trace_length: full_trace_length,
-            trace_columns: if has_rc_builtin {
-                34 + 3 + 12 + 3
-                + 8 + 1 // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
-            } else {
-                34 + 3 + 12 + 3
-            },
-            transition_degrees: vec![
-                2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
-                1, // Flag 15
-                3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
-                2, 2, 2, 2, // Increasing memory auxiliary constraints.
-                2, 2, 2, 2, // Consistent memory auxiliary constraints.
-                2, 2, 2, 2, // Permutation auxiliary constraints.
-                2, 2, 2, // Permutation auxiliary constraints.
-                1, // range-check builtin constraint
-            ],
-            transition_exemptions: vec![
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
-                0, // inst (1)
-                0, 0, 0, // operand consraints (3)
-                1, 1, 1, 1, 0, 0, // register constraints (6)
-                0, 0, 0, 0, 0, // opcode constraints (5)
-                0, 0, 0, 1, // memory continuous (4)
-                0, 0, 0, 1, // memory value consistency (4)
-                0, 0, 0, 1, // memory permutation argument (4)
-                0, 0, 1, // range check continuous (3)
-                0, 0, 0, // range check permutation argument (3)
-                0, // range-check builtin exemption
-            ],
+            trace_columns,
+            transition_degrees,
+            transition_exemptions,
             transition_offsets: vec![0, 1],
-            num_transition_constraints: if has_rc_builtin {
-                49 + 1 // range-check builtin value decomposition constraint
-            } else {
-                49
-            },
+            num_transition_constraints,
         };
 
         Self {
