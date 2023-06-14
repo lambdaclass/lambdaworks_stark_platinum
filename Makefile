@@ -1,8 +1,13 @@
+CC=gcc
+
 .PHONY: test clippy
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-run:
-	cargo run --release $(PATH)
+build: 
+	cargo build --release
+
+run: build
+	cargo run --release $(PROGRAM_PATH)
 	
 test:
 	cargo test

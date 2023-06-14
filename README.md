@@ -23,7 +23,7 @@ You can generate a proof for a compiled program with Cairo 0.11 and verify using
 
 For example, if you have a `program.json` in the project folder, you can use:
 
-`make run PATH=program.json`
+`make run PROGRAM_PATH=program.json`
 
 or
 
