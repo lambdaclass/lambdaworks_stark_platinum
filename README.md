@@ -17,7 +17,24 @@ To be added:
 - Range check and Pedersen built-ins
 - Different layouts
 
+## Requirements
+
+- Cargo 1.69
+  
 ## How to try it
+## Using Docker compiler
+
+Build the compiler image with:
+
+`make docker_build_cairo_compiler`
+
+Then use:
+
+`make docker_compile_and_run PROGRAM=program_name.cairo`
+
+## Using cairo-compile
+
+`make compile_and_run PROGRAM=program_name.cairo`
 
 You can generate a proof for a compiled program with Cairo 0.11 and verify using `make run` or `cairo run`
 

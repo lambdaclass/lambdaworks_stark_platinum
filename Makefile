@@ -23,3 +23,17 @@ docker_build_cairo_compiler:
 	
 docker_compile_cairo:
 	docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(OUTPUT)
+
+docker_compile_and_run:
+	@echo "Compiling program with docker"
+	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
+	@echo "Compiling done"
+	@cargo run --quiet --release $(PROGRAM).json 
+	@rm $(PROGRAM).json
+
+compile_and_run:
+	@echo "Compiling program with cairo-compile"
+	@cairo-compile $(PROGRAM) > $(PROGRAM).json
+	@echo "Compiling done"
+	@cargo run --quiet --release $(PROGRAM).json 
+	@rm $(PROGRAM).json
