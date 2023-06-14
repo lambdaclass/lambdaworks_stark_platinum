@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
