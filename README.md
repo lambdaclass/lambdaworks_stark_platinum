@@ -19,7 +19,7 @@ To be added:
 
 ## Compiling Cairo Programs to prove
 
-You can compile program using `cairo-compile`, which requires `python3.9` and `cairo-lang`
+You can compile a program using `cairo-compile`, which requires `python3.9` and `cairo-lang`
 
 As an alternative, you can use the `Dockerfile` provided. 
 
