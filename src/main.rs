@@ -1,5 +1,5 @@
 use std::env;
-use std::time::{Instant};
+use std::time::Instant;
 
 use lambdaworks_stark::{cairo_run::run::generate_prover_args, prover::prove, verifier::verify};
 
