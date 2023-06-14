@@ -848,7 +848,11 @@ mod test {
 
     use crate::{
         air::{
-            cairo_air::air::evaluate_range_check_builtin_constraint, debug::validate_trace,
+            cairo_air::air::{
+                add_program_in_public_input_section, evaluate_range_check_builtin_constraint,
+                PublicInputs,
+            },
+            debug::validate_trace,
             traits::AIR,
         },
         cairo_run::run::{generate_prover_args, program_path},
@@ -881,89 +885,92 @@ mod test {
         assert_eq!(evaluate_range_check_builtin_constraint(&row), FE::zero());
     }
 
-    // #[test]
-    // fn check_simple_cairo_trace_evaluates_to_zero() {
-    //     let (main_trace, cairo_air, public_input) =
-    //         generate_prover_args(&program_path("simple_program.json"));
-    //     let mut trace_polys = main_trace.compute_trace_polys();
-    //     let mut transcript = DefaultTranscript::new();
-    //     let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
+    #[test]
+    fn check_simple_cairo_trace_evaluates_to_zero() {
+        let (main_trace, cairo_air, public_input) =
+            generate_prover_args(&program_path("simple_program.json"), false);
+        let mut trace_polys = main_trace.compute_trace_polys();
+        let mut transcript = DefaultTranscript::new();
+        let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
 
-    //     let aux_trace =
-    //         cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges, &public_input);
-    //     let aux_polys = aux_trace.compute_trace_polys();
+        let aux_trace =
+            cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges, &public_input);
+        let aux_polys = aux_trace.compute_trace_polys();
 
-    //     trace_polys.extend_from_slice(&aux_polys);
+        trace_polys.extend_from_slice(&aux_polys);
 
-    //     let domain = Domain::new(&cairo_air);
+        let domain = Domain::new(&cairo_air);
 
-    //     assert!(validate_trace(
-    //         &cairo_air,
-    //         &trace_polys,
-    //         &domain,
-    //         &public_input,
-    //         &rap_challenges
-    //     ));
-    // }
+        assert!(validate_trace(
+            &cairo_air,
+            &trace_polys,
+            &domain,
+            &public_input,
+            &rap_challenges
+        ));
+    }
 
-    // #[test]
-    // fn test_build_auxiliary_trace_add_program_in_public_input_section_works() {
-    //     let dummy_public_input = PublicInputs {
-    //         pc_init: FieldElement::zero(),
-    //         ap_init: FieldElement::zero(),
-    //         fp_init: FieldElement::zero(),
-    //         pc_final: FieldElement::zero(),
-    //         ap_final: FieldElement::zero(),
-    //         program: vec![
-    //             FieldElement::from(10),
-    //             FieldElement::from(20),
-    //             FieldElement::from(30),
-    //         ],
-    //         range_check_max: None,
-    //         range_check_min: None,
-    //         num_steps: 1,
-    //     };
+    #[test]
+    fn test_build_auxiliary_trace_add_program_in_public_input_section_works() {
+        let dummy_public_input = PublicInputs {
+            pc_init: FieldElement::zero(),
+            ap_init: FieldElement::zero(),
+            fp_init: FieldElement::zero(),
+            pc_final: FieldElement::zero(),
+            ap_final: FieldElement::zero(),
+            program: vec![
+                FieldElement::from(10),
+                FieldElement::from(20),
+                FieldElement::from(30),
+            ],
+            range_check_max: None,
+            range_check_min: None,
+            num_steps: 1,
+            // These are not used in this test
+            range_check_builtin_start_addr: 0,
+            range_check_builtin_stop_addr: 0,
+        };
 
-    //     let a = vec![
-    //         FieldElement::one(),
-    //         FieldElement::one(),
-    //         FieldElement::zero(),
-    //         FieldElement::zero(),
-    //         FieldElement::zero(),
-    //         FieldElement::zero(),
-    //     ];
-    //     let v = vec![
-    //         FieldElement::one(),
-    //         FieldElement::one(),
-    //         FieldElement::zero(),
-    //         FieldElement::zero(),
-    //         FieldElement::zero(),
-    //         FieldElement::zero(),
-    //     ];
-    //     let (ap, vp) = add_program_in_public_input_section(&a, &v, &dummy_public_input);
-    //     assert_eq!(
-    //         ap,
-    //         vec![
-    //             FieldElement::one(),
-    //             FieldElement::one(),
-    //             FieldElement::zero(),
-    //             FieldElement::one(),
-    //             FieldElement::from(2),
-    //             FieldElement::from(3)
-    //         ]
-    //     );
-    //     assert_eq!(
-    //         vp,
-    //         vec![
-    //             FieldElement::one(),
-    //             FieldElement::one(),
-    //             FieldElement::zero(),
-    //             FieldElement::from(10),
-    //             FieldElement::from(20),
-    //             FieldElement::from(30)
-    //         ]
-    //     );
-    // }
+        let a = vec![
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+        ];
+        let v = vec![
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+        ];
+        let (ap, vp) = add_program_in_public_input_section(&a, &v, &dummy_public_input);
+        assert_eq!(
+            ap,
+            vec![
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::zero(),
+                FieldElement::one(),
+                FieldElement::from(2),
+                FieldElement::from(3)
+            ]
+        );
+        assert_eq!(
+            vp,
+            vec![
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::zero(),
+                FieldElement::from(10),
+                FieldElement::from(20),
+                FieldElement::from(30)
+            ]
+        );
+    }
 
     #[test]
     fn test_build_auxiliary_trace_sort_columns_by_memory_address() {
