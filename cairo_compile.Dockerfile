@@ -3,7 +3,7 @@ FROM python:3.9-slim
 WORKDIR /app
 
 RUN apt-get update && \
-  apt-get install -y --no-install-recommends g++ python3.9 libgmp3-dev && \
+  apt-get install -y --no-install-recommends g++ libgmp3-dev && \
   pip install ecdsa==0.18.0 \
   bitarray==2.7.3 \
   fastecdsa==2.2.3 \
