@@ -22,26 +22,21 @@ To be added:
 - Cargo 1.69+
   
 ## How to try it
+
 ## Using Docker compiler
 
 Build the compiler image with:
 
 `make docker_build_cairo_compiler`
 
-Then use:
+Then for example, if you have a `program.json` in the project folder, you can use:
 
 `make docker_compile_and_run PROGRAM=program_name.cairo`
 
 ## Using cairo-compile
 
+If you have `cairo-lang`installed, you can use it instead of the Dockerfile
+
+Then for example, if you have a `program.json` in the project folder, you can use:
+
 `make compile_and_run PROGRAM=program_name.cairo`
-
-You can generate a proof for a compiled program with Cairo 0.11 and verify using `make run` or `cairo run`
-
-For example, if you have a `program.json` in the project folder, you can use:
-
-`make run PROGRAM_PATH=program.json`
-
-or
-
-`cargo run --release program.json`
