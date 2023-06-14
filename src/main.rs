@@ -13,7 +13,7 @@ fn main() {
     println!("Proof generated");
 
     println!("Verifying ...");
-    if verify(&proof, &cairo_air, &pub_inputs){
+    if verify(&proof, &cairo_air, &pub_inputs) {
         println!("Verification succeded");
     } else {
         println!("Verification failed");
