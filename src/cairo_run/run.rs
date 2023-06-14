@@ -7,11 +7,19 @@ use crate::cairo_vm::execution_trace::build_main_trace;
 
 use super::cairo_layout::CairoLayout;
 use super::vec_writer::VecWriter;
+use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
+use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
+use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
+use cairo_vm::serde::deserialize_program::BuiltinName;
+use cairo_vm::types::program::Program;
+use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
 use cairo_vm::vm::errors::trace_errors::TraceError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
+use cairo_vm::vm::runners::cairo_runner::{CairoRunner, CairoArg};
+use cairo_vm::vm::vm_core::VirtualMachine;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use thiserror::Error;
 
@@ -96,6 +104,138 @@ pub fn run_program(
     Ok((register_states, cairo_mem, data_len))
 }
 
+pub fn run_program_cairo_1(
+    entrypoint_function: Option<&str>,
+    layout: CairoLayout,
+    filename: &str,
+) -> Result<(RegisterStates, CairoMemory, usize), Error> {
+    // default value for entrypoint is "main"
+    let entrypoint = entrypoint_function.unwrap_or("main");
+
+    let program_content = std::fs::read(filename).map_err(Error::IO)?;
+
+    let casm_contract: CasmContractClass = serde_json::from_slice(&program_content).unwrap();
+
+    let program: Program = casm_contract.clone().try_into().unwrap();
+
+    let mut runner = CairoRunner::new(
+        &(casm_contract.clone().try_into().unwrap()), layout.as_str(), false
+    ).unwrap();
+
+    let mut vm = VirtualMachine::new(true);
+
+    runner.initialize_function_runner_cairo_1(&mut vm, &[BuiltinName::range_check]);
+
+    // Implicit Args
+    let syscall_segment = MaybeRelocatable::from(vm.add_memory_segment());
+
+    let args = [Felt252::new(1).into(),Felt252::new(1).into(),Felt252::new(1).into()];
+
+    let builtins: Vec<&'static str> = runner
+        .get_program_builtins()
+        .iter()
+        .map(|b| b.name())
+        .collect();
+
+    let builtin_segment: Vec<MaybeRelocatable> = vm
+        .get_builtin_runners()
+        .iter()
+        .filter(|b| builtins.contains(&b.name()))
+        .flat_map(|b| b.initial_stack())
+        .collect();
+
+    let initial_gas = MaybeRelocatable::from(usize::MAX);
+
+    let mut implicit_args = builtin_segment;
+    implicit_args.extend([initial_gas]);
+    implicit_args.extend([syscall_segment]);
+
+    // Other args
+
+    // Load builtin costs
+    let builtin_costs: Vec<MaybeRelocatable> =
+        vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
+    let builtin_costs_ptr = vm.add_memory_segment();
+    vm.load_data(builtin_costs_ptr, &builtin_costs).unwrap();
+
+    // Load extra data
+    let core_program_end_ptr =
+        (runner.program_base.unwrap() + program.data_len()).unwrap();
+    let program_extra_data: Vec<MaybeRelocatable> =
+        vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
+    vm.load_data(core_program_end_ptr, &program_extra_data)
+        .unwrap();
+
+    // Load calldata
+    let calldata_start = vm.add_memory_segment();
+    let calldata_end = vm.load_data(calldata_start, &args.to_vec()).unwrap();
+
+    // Create entrypoint_args
+
+    let mut entrypoint_args: Vec<CairoArg> = implicit_args
+        .iter()
+        .map(|m| CairoArg::from(m.clone()))
+        .collect();
+    entrypoint_args.extend([
+        MaybeRelocatable::from(calldata_start).into(),
+        MaybeRelocatable::from(calldata_end).into(),
+    ]);
+    let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
+
+    let mut hint_processor = BuiltinHintProcessor::new_empty();
+
+    // Run contract entrypoint
+    // We assume entrypoint 0 for only one function
+    runner
+        .run_from_entrypoint(
+            0,
+            &entrypoint_args,
+            &mut None,
+            true,
+            Some(program.data_len() + program_extra_data.len()),
+            &mut vm,
+            &mut hint_processor,
+        )
+        .unwrap();
+
+    let trace_enabled = true;
+    let mut hint_executor = BuiltinHintProcessor::new_empty();
+    let cairo_run_config = cairo_run::CairoRunConfig {
+        entrypoint,
+        trace_enabled,
+        relocate_mem: true,
+        layout: layout.as_str(),
+        proof_mode: false,
+        secure_run: None,
+    };
+
+    runner.relocate(&mut vm, true);
+
+    let relocated_trace = vm.get_relocated_trace()?;
+    let relocated_memory = runner.relocated_memory;
+
+    /* 
+    let mut trace_vec = Vec::<u8>::new();
+    let mut trace_writer = VecWriter::new(&mut trace_vec);
+    cairo_run::write_encoded_trace(relocated_trace, &mut trace_writer)?;
+
+    let mut memory_vec = Vec::<u8>::new();
+    let mut memory_writer = VecWriter::new(&mut memory_vec);
+    cairo_run::write_encoded_memory(&cairo_runner.relocated_memory, &mut memory_writer)?;
+
+    trace_writer.flush()?;
+    memory_writer.flush()?;
+
+    //TO DO: Better error handling
+    let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();
+    let register_states = RegisterStates::from_bytes_le(&trace_vec).unwrap();
+
+    let data_len = cairo_runner.get_program().data_len();
+
+    Ok((register_states, cairo_mem, data_len))
+    */
+}
+
 pub fn generate_prover_args(
     file_path: &str,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
@@ -116,6 +256,28 @@ pub fn generate_prover_args(
 
     (main_trace, cairo_air, pub_inputs)
 }
+
+pub fn generate_prover_args_cairo_1(
+    file_path: &str,
+) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
+    let (register_states, memory, program_size) =
+        run_program(None, CairoLayout::Plain, file_path).unwrap();
+
+    let proof_options = ProofOptions {
+        blowup_factor: 4,
+        fri_number_of_queries: 3,
+        coset_offset: 3,
+    };
+
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+
+    let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
+
+    let cairo_air = CairoAIR::new(proof_options, main_trace.n_rows(), register_states.steps());
+
+    (main_trace, cairo_air, pub_inputs)
+}
+
 
 pub fn program_path(program_name: &str) -> String {
     const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
