@@ -14,6 +14,8 @@ pub use lambdaworks_math::{
     field::{element::FieldElement, fields::u64_prime_field::U64PrimeField},
     polynomial::Polynomial,
 };
+
+#[cfg(debug_assertions)]
 use log::error;
 
 use self::fri_decommit::FriDecommitment;
