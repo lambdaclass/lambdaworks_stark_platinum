@@ -117,11 +117,6 @@ pub fn generate_prover_args(
         &mut pub_inputs,
         has_range_check_builtin,
     );
-    println!(
-        "trace cols: {} trace rows: {}",
-        main_trace.n_cols,
-        main_trace.n_rows()
-    );
 
     let cairo_air = CairoAIR::new(
         proof_options,
