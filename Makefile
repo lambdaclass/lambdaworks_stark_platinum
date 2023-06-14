@@ -1,5 +1,3 @@
-CC=gcc
-
 .PHONY: test clippy
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
