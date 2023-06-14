@@ -201,7 +201,7 @@ impl PublicInputs {
 pub struct CairoAIR {
     pub context: AirContext,
     pub number_steps: usize,
-    has_range_check_builtin: bool,
+    has_rc_builtin: bool,
 }
 
 impl CairoAIR {
@@ -209,11 +209,11 @@ impl CairoAIR {
     /// full_trace_length: Padding to 2^n
     /// number_steps: Number of steps of the execution / register steps / rows in cairo runner trace
     #[rustfmt::skip]
-    pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize, has_range_check_builtin: bool) -> Self {
+    pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize, has_rc_builtin: bool) -> Self {
         let context = AirContext {
             options: proof_options,
             trace_length: full_trace_length,
-            trace_columns: if has_range_check_builtin {
+            trace_columns: if has_rc_builtin {
                 34 + 3 + 12 + 3
                 + 8 + 1 // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
             } else {
@@ -249,7 +249,7 @@ impl CairoAIR {
         Self {
             context,
             number_steps,
-            has_range_check_builtin
+            has_rc_builtin,
         }
     }
 }
@@ -428,7 +428,7 @@ impl AIR for CairoAIR {
         frame: &Frame<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
     ) -> Vec<FieldElement<Self::Field>> {
-        let builtin_offset = if self.has_range_check_builtin {
+        let builtin_offset = if self.has_rc_builtin {
             0
         } else {
             BUILTIN_OFFSET
@@ -446,7 +446,7 @@ impl AIR for CairoAIR {
         permutation_argument(&mut constraints, frame, rap_challenges, builtin_offset);
         permutation_argument_range_check(&mut constraints, frame, rap_challenges, builtin_offset);
 
-        if self.has_range_check_builtin {
+        if self.has_rc_builtin {
             range_check_builtin(&mut constraints, frame);
         }
 
@@ -485,7 +485,7 @@ impl AIR for CairoAIR {
         // Auxiliary constraint: permutation argument final value
         let final_index = self.context.trace_length - 1;
 
-        let builtin_offset = if self.has_range_check_builtin {
+        let builtin_offset = if self.has_rc_builtin {
             0
         } else {
             BUILTIN_OFFSET
