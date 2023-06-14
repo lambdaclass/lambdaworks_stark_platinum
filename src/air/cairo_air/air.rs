@@ -674,57 +674,49 @@ fn memory_is_increasing(
     let next = frame.get_row(1);
     let one = FieldElement::one();
 
-    constraints[MEMORY_INCREASING_0 - builtin_offset] = (&curr
-        [MEMORY_ADDR_SORTED_0 - builtin_offset]
+    constraints[MEMORY_INCREASING_0] = (&curr[MEMORY_ADDR_SORTED_0 - builtin_offset]
         - &curr[MEMORY_ADDR_SORTED_1 - builtin_offset])
         * (&curr[MEMORY_ADDR_SORTED_1 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_0 - builtin_offset]
             - &one);
 
-    constraints[MEMORY_INCREASING_1 - builtin_offset] = (&curr
-        [MEMORY_ADDR_SORTED_1 - builtin_offset]
+    constraints[MEMORY_INCREASING_1] = (&curr[MEMORY_ADDR_SORTED_1 - builtin_offset]
         - &curr[MEMORY_ADDR_SORTED_2 - builtin_offset])
         * (&curr[MEMORY_ADDR_SORTED_2 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_1 - builtin_offset]
             - &one);
 
-    constraints[MEMORY_INCREASING_2 - builtin_offset] = (&curr
-        [MEMORY_ADDR_SORTED_2 - builtin_offset]
+    constraints[MEMORY_INCREASING_2] = (&curr[MEMORY_ADDR_SORTED_2 - builtin_offset]
         - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset])
         * (&curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_2 - builtin_offset]
             - &one);
 
-    constraints[MEMORY_INCREASING_3 - builtin_offset] = (&curr
-        [MEMORY_ADDR_SORTED_3 - builtin_offset]
+    constraints[MEMORY_INCREASING_3] = (&curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
         - &next[MEMORY_ADDR_SORTED_0 - builtin_offset])
         * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
             - &one);
 
-    constraints[MEMORY_CONSISTENCY_0 - builtin_offset] = (&curr
-        [MEMORY_VALUES_SORTED_0 - builtin_offset]
+    constraints[MEMORY_CONSISTENCY_0] = (&curr[MEMORY_VALUES_SORTED_0 - builtin_offset]
         - &curr[MEMORY_VALUES_SORTED_1 - builtin_offset])
         * (&curr[MEMORY_ADDR_SORTED_1 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_0 - builtin_offset]
             - &one);
 
-    constraints[MEMORY_CONSISTENCY_1 - builtin_offset] = (&curr
-        [MEMORY_VALUES_SORTED_1 - builtin_offset]
+    constraints[MEMORY_CONSISTENCY_1] = (&curr[MEMORY_VALUES_SORTED_1 - builtin_offset]
         - &curr[MEMORY_VALUES_SORTED_2 - builtin_offset])
         * (&curr[MEMORY_ADDR_SORTED_2 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_1 - builtin_offset]
             - &one);
 
-    constraints[MEMORY_CONSISTENCY_2 - builtin_offset] = (&curr
-        [MEMORY_VALUES_SORTED_2 - builtin_offset]
+    constraints[MEMORY_CONSISTENCY_2] = (&curr[MEMORY_VALUES_SORTED_2 - builtin_offset]
         - &curr[MEMORY_VALUES_SORTED_3 - builtin_offset])
         * (&curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_2 - builtin_offset]
             - &one);
 
-    constraints[MEMORY_CONSISTENCY_3 - builtin_offset] = (&curr
-        [MEMORY_VALUES_SORTED_3 - builtin_offset]
+    constraints[MEMORY_CONSISTENCY_3] = (&curr[MEMORY_VALUES_SORTED_3 - builtin_offset]
         - &next[MEMORY_VALUES_SORTED_0 - builtin_offset])
         * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
@@ -789,21 +781,21 @@ fn permutation_argument_range_check(
     let one = FieldElement::one();
     let z = &rap_challenges.z_range_check;
 
-    constraints[RANGE_CHECK_INCREASING_0 - builtin_offset] =
-        (&curr[RANGE_CHECK_COL_1 - builtin_offset] - &curr[RANGE_CHECK_COL_2 - builtin_offset])
-            * (&curr[RANGE_CHECK_COL_2 - builtin_offset]
-                - &curr[RANGE_CHECK_COL_1 - builtin_offset]
-                - &one);
-    constraints[RANGE_CHECK_INCREASING_1 - builtin_offset] =
-        (&curr[RANGE_CHECK_COL_2 - builtin_offset] - &curr[RANGE_CHECK_COL_3 - builtin_offset])
-            * (&curr[RANGE_CHECK_COL_3 - builtin_offset]
-                - &curr[RANGE_CHECK_COL_2 - builtin_offset]
-                - &one);
-    constraints[RANGE_CHECK_INCREASING_2 - builtin_offset] =
-        (&curr[RANGE_CHECK_COL_3 - builtin_offset] - &next[RANGE_CHECK_COL_1 - builtin_offset])
-            * (&next[RANGE_CHECK_COL_1 - builtin_offset]
-                - &curr[RANGE_CHECK_COL_3 - builtin_offset]
-                - &one);
+    constraints[RANGE_CHECK_INCREASING_0] = (&curr[RANGE_CHECK_COL_1 - builtin_offset]
+        - &curr[RANGE_CHECK_COL_2 - builtin_offset])
+        * (&curr[RANGE_CHECK_COL_2 - builtin_offset]
+            - &curr[RANGE_CHECK_COL_1 - builtin_offset]
+            - &one);
+    constraints[RANGE_CHECK_INCREASING_1] = (&curr[RANGE_CHECK_COL_2 - builtin_offset]
+        - &curr[RANGE_CHECK_COL_3 - builtin_offset])
+        * (&curr[RANGE_CHECK_COL_3 - builtin_offset]
+            - &curr[RANGE_CHECK_COL_2 - builtin_offset]
+            - &one);
+    constraints[RANGE_CHECK_INCREASING_2] = (&curr[RANGE_CHECK_COL_3 - builtin_offset]
+        - &next[RANGE_CHECK_COL_1 - builtin_offset])
+        * (&next[RANGE_CHECK_COL_1 - builtin_offset]
+            - &curr[RANGE_CHECK_COL_3 - builtin_offset]
+            - &one);
 
     let p0 = &curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1 - builtin_offset];
     let p0_next = &next[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1 - builtin_offset];
@@ -818,9 +810,9 @@ fn permutation_argument_range_check(
     let a1 = &curr[OFF_OP0];
     let a2 = &curr[OFF_OP1];
 
-    constraints[RANGE_CHECK_0 - builtin_offset] = (z - ap1) * p1 - (z - a1) * p0;
-    constraints[RANGE_CHECK_1 - builtin_offset] = (z - ap2) * p2 - (z - a2) * p1;
-    constraints[RANGE_CHECK_2 - builtin_offset] = (z - ap0_next) * p0_next - (z - a0_next) * p2;
+    constraints[RANGE_CHECK_0] = (z - ap1) * p1 - (z - a1) * p0;
+    constraints[RANGE_CHECK_1] = (z - ap2) * p2 - (z - a2) * p1;
+    constraints[RANGE_CHECK_2] = (z - ap0_next) * p0_next - (z - a0_next) * p2;
 }
 
 fn frame_inst_size(frame_row: &[FE]) -> FE {
