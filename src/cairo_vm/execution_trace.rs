@@ -108,6 +108,10 @@ fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usiz
     trace.table.append(&mut pad);
 }
 
+/// Pads trace with its last row, with the exception of the columns specified in
+/// `zero_pad_columns`, where the pad is done with zeros.
+/// If the last row is [2, 1, 4, 1] and the zero pad columns are [0, 1], then the
+/// padding will be [0, 0, 4, 1].
 fn pad_with_last_row_and_zeros<F: IsFFTField>(
     trace: &mut TraceTable<F>,
     number_rows: usize,
