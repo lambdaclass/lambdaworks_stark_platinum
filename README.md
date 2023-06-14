@@ -17,16 +17,31 @@ To be added:
 - Range check and Pedersen built-ins
 - Different layouts
 
-## Compiling Cairo Programs to prove
+## Requirements
 
-You can compile a program using `cairo-compile`, which requires `python3.9` and `cairo-lang`
+- Cargo 1.69+
+  
+## How to try it
+## Using Docker compiler
 
-As an alternative, you can use the `Dockerfile` provided. 
-
-Build it with:
+Build the compiler image with:
 
 `make docker_build_cairo_compiler`
 
-and compile programs with:
+Then use:
 
-`make docker_compile_cairo PROGRAM=program.cairo OUTPUT=program.json`
+`make docker_compile_and_run PROGRAM=program_name.cairo`
+
+## Using cairo-compile
+
+`make compile_and_run PROGRAM=program_name.cairo`
+
+You can generate a proof for a compiled program with Cairo 0.11 and verify using `make run` or `cairo run`
+
+For example, if you have a `program.json` in the project folder, you can use:
+
+`make run PROGRAM_PATH=program.json`
+
+or
+
+`cargo run --release program.json`
