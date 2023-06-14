@@ -694,7 +694,8 @@ mod test {
             &program_path("simple_program.json"),
         )
         .unwrap();
-        let pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+        let pub_inputs =
+            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, 0, 0);
         let execution_trace =
             build_cairo_execution_trace(&register_states, &memory, &pub_inputs, false);
 
@@ -801,7 +802,8 @@ mod test {
 
         let (register_states, memory, program_size) =
             run_program(None, CairoLayout::AllCairo, &program_path("call_func.json")).unwrap();
-        let pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+        let pub_inputs =
+            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, 0, 0);
         let execution_trace =
             build_cairo_execution_trace(&register_states, &memory, &pub_inputs, false);
 

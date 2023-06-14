@@ -173,6 +173,8 @@ impl PublicInputs {
         register_states: &RegisterStates,
         memory: &CairoMemory,
         program_size: usize,
+        rc_builtin_start: u64,
+        rc_builtin_stop: u64,
     ) -> Self {
         let mut program = vec![];
 
@@ -190,8 +192,8 @@ impl PublicInputs {
             ap_final: FieldElement::from(last_step.ap),
             range_check_min: None,
             range_check_max: None,
-            range_check_builtin_start_addr: 25,
-            range_check_builtin_stop_addr: 26,
+            range_check_builtin_start_addr: rc_builtin_start,
+            range_check_builtin_stop_addr: rc_builtin_stop,
             program,
             num_steps: register_states.steps(),
         }
@@ -243,7 +245,7 @@ impl CairoAIR {
                 0, // range-check builtin exemption
             ],
             transition_offsets: vec![0, 1],
-            num_transition_constraints: if has_range_check_builtin {
+            num_transition_constraints: if has_rc_builtin {
                 49 + 1 // range-check builtin value decomposition constraint
             } else {
                 49
@@ -892,7 +894,7 @@ mod test {
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let (main_trace, cairo_air, public_input) =
-            generate_prover_args(&program_path("simple_program.json"), false);
+            generate_prover_args(&program_path("simple_program.json"), false, 0, 0);
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);

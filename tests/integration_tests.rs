@@ -117,9 +117,18 @@ fn test_prove_quadratic() {
 
 #[ignore = "metal"]
 /// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
-fn test_prove_cairo_program(file_path: &str, has_range_check_builtin: bool) {
-    let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(file_path, has_range_check_builtin);
+fn test_prove_cairo_program(
+    file_path: &str,
+    has_range_check_builtin: bool,
+    rc_builtin_start: u64,
+    rc_builtin_stop: u64,
+) {
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(
+        file_path,
+        has_range_check_builtin,
+        rc_builtin_start,
+        rc_builtin_stop,
+    );
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -127,17 +136,22 @@ fn test_prove_cairo_program(file_path: &str, has_range_check_builtin: bool) {
 
 #[test_log::test]
 fn test_prove_cairo_simple_program() {
-    test_prove_cairo_program(&program_path("simple_program.json"), false);
+    test_prove_cairo_program(&program_path("simple_program.json"), false, 0, 0);
 }
 
 #[test_log::test]
 fn test_prove_cairo_fibonacci_5() {
-    test_prove_cairo_program(&program_path("fibonacci_5.json"), false);
+    test_prove_cairo_program(&program_path("fibonacci_5.json"), false, 0, 0);
 }
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
-    test_prove_cairo_program(&program_path("rc_program.json"), true);
+    test_prove_cairo_program(&program_path("rc_program.json"), true, 25, 26);
+}
+
+#[test_log::test]
+fn test_prove_cairo_lt_comparison() {
+    test_prove_cairo_program(&program_path("lt_comparison.json"), true, 131, 132);
 }
 
 #[test_log::test]
@@ -196,7 +210,7 @@ fn test_prove_dummy() {
 #[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"), false);
+        generate_prover_args(&program_path("simple_program.json"), false, 0, 0);
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     // We modify the original program and verify using this new "corrupted" version
@@ -212,7 +226,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_range_bounds() {
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"), false);
+        generate_prover_args(&program_path("simple_program.json"), false, 0, 0);
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);

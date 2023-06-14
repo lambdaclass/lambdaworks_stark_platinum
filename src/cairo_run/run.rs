@@ -99,6 +99,8 @@ pub fn run_program(
 pub fn generate_prover_args(
     file_path: &str,
     has_range_check_builtin: bool,
+    rc_builtin_start: u64,
+    rc_builtin_stop: u64,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
     let (register_states, memory, program_size) =
         run_program(None, CairoLayout::Small, file_path).unwrap();
@@ -109,7 +111,13 @@ pub fn generate_prover_args(
         coset_offset: 3,
     };
 
-    let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(
+        &register_states,
+        &memory,
+        program_size,
+        rc_builtin_start,
+        rc_builtin_stop,
+    );
 
     let main_trace = build_main_trace(
         &register_states,
@@ -157,7 +165,8 @@ mod tests {
 
         let (register_states, memory, program_size) =
             run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
-        let pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+        let pub_inputs =
+            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, 0, 0);
         let execution_trace =
             build_cairo_execution_trace(&register_states, &memory, &pub_inputs, false);
 
