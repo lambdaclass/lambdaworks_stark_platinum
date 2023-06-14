@@ -60,14 +60,14 @@ pub fn build_main_trace(
     let mut main_trace = build_cairo_execution_trace(
         register_states,
         memory,
-        &public_input,
+        public_input,
         has_range_check_builtin,
     );
 
     let mut address_cols = main_trace
         .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
         .table;
-    address_cols.sort_by(|x, y| x.representative().cmp(&y.representative()));
+    address_cols.sort_by_key(|x| x.representative());
 
     let (rc_holes, rc_min, rc_max) = get_rc_holes(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);
     public_input.range_check_min = Some(rc_min);
@@ -199,7 +199,7 @@ fn get_memory_holes(sorted_addrs: &[FE]) -> Vec<FE> {
     // First loop tmp addr = 1
     while tmp_addr != initial_addr {
         memory_holes.push(tmp_addr.clone());
-        tmp_addr = tmp_addr + FE::one();
+        tmp_addr += FE::one();
     }
 
     let mut prev_addr = &sorted_addrs[0];
@@ -212,7 +212,7 @@ fn get_memory_holes(sorted_addrs: &[FE]) -> Vec<FE> {
 
             while hole_addr.representative() < addr.representative() {
                 memory_holes.push(hole_addr.clone());
-                hole_addr = hole_addr + FE::one();
+                hole_addr += FE::one();
             }
         }
         prev_addr = addr;
@@ -363,8 +363,8 @@ fn add_rc_builtin_columns(
     memory: &CairoMemory,
 ) {
     // Build range-check builtin columns: rc_0, rc_1, ... , rc_7, rc_value
-    let range_check_builtin_start = public_inputs.range_check_builtin_start_addr.clone();
-    let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr.clone();
+    let range_check_builtin_start = public_inputs.range_check_builtin_start_addr;
+    let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr;
 
     let range_checked_values: Vec<&FE> = (range_check_builtin_start..range_check_builtin_stop)
         .map(|addr| memory.get(&addr).unwrap())
@@ -652,12 +652,9 @@ mod test {
         let decomposition_columns =
             decompose_rc_values_into_trace_columns(&[&fifteen, &sixteen, &one_two_three]);
 
-        for i in 0..8 {
-            assert_eq!(decomposition_columns[i][0], FE::from_hex("F").unwrap());
-        }
-
-        for i in 0..8 {
-            assert_eq!(decomposition_columns[i][1], FE::from_hex("10").unwrap());
+        for row in &decomposition_columns {
+            assert_eq!(row[0], FE::from_hex("F").unwrap());
+            assert_eq!(row[1], FE::from_hex("10").unwrap());
         }
 
         assert_eq!(decomposition_columns[0][2], FE::from_hex("8").unwrap());
@@ -1212,11 +1209,11 @@ mod test {
 
     #[test]
     fn test_get_memory_holes() {
-        let mut addrs: Vec<FE> = (1..4).map(|n| FE::from(n)).collect();
-        let addrs_extension: Vec<FE> = (6..10).map(|n| FE::from(n)).collect();
+        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
+        let addrs_extension: Vec<FE> = (6..10).map(FE::from).collect();
         addrs.extend_from_slice(&addrs_extension);
 
-        let addrs_extension: Vec<FE> = (13..16).map(|n| FE::from(n)).collect();
+        let addrs_extension: Vec<FE> = (13..16).map(FE::from).collect();
         addrs.extend_from_slice(&addrs_extension);
 
         let expected_memory_holes = vec![
@@ -1233,7 +1230,7 @@ mod test {
 
     #[test]
     fn test_get_memory_holes_hole_at_beginning() {
-        let addrs: Vec<FE> = (3..10).map(|n| FE::from(n)).collect();
+        let addrs: Vec<FE> = (3..10).map(FE::from).collect();
 
         let expected_memory_holes = vec![FE::one(), FE::from(2)];
         let calculated_memory_holes = get_memory_holes(&addrs);
