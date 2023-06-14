@@ -8,3 +8,6 @@ clippy:
 
 build_metal:
 	cargo b --features metal --release
+
+run:
+	cargo run --release $(PATH)
