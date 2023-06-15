@@ -16,3 +16,27 @@ To be added:
 - Optimizing verifier operations
 - Range check and Pedersen built-ins
 - Different layouts
+
+## Requirements
+
+- Cargo 1.69+
+  
+## How to try it
+
+### Using Docker compiler
+
+Build the compiler image with:
+
+`make docker_build_cairo_compiler`
+
+Then for example, if you have a `program.json` in the project folder, you can use:
+
+`make docker_compile_and_run PROGRAM=program_name.cairo`
+
+### Using cairo-compile
+
+If you have `cairo-lang`installed, you can use it instead of the Dockerfile
+
+Then for example, if you have a `program.json` in the project folder, you can use:
+
+`make compile_and_run PROGRAM=program_name.cairo`
