@@ -72,12 +72,12 @@ pub fn build_main_trace(
     let (rc_holes, rc_min, rc_max) = get_rc_holes(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);
     public_input.range_check_min = Some(rc_min);
     public_input.range_check_max = Some(rc_max);
-
     fill_rc_holes(&mut main_trace, rc_holes);
 
-    if has_range_check_builtin {
-        let mut memory_holes = get_memory_holes(&address_cols);
-        fill_memory_holes_to_trace(&mut main_trace, &mut memory_holes);
+    let mut memory_holes = get_memory_holes(&address_cols, public_input.program.len());
+
+    if !memory_holes.is_empty() {
+        fill_memory_holes(&mut main_trace, &mut memory_holes);
     }
 
     add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
@@ -191,23 +191,17 @@ fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldEleme
 /// as a consequence of interaction with builtins.
 /// IN: Vector of sorted addresses
 /// OUT: Vector of addresses that were not presents in the input vector (holes)
-fn get_memory_holes(sorted_addrs: &[FE]) -> Vec<FE> {
+pub fn get_memory_holes(sorted_addrs: &[FE], data_len: usize) -> Vec<FE> {
     let mut memory_holes = Vec::new();
-
-    let initial_addr = sorted_addrs[0].clone();
-    let mut tmp_addr = FE::one();
-    // First loop tmp addr = 1
-    while tmp_addr != initial_addr {
-        memory_holes.push(tmp_addr.clone());
-        tmp_addr += FE::one();
-    }
-
     let mut prev_addr = &sorted_addrs[0];
 
     for addr in sorted_addrs.iter() {
         let addr_diff = addr - prev_addr;
 
-        if addr_diff != FE::one() && addr_diff != FE::zero() {
+        if addr_diff != FE::one()
+            && addr_diff != FE::zero()
+            && addr.representative() > (data_len as u64).into()
+        {
             let mut hole_addr = prev_addr + FE::one();
 
             while hole_addr.representative() < addr.representative() {
@@ -226,17 +220,8 @@ fn get_memory_holes(sorted_addrs: &[FE]) -> Vec<FE> {
 /// addresses. If not, it will be filled with zeros. The function fills with missing addresses by
 /// iterating each memory address column in an ascending order and fills with zeros when no more
 /// missing addresses are left.
-fn fill_memory_holes_to_trace(
-    trace: &mut TraceTable<Stark252PrimeField>,
-    memory_holes: &mut Vec<FE>,
-) {
+fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut Vec<FE>) {
     const NUM_ADDR_COLS: usize = MEMORY_COLUMNS.len() / 2;
-    let memory_holes_len_next_multiple = (memory_holes.len() / NUM_ADDR_COLS + 1) * NUM_ADDR_COLS;
-
-    memory_holes.extend(vec![
-        FE::zero();
-        memory_holes_len_next_multiple - memory_holes.len()
-    ]);
 
     for memory_holes_window in memory_holes.windows(NUM_ADDR_COLS) {
         let mut last_row = trace.last_row().to_vec();
@@ -357,12 +342,12 @@ pub fn build_cairo_execution_trace(
     TraceTable::new_from_cols(&trace_cols)
 }
 
+// Build range-check builtin columns: rc_0, rc_1, ... , rc_7, rc_value
 fn add_rc_builtin_columns(
     trace_cols: &mut Vec<Vec<FE>>,
     public_inputs: &PublicInputs,
     memory: &CairoMemory,
 ) {
-    // Build range-check builtin columns: rc_0, rc_1, ... , rc_7, rc_value
     let range_check_builtin_start = public_inputs.range_check_builtin_start_addr;
     let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr;
 
@@ -1235,20 +1220,20 @@ mod test {
             FE::from(11),
             FE::from(12),
         ];
-        let calculated_memory_holes = get_memory_holes(&addrs);
+        let calculated_memory_holes = get_memory_holes(&addrs, 0);
 
         assert_eq!(expected_memory_holes, calculated_memory_holes);
     }
 
-    #[test]
-    fn test_get_memory_holes_hole_at_beginning() {
-        let addrs: Vec<FE> = (3..10).map(FE::from).collect();
+    // #[test]
+    // fn test_get_memory_holes_hole_at_beginning() {
+    //     let addrs: Vec<FE> = (3..10).map(FE::from).collect();
 
-        let expected_memory_holes = vec![FE::one(), FE::from(2)];
-        let calculated_memory_holes = get_memory_holes(&addrs);
+    //     let expected_memory_holes = vec![FE::one(), FE::from(2)];
+    //     let calculated_memory_holes = get_memory_holes(&addrs);
 
-        assert_eq!(expected_memory_holes, calculated_memory_holes);
-    }
+    //     assert_eq!(expected_memory_holes, calculated_memory_holes);
+    // }
 
     #[test]
     fn test_fill_memory_holes() {
@@ -1267,7 +1252,7 @@ mod test {
         let mut trace = TraceTable::new_from_cols(&trace_cols);
 
         let mut memory_holes = vec![FE::from(4), FE::from(7), FE::from(8)];
-        fill_memory_holes_to_trace(&mut trace, &mut memory_holes);
+        fill_memory_holes(&mut trace, &mut memory_holes);
 
         let frame_pc = &trace.cols()[FRAME_PC];
         let dst_addr = &trace.cols()[FRAME_DST_ADDR];
