@@ -35,6 +35,6 @@ docker_compile_and_run: target/release/lambdaworks-stark
 compile_and_run: target/release/lambdaworks-stark
 	@echo "Compiling program with cairo-compile"
 	@cairo-compile $(PROGRAM) > $(PROGRAM).json
-	@echo "Compiling done"
+	@echo "Compiling done \n"
 	@cargo run --features instruments --quiet --release $(PROGRAM).json 
 	@rm $(PROGRAM).json
