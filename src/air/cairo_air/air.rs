@@ -220,7 +220,8 @@ impl CairoAIR {
             2, 2, 2, 2, // Increasing memory auxiliary constraints.
             2, 2, 2, 2, // Consistent memory auxiliary constraints.
             2, 2, 2, 2, // Permutation auxiliary constraints.
-            2, 2, 2, // Permutation auxiliary constraints.
+            2, 2, 2, // range-check increasing.
+            2, 2, 2, // range-check permutation argument
         ];
         let mut transition_exemptions = vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)

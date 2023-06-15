@@ -154,6 +154,11 @@ fn test_prove_cairo_lt_comparison() {
     test_prove_cairo_program(&program_path("lt_comparison.json"), true, 131, 132);
 }
 
+// #[test_log::test]
+// fn test_prove_cairo_compare_lesser_array() {
+//     test_prove_cairo_program(&program_path("compare_lesser_array.json"), true, 2400, 2410);
+// }
+
 #[test_log::test]
 fn test_prove_rap_fib() {
     let trace_length = 16;

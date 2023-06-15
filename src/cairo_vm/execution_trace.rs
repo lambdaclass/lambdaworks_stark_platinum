@@ -1,3 +1,5 @@
+use std::iter;
+
 use super::{
     cairo_mem::CairoMemory,
     cairo_trace::RegisterStates,
@@ -25,6 +27,7 @@ use lambdaworks_math::{
     },
     unsigned_integer::element::UnsignedInteger,
 };
+use num_integer::div_ceil;
 
 pub const MEMORY_COLUMNS: [usize; 8] = [
     FRAME_PC,
@@ -36,6 +39,8 @@ pub const MEMORY_COLUMNS: [usize; 8] = [
     FRAME_OP0,
     FRAME_OP1,
 ];
+
+pub const ADDR_COLUMNS: [usize; 4] = [FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR];
 
 // MAIN TRACE LAYOUT
 // -----------------------------------------------------------------------------------------
@@ -189,18 +194,21 @@ fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldEleme
 
 /// Get memory holes from accessed addresses. These memory holes appear
 /// as a consequence of interaction with builtins.
-/// IN: Vector of sorted addresses
+/// IN: Vector of sorted addresses and codelen, the length of the Cairo program instructions.
 /// OUT: Vector of addresses that were not presents in the input vector (holes)
-pub fn get_memory_holes(sorted_addrs: &[FE], data_len: usize) -> Vec<FE> {
+pub fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
     let mut memory_holes = Vec::new();
     let mut prev_addr = &sorted_addrs[0];
 
     for addr in sorted_addrs.iter() {
         let addr_diff = addr - prev_addr;
 
+        // If the candidate memory hole has an address belonging to the program segment (public
+        // memory), that is not accounted here since public memory is added in a posterior step of
+        // the protocol.
         if addr_diff != FE::one()
             && addr_diff != FE::zero()
-            && addr.representative() > (data_len as u64).into()
+            && addr.representative() > (codelen as u64).into()
         {
             let mut hole_addr = prev_addr + FE::one();
 
@@ -220,26 +228,33 @@ pub fn get_memory_holes(sorted_addrs: &[FE], data_len: usize) -> Vec<FE> {
 /// addresses. If not, it will be filled with zeros. The function fills with missing addresses by
 /// iterating each memory address column in an ascending order and fills with zeros when no more
 /// missing addresses are left.
-fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut Vec<FE>) {
-    const NUM_ADDR_COLS: usize = MEMORY_COLUMNS.len() / 2;
+fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut [FE]) {
+    let last_row = trace.last_row().to_vec();
 
-    for memory_holes_window in memory_holes.windows(NUM_ADDR_COLS) {
-        let mut last_row = trace.last_row().to_vec();
+    // This number represents the amount of times we have to pad to fill the memory
+    // holes into the trace.
+    // There are a total of ADDR_COLUMNS.len() address columns, and we have to append
+    // hole addresses in each column until there are no more holes.
+    // If we have that memory_holes = [1, 2, 3, 4, 5] and there are 4 address columns,
+    // we will have to pad with 2 rows, one for the first [1, 2, 3, 4] and one for the
+    // 5 value.
+    let padding_size = div_ceil(memory_holes.len(), ADDR_COLUMNS.len());
 
-        MEMORY_COLUMNS
-            .iter()
-            .take(NUM_ADDR_COLS)
-            .zip(memory_holes_window)
-            .for_each(|(memory_column_idx, memory_hole)| {
-                last_row[*memory_column_idx] = memory_hole.clone()
-            });
+    let padding_row_iter = iter::repeat(last_row).take(padding_size);
+    let addr_columns_iter = iter::repeat(ADDR_COLUMNS).take(padding_size);
+    let mut memory_holes_iter = memory_holes.iter();
 
-        MEMORY_COLUMNS
-            .iter()
-            .skip(NUM_ADDR_COLS)
-            .for_each(|memory_column_idx| last_row[*memory_column_idx] = FE::zero());
+    for (addr_cols, mut padding_row) in iter::zip(addr_columns_iter, padding_row_iter) {
+        // The particular placement of the holes in each column is not important,
+        // the only thing that matters is that the addresses are put somewhere in the address
+        // columns.
+        addr_cols.iter().for_each(|a_col| {
+            if let Some(hole) = memory_holes_iter.next() {
+                padding_row[*a_col] = hole.clone();
+            }
+        });
 
-        trace.table.append(&mut last_row);
+        trace.table.append(&mut padding_row);
     }
 }
 
