@@ -1,4 +1,4 @@
-#[cfg(feature = "instruments")] 
+#[cfg(feature = "instruments")]
 use std::time::Instant;
 
 use super::{
@@ -502,9 +502,9 @@ where
     FieldElement<F>: ByteConversion,
 {
     info!("Started proof generation...");
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     println!("- Started round 0: Transcript Initialization");
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     let timer0 = Instant::now();
 
     let domain = Domain::new(air);
@@ -515,15 +515,13 @@ where
     #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed0);
 
-
-
     // ===================================
     // ==========|   Round 1   |==========
     // ===================================
 
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     println!("- Started round 1: RAP");
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     let timer1 = Instant::now();
 
     let round_1_result = round_1_randomized_air_with_preprocessing::<F, A, _>(
@@ -548,14 +546,13 @@ where
     #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed1);
 
-
     // ===================================
     // ==========|   Round 2   |==========
     // ===================================
 
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     println!("- Started round 2: Compute composition polynomial");
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     let timer2 = Instant::now();
 
     // <<<< Receive challenges: 𝛼_j^B
@@ -601,9 +598,9 @@ where
     // ==========|   Round 3   |==========
     // ===================================
 
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     println!("- Started round 3: Evaluate polynomial in out of domain elements");
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     let timer3 = Instant::now();
 
     // <<<< Receive challenge: z
@@ -650,9 +647,9 @@ where
     // ==========|   Round 4   |==========
     // ===================================
 
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     println!("- Started round 4: FRI");
-    #[cfg(feature = "instruments")] 
+    #[cfg(feature = "instruments")]
     let timer4 = Instant::now();
 
     // Part of this round is running FRI, which is an interactive
@@ -673,16 +670,18 @@ where
     #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed4);
 
-
-    #[cfg(feature = "instruments")] {
+    #[cfg(feature = "instruments")]
+    {
         let total_time = elapsed1 + elapsed2 + elapsed3 + elapsed4;
-        println!(" Fraction of proving time per round: {:.4} {:.4} {:.4} {:.4} {:.4}", 
-            elapsed0.as_nanos() as f64 / total_time.as_nanos() as f64 
-            , elapsed1.as_nanos() as f64 / total_time.as_nanos() as f64, elapsed2.as_nanos() as f64 / total_time.as_nanos() as f64, elapsed3.as_nanos() as f64 / total_time.as_nanos() as f64, elapsed4.as_nanos() as f64 / total_time.as_nanos() as f64);
+        println!(
+            " Fraction of proving time per round: {:.4} {:.4} {:.4} {:.4} {:.4}",
+            elapsed0.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed1.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed2.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed3.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed4.as_nanos() as f64 / total_time.as_nanos() as f64
+        );
     }
-
-
-
 
     info!("End proof generation");
 
