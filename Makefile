@@ -28,13 +28,13 @@ target/release/lambdaworks-stark:
 docker_compile_and_run: target/release/lambdaworks-stark
 	@echo "Compiling program with docker"
 	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
-	@echo "Compiling done"
-	@cargo run --quiet --release $(PROGRAM).json 
+	@echo "Compiling done \n"
+	@cargo run --features instruments --quiet --release $(PROGRAM).json 
 	@rm $(PROGRAM).json
 
 compile_and_run: target/release/lambdaworks-stark
 	@echo "Compiling program with cairo-compile"
 	@cairo-compile $(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done"
-	@cargo run --quiet --release $(PROGRAM).json 
+	@cargo run --features instruments --quiet --release $(PROGRAM).json 
 	@rm $(PROGRAM).json

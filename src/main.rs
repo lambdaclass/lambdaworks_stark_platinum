@@ -7,21 +7,26 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let file_path = &args[1];
+    println!("Running program and generating trace ...");
+    let timer = Instant::now();
+
     let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path);
+    println!("  Time spent: {:?} \n", timer.elapsed());
 
     let timer = Instant::now();
     println!("Making proof ...");
     let proof = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
-    println!("Proof generated");
-    println!("Time spent creating proof: {:?} ", timer.elapsed());
+    println!("Time spent in proving: {:?} \n", timer.elapsed());
 
     let timer = Instant::now();
 
     println!("Verifying ...");
-    if verify(&proof, &cairo_air, &pub_inputs) {
+    let proof_verified = verify(&proof, &cairo_air, &pub_inputs);
+    println!("Time spent in verifying: {:?} \n", timer.elapsed());
+
+    if proof_verified {
         println!("Verification succeded");
     } else {
         println!("Verification failed");
     }
-    println!("Time spent verifying: {:?} ", timer.elapsed());
 }
