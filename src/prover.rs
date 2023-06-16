@@ -71,7 +71,7 @@ struct Round3<F: IsFFTField> {
 struct Round4<F: IsFFTField> {
     fri_last_value: FieldElement<F>,
     fri_layers_merkle_roots: Vec<Commitment>,
-    deep_poly_openings: DeepPolynomialOpenings<F>,
+    deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,
     query_list: Vec<FriDecommitment<F>>,
 }
 
@@ -363,7 +363,7 @@ where
         &coset_offset,
         domain_size,
     );
-    let (query_list, iota_0) = fri_query_phase(air, domain_size, &fri_layers, transcript);
+    let (query_list, iotas) = fri_query_phase(air, domain_size, &fri_layers, transcript);
 
     let fri_layers_merkle_roots: Vec<_> = fri_layers
         .iter()
@@ -371,7 +371,7 @@ where
         .collect();
 
     let deep_poly_openings =
-        open_deep_composition_poly(domain, round_1_result, round_2_result, iota_0);
+        open_deep_composition_poly(domain, round_1_result, round_2_result, &iotas);
 
     Round4 {
         fri_last_value,
@@ -454,42 +454,46 @@ fn open_deep_composition_poly<F: IsFFTField, A: AIR<Field = F>>(
     domain: &Domain<F>,
     round_1_result: &Round1<F, A>,
     round_2_result: &Round2<F>,
-    index_to_open: usize,
-) -> DeepPolynomialOpenings<F>
+    indexes_to_open: &[usize], // list of iotas
+) -> Vec<DeepPolynomialOpenings<F>>
 where
     FieldElement<F>: ByteConversion,
 {
-    let index = index_to_open % domain.lde_roots_of_unity_coset.len();
+    let mut ret = Vec::new();
+    for index_to_open in indexes_to_open {
+        let index = index_to_open % domain.lde_roots_of_unity_coset.len();
 
-    let lde_composition_poly_proof = round_2_result
-        .composition_poly_merkle_tree
-        .get_proof_by_pos(index)
-        .unwrap();
+        let lde_composition_poly_proof = round_2_result
+            .composition_poly_merkle_tree
+            .get_proof_by_pos(index)
+            .unwrap();
 
-    // H₁ openings
-    let lde_composition_poly_even_evaluation =
-        round_2_result.lde_composition_poly_even_evaluations[index].clone();
+        // H₁ openings
+        let lde_composition_poly_even_evaluation =
+            round_2_result.lde_composition_poly_even_evaluations[index].clone();
 
-    // H₂ openings
-    let lde_composition_poly_odd_evaluation =
-        round_2_result.lde_composition_poly_odd_evaluations[index].clone();
+        // H₂ openings
+        let lde_composition_poly_odd_evaluation =
+            round_2_result.lde_composition_poly_odd_evaluations[index].clone();
 
-    // Trace polynomials openings
-    let lde_trace_merkle_proofs = round_1_result
-        .lde_trace_merkle_trees
-        .iter()
-        .map(|tree| tree.get_proof_by_pos(index).unwrap())
-        .collect();
+        // Trace polynomials openings
+        let lde_trace_merkle_proofs = round_1_result
+            .lde_trace_merkle_trees
+            .iter()
+            .map(|tree| tree.get_proof_by_pos(index).unwrap())
+            .collect();
 
-    let lde_trace_evaluations = round_1_result.lde_trace.get_row(index).to_vec();
+        let lde_trace_evaluations = round_1_result.lde_trace.get_row(index).to_vec();
 
-    DeepPolynomialOpenings {
-        lde_composition_poly_proof,
-        lde_composition_poly_even_evaluation,
-        lde_composition_poly_odd_evaluation,
-        lde_trace_merkle_proofs,
-        lde_trace_evaluations,
+        ret.push(DeepPolynomialOpenings {
+            lde_composition_poly_proof,
+            lde_composition_poly_even_evaluation,
+            lde_composition_poly_odd_evaluation,
+            lde_trace_merkle_proofs,
+            lde_trace_evaluations,
+        });
     }
+    ret
 }
 
 // FIXME remove unwrap() calls and return errors
