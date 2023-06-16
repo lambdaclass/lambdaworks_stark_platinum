@@ -207,7 +207,9 @@ pub fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
             let mut hole_addr = prev_addr + FE::one();
 
             while hole_addr.representative() < addr.representative() {
-                memory_holes.push(hole_addr.clone());
+                if hole_addr.representative() > (codelen as u64).into() {
+                    memory_holes.push(hole_addr.clone());
+                }
                 hole_addr += FE::one();
             }
         }
@@ -217,11 +219,9 @@ pub fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
     memory_holes
 }
 
-/// Fill memory holes in each column of a trace with zeros or the missing address, depending on the
+/// Fill memory holes in each address column of the trace with the missing address, depending on the
 /// trace column. If the trace column refers to memory addresses, it will be filled with the missing
-/// addresses. If not, it will be filled with zeros. The function fills with missing addresses by
-/// iterating each memory address column in an ascending order and fills with zeros when no more
-/// missing addresses are left.
+/// addresses.
 fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut [FE]) {
     let last_row = trace.last_row().to_vec();
 
@@ -1208,13 +1208,16 @@ mod test {
     }
 
     #[test]
-    fn test_get_memory_holes() {
+    fn test_get_memory_holes_no_codelen() {
+        // We construct a sorted addresses list [1, 2, 3, 6, 7, 8, 9, 13, 14, 15], and
+        // set codelen = 0. With this value of codelen, any holes present between
+        // the min and max addresses should be returned by the function.
         let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
         let addrs_extension: Vec<FE> = (6..10).map(FE::from).collect();
         addrs.extend_from_slice(&addrs_extension);
-
         let addrs_extension: Vec<FE> = (13..16).map(FE::from).collect();
         addrs.extend_from_slice(&addrs_extension);
+        let codelen = 0;
 
         let expected_memory_holes = vec![
             FE::from(4),
@@ -1223,20 +1226,44 @@ mod test {
             FE::from(11),
             FE::from(12),
         ];
-        let calculated_memory_holes = get_memory_holes(&addrs, 0);
+        let calculated_memory_holes = get_memory_holes(&addrs, codelen);
 
         assert_eq!(expected_memory_holes, calculated_memory_holes);
     }
 
-    // #[test]
-    // fn test_get_memory_holes_hole_at_beginning() {
-    //     let addrs: Vec<FE> = (3..10).map(FE::from).collect();
+    #[test]
+    fn test_get_memory_holes_inside_program_section() {
+        // We construct a sorted addresses list [1, 2, 3, 8, 9] and we
+        // set a codelen of 9. Since all the holes will be inside the
+        // program segment (meaning from addresses 1 to 9), the function
+        // should not return any of them.
+        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
+        let addrs_extension: Vec<FE> = (8..10).map(FE::from).collect();
+        addrs.extend_from_slice(&addrs_extension);
+        let codelen = 9;
 
-    //     let expected_memory_holes = vec![FE::one(), FE::from(2)];
-    //     let calculated_memory_holes = get_memory_holes(&addrs);
+        let calculated_memory_holes = get_memory_holes(&addrs, codelen);
+        let expected_memory_holes: Vec<FE> = Vec::new();
 
-    //     assert_eq!(expected_memory_holes, calculated_memory_holes);
-    // }
+        assert_eq!(expected_memory_holes, calculated_memory_holes);
+    }
+
+    #[test]
+    fn test_get_memory_holes_outside_program_section() {
+        // We construct a sorted addresses list [1, 2, 3, 8, 9] and we
+        // set a codelen of 6. The holes found inside the program section,
+        // i.e. in the address range between 1 to 6, should not be returned.
+        // So addresses 4, 5 and 6 will no be returned, only address 7.
+        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
+        let addrs_extension: Vec<FE> = (8..10).map(FE::from).collect();
+        addrs.extend_from_slice(&addrs_extension);
+        let codelen = 6;
+
+        let calculated_memory_holes = get_memory_holes(&addrs, codelen);
+        let expected_memory_holes = vec![FE::from(7)];
+
+        assert_eq!(expected_memory_holes, calculated_memory_holes);
+    }
 
     #[test]
     fn test_fill_memory_holes() {
