@@ -7,6 +7,7 @@ use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, Fibona
 use lambdaworks_stark::air::example::{
     dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
 };
+use lambdaworks_stark::air::trace::TraceTable;
 use lambdaworks_stark::cairo_run::run::{generate_prover_args, program_path};
 use lambdaworks_stark::{
     air::context::{AirContext, ProofOptions},
@@ -138,7 +139,7 @@ fn test_prove_cairo_fibonacci_5() {
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
-    test_prove_cairo_program(&program_path("rc_program.json"), Some(25..26));
+    test_prove_cairo_program(&program_path("rc_program.json"), Some(27..29));
 }
 
 #[test_log::test]
@@ -233,3 +234,23 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
     public_input.range_check_max = Some(public_input.range_check_max.unwrap() - 1);
     assert!(!verify(&result, &cairo_air, &public_input));
 }
+
+#[test_log::test]
+fn test_verifier_rejects_proof_with_changed_range_check_value() {
+    let (main_trace, cairo_air, mut public_input) =
+        generate_prover_args(&program_path("rc_program.json"), Some(27..29));
+
+    let malicious_rc_value = FE::from(35);
+
+    let mut malicious_trace_columns = main_trace.cols();
+    let n_cols = malicious_trace_columns.len();
+    let mut last_column = malicious_trace_columns.last().unwrap().clone();
+    last_column[0] = malicious_rc_value;
+    malicious_trace_columns[n_cols - 1] = last_column;
+
+    let malicious_trace = TraceTable::new_from_cols(&malicious_trace_columns);
+    let proof = prove(&malicious_trace, &cairo_air, &mut public_input).unwrap();
+    assert!(!verify(&proof, &cairo_air, &public_input));
+}
+
+// let overflowing_rc_value = FE::from_hex("0x100000000000000000000000000000001").unwrap();
