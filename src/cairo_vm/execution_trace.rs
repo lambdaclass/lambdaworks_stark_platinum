@@ -192,8 +192,12 @@ fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldEleme
 
 /// Get memory holes from accessed addresses. These memory holes appear
 /// as a consequence of interaction with builtins.
-/// IN: Vector of sorted addresses and codelen, the length of the Cairo program instructions.
-/// OUT: Vector of addresses that were not presents in the input vector (holes)
+/// Returns a vector of addresses that were not present in the input vector (holes)
+///
+/// # Arguments
+///
+/// * `sorted_addrs` - Vector of sorted memory addresses.
+/// * `codelen` - the length of the Cairo program instructions.
 pub fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
     let mut memory_holes = Vec::new();
     let mut prev_addr = &sorted_addrs[0];
