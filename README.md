@@ -14,7 +14,7 @@ To be added:
 - Grinding
 - Skipping FRI layers
 - Optimizing verifier operations
-- Range check and Pedersen built-ins
+- Range-check and Pedersen built-ins
 - Different layouts
 
 ## Requirements
@@ -29,7 +29,7 @@ Build the compiler image with:
 
 `make docker_build_cairo_compiler`
 
-Then for example, if you have a `program.json` in the project folder, you can use:
+Then for example, if you have a Cairo program in the project folder, you can use:
 
 `make docker_compile_and_run PROGRAM=program_name.cairo`
 
@@ -37,6 +37,6 @@ Then for example, if you have a `program.json` in the project folder, you can us
 
 If you have `cairo-lang`installed, you can use it instead of the Dockerfile
 
-Then for example, if you have a `program.json` in the project folder, you can use:
+Then for example, if you have some Cairo program in the project folder, you can use:
 
 `make compile_and_run PROGRAM=program_name.cairo`
