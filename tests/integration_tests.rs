@@ -3,12 +3,15 @@ use std::ops::Range;
 use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
+use lambdaworks_stark::air::cairo_air::air::{CairoAIR, PublicInputs};
 use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP};
 use lambdaworks_stark::air::example::{
     dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
 };
 use lambdaworks_stark::air::trace::TraceTable;
-use lambdaworks_stark::cairo_run::run::{generate_prover_args, program_path};
+use lambdaworks_stark::cairo_run::cairo_layout::CairoLayout;
+use lambdaworks_stark::cairo_run::run::{generate_prover_args, program_path, run_program};
+use lambdaworks_stark::cairo_vm::execution_trace::build_main_trace;
 use lambdaworks_stark::{
     air::context::{AirContext, ProofOptions},
     fri::FieldElement,
@@ -237,9 +240,13 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
 
 #[test_log::test]
 fn test_verifier_rejects_proof_with_changed_range_check_value() {
+    // In this test we change the range-check value in the trace, so the constraint
+    // that asserts that the sum of the rc decomposed values is equal to the
+    // range-checked value won't hold, and the verifier will reject the proof.
     let (main_trace, cairo_air, mut public_input) =
         generate_prover_args(&program_path("rc_program.json"), Some(27..29));
 
+    // The malicious value, we change the previous value to a 35.
     let malicious_rc_value = FE::from(35);
 
     let mut malicious_trace_columns = main_trace.cols();
@@ -253,4 +260,46 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     assert!(!verify(&proof, &cairo_air, &public_input));
 }
 
-// let overflowing_rc_value = FE::from_hex("0x100000000000000000000000000000001").unwrap();
+#[test_log::test]
+fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
+    // In this test we manually insert a value greater than 2^128 in the range-check builtin segment.
+
+    // This value is greater than 2^128, and the verifier should reject the proof built with it.
+    let overflowing_rc_value = FE::from_hex("0x100000000000000000000000000000001").unwrap();
+
+    let program_path = program_path("rc_program.json");
+    let (register_states, memory, program_size) =
+        run_program(None, CairoLayout::Small, &program_path).unwrap();
+
+    // The malicious value is inserted in memory here.
+    let mut malicious_memory = memory.clone();
+    malicious_memory.data.insert(27, overflowing_rc_value);
+
+    // These is the regular setup for generating the trace and the Cairo AIR, but now
+    // we do it with the malicious memory
+    let proof_options = ProofOptions {
+        blowup_factor: 4,
+        fri_number_of_queries: 3,
+        coset_offset: 3,
+    };
+    let rc_builtin_range = Some(27..29);
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(
+        &register_states,
+        &malicious_memory,
+        program_size,
+        rc_builtin_range,
+    );
+
+    let malicious_trace = build_main_trace(&register_states, &malicious_memory, &mut pub_inputs);
+
+    let has_range_check_builtin = pub_inputs.range_check_builtin_range.is_some();
+    let cairo_air = CairoAIR::new(
+        proof_options,
+        malicious_trace.n_rows(),
+        register_states.steps(),
+        has_range_check_builtin,
+    );
+
+    let proof = prove(&malicious_trace, &cairo_air, &mut pub_inputs).unwrap();
+    assert!(!verify(&proof, &cairo_air, &pub_inputs));
+}
