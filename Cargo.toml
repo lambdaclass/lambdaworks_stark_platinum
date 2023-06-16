@@ -27,6 +27,7 @@ rstest = "0.17.0"
 
 [features]
 test_fiat_shamir = []
+instruments = [] # This enables timing prints in prover and verifier
 
 [[bench]]
 name = "criterion_starks"

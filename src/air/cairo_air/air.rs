@@ -220,8 +220,8 @@ impl CairoAIR {
             2, 2, 2, 2, // Increasing memory auxiliary constraints.
             2, 2, 2, 2, // Consistent memory auxiliary constraints.
             2, 2, 2, 2, // Permutation auxiliary constraints.
-            2, 2, 2, // range-check increasing.
-            2, 2, 2, // range-check permutation argument
+            2, 2, 2, // range-check increasing constraints.
+            2, 2, 2, // range-check permutation argument constraints.
         ];
         let mut transition_exemptions = vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
@@ -253,6 +253,17 @@ impl CairoAIR {
             transition_offsets: vec![0, 1],
             num_transition_constraints,
         };
+
+        // The number of the transition constraints and the lengths of transition degrees
+        // and transition exemptions should be the same always.
+        debug_assert_eq!(
+            context.transition_degrees.len(),
+            context.num_transition_constraints
+        );
+        debug_assert_eq!(
+            context.transition_exemptions.len(),
+            context.num_transition_constraints
+        );
 
         Self {
             context,
