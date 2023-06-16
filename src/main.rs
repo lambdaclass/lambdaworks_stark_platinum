@@ -7,7 +7,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let file_path = &args[1];
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path);
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path, false, 0, 0);
 
     let timer = Instant::now();
     println!("Making proof ...");
