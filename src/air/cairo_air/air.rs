@@ -275,6 +275,14 @@ impl CairoAIR {
             has_rc_builtin,
         }
     }
+
+    fn get_builtin_offset(&self) -> usize {
+        if self.has_rc_builtin {
+            0
+        } else {
+            BUILTIN_OFFSET
+        }
+    }
 }
 
 pub struct CairoRAPChallenges {
@@ -451,11 +459,7 @@ impl AIR for CairoAIR {
         frame: &Frame<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
     ) -> Vec<FieldElement<Self::Field>> {
-        let builtin_offset = if self.has_rc_builtin {
-            0
-        } else {
-            BUILTIN_OFFSET
-        };
+        let builtin_offset = self.get_builtin_offset();
 
         let mut constraints: Vec<FieldElement<Self::Field>> =
             vec![FE::zero(); self.num_transition_constraints()];
@@ -508,11 +512,7 @@ impl AIR for CairoAIR {
         // Auxiliary constraint: permutation argument final value
         let final_index = self.context.trace_length - 1;
 
-        let builtin_offset = if self.has_rc_builtin {
-            0
-        } else {
-            BUILTIN_OFFSET
-        };
+        let builtin_offset = self.get_builtin_offset();
 
         let mut cumulative_product = FieldElement::one();
         for (i, value) in public_input.program.iter().enumerate() {
