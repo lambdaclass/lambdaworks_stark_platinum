@@ -216,6 +216,17 @@ impl CairoAIR {
             num_transition_constraints: 49,
         };
 
+        // The number of the transition constraints and the lengths of transition degrees
+        // and transition exemptions should be the same always.
+        debug_assert_eq!(
+            context.transition_degrees.len(),
+            context.num_transition_constraints
+        );
+        debug_assert_eq!(
+            context.transition_exemptions.len(),
+            context.num_transition_constraints
+        );
+
         Self {
             context,
             number_steps,
