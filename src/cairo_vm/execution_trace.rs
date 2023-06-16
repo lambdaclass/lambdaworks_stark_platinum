@@ -198,7 +198,7 @@ fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldEleme
 ///
 /// * `sorted_addrs` - Vector of sorted memory addresses.
 /// * `codelen` - the length of the Cairo program instructions.
-pub fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
+fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
     let mut memory_holes = Vec::new();
     let mut prev_addr = &sorted_addrs[0];
 
@@ -480,7 +480,7 @@ fn compute_dst(
 /// Returns the vector of:
 /// - op0_addrs
 /// - op0s
-pub fn compute_op0(
+fn compute_op0(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
     register_states: &RegisterStates,
@@ -514,7 +514,7 @@ pub fn compute_op0(
 /// Returns the vector of:
 /// - op1_addrs
 /// - op1s
-pub fn compute_op1(
+fn compute_op1(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
     register_states: &RegisterStates,
@@ -611,7 +611,7 @@ fn rows_to_cols<const N: usize>(rows: &[[FE; N]]) -> Vec<Vec<FE>> {
     cols
 }
 
-pub fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
+fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
     let mask = UnsignedInteger::from_hex("FFFF").unwrap();
     let mut rc_base_types: Vec<UnsignedInteger<4>> =
         rc_values.iter().map(|x| x.representative()).collect();
