@@ -56,6 +56,10 @@ pub const ADDR_COLUMNS: [usize; 4] = [FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, 
 // ├xxxxxxxxxxxxxxxx|x|xx|xxxx|xxxx|xxx|xxx┤
 //
 
+/// Builds the Cairo main trace (i.e. the trace without the auxiliary columns).
+/// Builds the execution trace, fills the offset range-check holes and memory holes, adds
+/// public memory dummy accesses (See section 9.8 of the Cairo whitepaper) and pads the result
+/// so that it has a trace length equal to the closest power of two.
 pub fn build_main_trace(
     register_states: &RegisterStates,
     memory: &CairoMemory,
