@@ -22,6 +22,8 @@ To be added:
 - Cargo 1.69+
   
 ## How to try it
+For the moment, only programs with no builtins can be verified with the CLI. This
+feature will be added soon.
 
 ### Using Docker compiler
 
@@ -37,6 +39,6 @@ Then for example, if you have a `program.json` in the project folder, you can us
 
 If you have `cairo-lang`installed, you can use it instead of the Dockerfile
 
-Then for example, if you have a `program.json` in the project folder, you can use:
+Then for example, if you have a `program.json` in the project folder, you can use
 
 `make compile_and_run PROGRAM=program_name.cairo`
