@@ -67,8 +67,8 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
         // the exemption steps corresponding to the transition, it should have zero as a
         // result
         evaluations.iter().enumerate().for_each(|(i, eval)| {
-            // If it's not the last elements we should skip
-            // And eval is not zero
+            // Check that all the transition constraint evaluations of the trace are zero.
+            // We don't take into account the transition exemptions.
             if step < exemption_steps[i] && eval != &FieldElement::<F>::zero() {
                 ret = false;
                 error!(
