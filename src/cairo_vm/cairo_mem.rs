@@ -8,7 +8,7 @@ use std::{collections::HashMap, fs};
 // correct or we should consider another type.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CairoMemory {
-    pub data: HashMap<u64, FE>,
+    data: HashMap<u64, FE>,
 }
 
 impl CairoMemory {
