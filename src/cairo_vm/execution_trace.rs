@@ -1228,16 +1228,6 @@ mod test {
         assert_eq!(expected_memory_holes, calculated_memory_holes);
     }
 
-    // #[test]
-    // fn test_get_memory_holes_hole_at_beginning() {
-    //     let addrs: Vec<FE> = (3..10).map(FE::from).collect();
-
-    //     let expected_memory_holes = vec![FE::one(), FE::from(2)];
-    //     let calculated_memory_holes = get_memory_holes(&addrs);
-
-    //     assert_eq!(expected_memory_holes, calculated_memory_holes);
-    // }
-
     #[test]
     fn test_fill_memory_holes() {
         const TRACE_COL_LEN: usize = 2;
