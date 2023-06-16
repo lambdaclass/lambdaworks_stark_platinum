@@ -160,6 +160,7 @@ pub struct PublicInputs {
     pub range_check_min: Option<u16>,
     // maximum range check value
     pub range_check_max: Option<u16>,
+    // Range-check builtin address range
     pub range_check_builtin_range: Option<Range<u64>>,
     // pub builtins: Vec<Builtin>, // list of builtins
     pub program: Vec<FE>,
@@ -207,8 +208,12 @@ pub struct CairoAIR {
 
 impl CairoAIR {
     /// Creates a new CairoAIR from proof_options
-    /// full_trace_length: Padding to 2^n
-    /// number_steps: Number of steps of the execution / register steps / rows in cairo runner trace
+    ///
+    /// # Arguments
+    ///
+    /// * `full_trace_length` - Trace length padded to 2^n
+    /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
+    /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
     #[rustfmt::skip]
     pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize, has_rc_builtin: bool) -> Self {
         let mut trace_columns = 34 + 3 + 12 + 3;
