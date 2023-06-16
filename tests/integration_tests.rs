@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
@@ -117,18 +119,8 @@ fn test_prove_quadratic() {
 
 #[ignore = "metal"]
 /// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
-fn test_prove_cairo_program(
-    file_path: &str,
-    has_range_check_builtin: bool,
-    rc_builtin_start: u64,
-    rc_builtin_stop: u64,
-) {
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(
-        file_path,
-        has_range_check_builtin,
-        rc_builtin_start,
-        rc_builtin_stop,
-    );
+fn test_prove_cairo_program(file_path: &str, rc_builtin_range: Option<Range<u64>>) {
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path, rc_builtin_range);
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -136,27 +128,27 @@ fn test_prove_cairo_program(
 
 #[test_log::test]
 fn test_prove_cairo_simple_program() {
-    test_prove_cairo_program(&program_path("simple_program.json"), false, 0, 0);
+    test_prove_cairo_program(&program_path("simple_program.json"), None);
 }
 
 #[test_log::test]
 fn test_prove_cairo_fibonacci_5() {
-    test_prove_cairo_program(&program_path("fibonacci_5.json"), false, 0, 0);
+    test_prove_cairo_program(&program_path("fibonacci_5.json"), None);
 }
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
-    test_prove_cairo_program(&program_path("rc_program.json"), true, 25, 26);
+    test_prove_cairo_program(&program_path("rc_program.json"), Some(25..26));
 }
 
 #[test_log::test]
 fn test_prove_cairo_lt_comparison() {
-    test_prove_cairo_program(&program_path("lt_comparison.json"), true, 131, 132);
+    test_prove_cairo_program(&program_path("lt_comparison.json"), Some(131..132));
 }
 
 // #[test_log::test]
 // fn test_prove_cairo_compare_lesser_array() {
-//     test_prove_cairo_program(&program_path("compare_lesser_array.json"), true, 2400, 2410);
+//     test_prove_cairo_program(&program_path("compare_lesser_array.json"), Some(2400..2410));
 // }
 
 #[test_log::test]
@@ -215,7 +207,7 @@ fn test_prove_dummy() {
 #[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"), false, 0, 0);
+        generate_prover_args(&program_path("simple_program.json"), None);
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     // We modify the original program and verify using this new "corrupted" version
@@ -231,7 +223,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_range_bounds() {
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"), false, 0, 0);
+        generate_prover_args(&program_path("simple_program.json"), None);
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);

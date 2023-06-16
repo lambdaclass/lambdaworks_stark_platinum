@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
     element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
@@ -158,8 +160,7 @@ pub struct PublicInputs {
     pub range_check_min: Option<u16>,
     // maximum range check value
     pub range_check_max: Option<u16>,
-    pub range_check_builtin_start_addr: u64,
-    pub range_check_builtin_stop_addr: u64,
+    pub range_check_builtin_range: Option<Range<u64>>,
     // pub builtins: Vec<Builtin>, // list of builtins
     pub program: Vec<FE>,
     pub num_steps: usize, // number of execution steps
@@ -173,8 +174,7 @@ impl PublicInputs {
         register_states: &RegisterStates,
         memory: &CairoMemory,
         program_size: usize,
-        rc_builtin_start: u64,
-        rc_builtin_stop: u64,
+        range_check_builtin_range: Option<Range<u64>>,
     ) -> Self {
         let mut program = vec![];
 
@@ -192,8 +192,7 @@ impl PublicInputs {
             ap_final: FieldElement::from(last_step.ap),
             range_check_min: None,
             range_check_max: None,
-            range_check_builtin_start_addr: rc_builtin_start,
-            range_check_builtin_stop_addr: rc_builtin_stop,
+            range_check_builtin_range,
             program,
             num_steps: register_states.steps(),
         }
@@ -907,7 +906,7 @@ mod test {
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let (main_trace, cairo_air, public_input) =
-            generate_prover_args(&program_path("simple_program.json"), false, 0, 0);
+            generate_prover_args(&program_path("simple_program.json"), None);
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
@@ -945,9 +944,7 @@ mod test {
             range_check_max: None,
             range_check_min: None,
             num_steps: 1,
-            // These are not used in this test
-            range_check_builtin_start_addr: 0,
-            range_check_builtin_stop_addr: 0,
+            range_check_builtin_range: None,
         };
 
         let a = vec![

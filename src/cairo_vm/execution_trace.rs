@@ -1,4 +1,4 @@
-use std::iter;
+use std::{iter, ops::Range};
 
 use super::{
     cairo_mem::CairoMemory,
@@ -60,14 +60,8 @@ pub fn build_main_trace(
     register_states: &RegisterStates,
     memory: &CairoMemory,
     public_input: &mut PublicInputs,
-    has_range_check_builtin: bool,
 ) -> TraceTable<Stark252PrimeField> {
-    let mut main_trace = build_cairo_execution_trace(
-        register_states,
-        memory,
-        public_input,
-        has_range_check_builtin,
-    );
+    let mut main_trace = build_cairo_execution_trace(register_states, memory, public_input);
 
     let mut address_cols = main_trace
         .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
@@ -266,7 +260,6 @@ pub fn build_cairo_execution_trace(
     raw_trace: &RegisterStates,
     memory: &CairoMemory,
     public_inputs: &PublicInputs,
-    has_range_check_builtin: bool,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
 
@@ -350,8 +343,8 @@ pub fn build_cairo_execution_trace(
     trace_cols.push(mul);
     trace_cols.push(selector);
 
-    if has_range_check_builtin {
-        add_rc_builtin_columns(&mut trace_cols, public_inputs, memory);
+    if let Some(range_check_builtin_range) = public_inputs.range_check_builtin_range.clone() {
+        add_rc_builtin_columns(&mut trace_cols, range_check_builtin_range, memory);
     }
 
     TraceTable::new_from_cols(&trace_cols)
@@ -360,13 +353,10 @@ pub fn build_cairo_execution_trace(
 // Build range-check builtin columns: rc_0, rc_1, ... , rc_7, rc_value
 fn add_rc_builtin_columns(
     trace_cols: &mut Vec<Vec<FE>>,
-    public_inputs: &PublicInputs,
+    range_check_builtin_range: Range<u64>,
     memory: &CairoMemory,
 ) {
-    let range_check_builtin_start = public_inputs.range_check_builtin_start_addr;
-    let range_check_builtin_stop = public_inputs.range_check_builtin_stop_addr;
-
-    let range_checked_values: Vec<&FE> = (range_check_builtin_start..range_check_builtin_stop)
+    let range_checked_values: Vec<&FE> = range_check_builtin_range
         .map(|addr| memory.get(&addr).unwrap())
         .collect();
     let mut rc_trace_columns = decompose_rc_values_into_trace_columns(&range_checked_values);
@@ -695,9 +685,8 @@ mod test {
         )
         .unwrap();
         let pub_inputs =
-            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, 0, 0);
-        let execution_trace =
-            build_cairo_execution_trace(&register_states, &memory, &pub_inputs, false);
+            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&vec![
@@ -803,9 +792,8 @@ mod test {
         let (register_states, memory, program_size) =
             run_program(None, CairoLayout::AllCairo, &program_path("call_func.json")).unwrap();
         let pub_inputs =
-            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, 0, 0);
-        let execution_trace =
-            build_cairo_execution_trace(&register_states, &memory, &pub_inputs, false);
+            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&[

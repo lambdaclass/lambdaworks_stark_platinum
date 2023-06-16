@@ -32,7 +32,7 @@ fn program_path(program_name: &str) -> String {
 }
 
 fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(program_path, false, 0, 0);
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(program_path, None);
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| black_box(prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap()));
