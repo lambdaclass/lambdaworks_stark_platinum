@@ -1,3 +1,6 @@
+#[cfg(feature = "instruments")]
+use std::time::Instant;
+
 use super::{
     air::constraints::evaluator::ConstraintEvaluator, fri::fri_decommit::FriDecommitment,
     sample_z_ood,
@@ -494,20 +497,75 @@ where
     A: AIR<Field = F>,
     FieldElement<F>: ByteConversion,
 {
+    #[cfg(feature = "instruments")]
+    println!("- Started step 1: Recover challenges");
+    #[cfg(feature = "instruments")]
+    let timer1 = Instant::now();
+
     let mut transcript = step_1_transcript_initialization();
     let domain = Domain::new(air);
 
     let challenges =
         step_1_replay_rounds_and_recover_challenges(air, proof, &domain, &mut transcript);
 
+    #[cfg(feature = "instruments")]
+    let elapsed1 = timer1.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed1);
+
+    #[cfg(feature = "instruments")]
+    println!("- Started step 2: Verify claimed polynomial");
+    #[cfg(feature = "instruments")]
+    let timer2 = Instant::now();
+
     if !step_2_verify_claimed_composition_polynomial(air, proof, &domain, public_input, &challenges)
     {
         return false;
     }
 
+    #[cfg(feature = "instruments")]
+    let elapsed2 = timer2.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed2);
+    #[cfg(feature = "instruments")]
+
+    println!("- Started step 3: Verify FRI");
+    #[cfg(feature = "instruments")]
+    let timer3 = Instant::now();
+
     if !step_3_verify_fri(air, proof, &domain, &challenges) {
         return false;
     }
 
-    step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges)
+    #[cfg(feature = "instruments")]
+    let elapsed3 = timer3.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed3);
+
+    #[cfg(feature = "instruments")]
+    println!("- Started step 4: Verify deep composition polynomial");
+    #[cfg(feature = "instruments")]
+    let timer4 = Instant::now();
+
+    #[allow(clippy::let_and_return)]
+    let verified = step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges);
+
+    #[cfg(feature = "instruments")]
+    let elapsed4 = timer4.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed4);
+
+    #[cfg(feature = "instruments")]
+    {
+        let total_time = elapsed1 + elapsed2 + elapsed3 + elapsed4;
+        println!(
+            " Fraction of verifying time per step: {:.4} {:.4} {:.4} {:.4}",
+            elapsed1.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed2.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed3.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed4.as_nanos() as f64 / total_time.as_nanos() as f64
+        );
+    }
+
+    verified
 }

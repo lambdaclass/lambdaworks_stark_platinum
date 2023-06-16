@@ -1,3 +1,6 @@
+#[cfg(feature = "instruments")]
+use std::time::Instant;
+
 use super::{
     air::{constraints::evaluator::ConstraintEvaluator, frame::Frame, trace::TraceTable},
     fri::fri_commit_phase,
@@ -498,15 +501,28 @@ pub fn prove<F: IsFFTField, A: AIR<Field = F>>(
 where
     FieldElement<F>: ByteConversion,
 {
-    info!("Starting proof generation...");
+    info!("Started proof generation...");
+    #[cfg(feature = "instruments")]
+    println!("- Started round 0: Transcript Initialization");
+    #[cfg(feature = "instruments")]
+    let timer0 = Instant::now();
 
     let domain = Domain::new(air);
-
     let mut transcript = round_0_transcript_initialization();
+
+    #[cfg(feature = "instruments")]
+    let elapsed0 = timer0.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed0);
 
     // ===================================
     // ==========|   Round 1   |==========
     // ===================================
+
+    #[cfg(feature = "instruments")]
+    println!("- Started round 1: RAP");
+    #[cfg(feature = "instruments")]
+    let timer1 = Instant::now();
 
     let round_1_result = round_1_randomized_air_with_preprocessing::<F, A, _>(
         air,
@@ -525,9 +541,19 @@ where
         &round_1_result.rap_challenges,
     );
 
+    #[cfg(feature = "instruments")]
+    let elapsed1 = timer1.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed1);
+
     // ===================================
     // ==========|   Round 2   |==========
     // ===================================
+
+    #[cfg(feature = "instruments")]
+    println!("- Started round 2: Compute composition polynomial");
+    #[cfg(feature = "instruments")]
+    let timer2 = Instant::now();
 
     // <<<< Receive challenges: 𝛼_j^B
     let boundary_coeffs_alphas =
@@ -563,9 +589,19 @@ where
     // >>>> Send commitments: [H₁], [H₂]
     transcript.append(&round_2_result.composition_poly_root);
 
+    #[cfg(feature = "instruments")]
+    let elapsed2 = timer2.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed2);
+
     // ===================================
     // ==========|   Round 3   |==========
     // ===================================
+
+    #[cfg(feature = "instruments")]
+    println!("- Started round 3: Evaluate polynomial in out of domain elements");
+    #[cfg(feature = "instruments")]
+    let timer3 = Instant::now();
 
     // <<<< Receive challenge: z
     let z = sample_z_ood(
@@ -602,9 +638,19 @@ where
         }
     }
 
+    #[cfg(feature = "instruments")]
+    let elapsed3 = timer3.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed3);
+
     // ===================================
     // ==========|   Round 4   |==========
     // ===================================
+
+    #[cfg(feature = "instruments")]
+    println!("- Started round 4: FRI");
+    #[cfg(feature = "instruments")]
+    let timer4 = Instant::now();
 
     // Part of this round is running FRI, which is an interactive
     // protocol on its own. Therefore we pass it the transcript
@@ -618,6 +664,24 @@ where
         &z,
         &mut transcript,
     );
+
+    #[cfg(feature = "instruments")]
+    let elapsed4 = timer4.elapsed();
+    #[cfg(feature = "instruments")]
+    println!("  Time spent: {:?}", elapsed4);
+
+    #[cfg(feature = "instruments")]
+    {
+        let total_time = elapsed1 + elapsed2 + elapsed3 + elapsed4;
+        println!(
+            " Fraction of proving time per round: {:.4} {:.4} {:.4} {:.4} {:.4}",
+            elapsed0.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed1.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed2.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed3.as_nanos() as f64 / total_time.as_nanos() as f64,
+            elapsed4.as_nanos() as f64 / total_time.as_nanos() as f64
+        );
+    }
 
     info!("End proof generation");
 
