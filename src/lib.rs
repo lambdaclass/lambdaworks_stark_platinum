@@ -59,11 +59,11 @@ where
         i += 1;
     }
 
-    let pre_mask: u8 = 1 << bits_to_clear;
+    let pre_mask: u8 = 1 << (8 - bits_to_clear);
     let mask: u8 = pre_mask.wrapping_sub(1);
     randomness[i] &= mask;
 
-    FieldElement::from_bytes_le(randomness).unwrap()
+    FieldElement::from_bytes_be(randomness).unwrap()
 }
 
 pub fn transcript_to_usize<T: Transcript>(transcript: &mut T) -> usize {
