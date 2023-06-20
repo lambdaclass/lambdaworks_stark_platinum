@@ -249,8 +249,6 @@ mod tests {
 
         let field_element: FE = randomness_to_field(&mut randomness);
 
-        println!("{}", field_element.representative().to_string());
-
         assert_eq!(field_element, expected_fe)
     }
 
