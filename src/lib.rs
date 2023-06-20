@@ -33,7 +33,7 @@ pub type FE = FieldElement<PrimeField>;
 
 /// Uses randomness from the transcript to create a FieldElement
 /// One bit less than the max used by the FieldElement is used as randomness. For StarkFields, this would be 251 bits randomness.
-/// Randomness is interpreted as limbs in LittleEndian, and each Limb is ordered in LittleEndian
+/// Randomness is interpreted as limbs in BigEndian, and each Limb is ordered in BigEndian
 pub fn transcript_to_field<F: IsPrimeField, T: Transcript>(transcript: &mut T) -> FieldElement<F>
 where
     FieldElement<F>: ByteConversion,
@@ -59,7 +59,7 @@ where
         i += 1;
     }
 
-    let pre_mask: u8 = 1 << (8 - bits_to_clear);
+    let pre_mask: u8 = 1u8.checked_shl(8 - bits_to_clear as u32).unwrap_or(0);
     let mask: u8 = pre_mask.wrapping_sub(1);
     randomness[i] &= mask;
 
@@ -211,55 +211,86 @@ mod tests {
 
     #[test]
     fn test_stark_prime_field_random_to_field_32() {
+        #[rustfmt::skip]
         let mut randomness: [u8; 32] = [
-            255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0,
+            248, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 
+            0, 0, 0, 0, 0, 0, 0, 32, 
         ];
 
         type FE = FieldElement<Stark252PrimeField>;
         let field_element: FE = randomness_to_field(&mut randomness);
-        let expected_fe = FE::from(31u64);
+        let expected_fe = FE::from(32u64);
         assert_eq!(field_element, expected_fe)
     }
 
     #[test]
-    fn test_stark_prime_field_random_to_field_2_pow_64() {
+    fn test_stark_prime_field_random_to_fiel_repeated_f_and_zero() {
+        #[rustfmt::skip]
         let mut randomness: [u8; 32] = [
-            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0,
+            255, 0, 255, 0, 255, 0, 255, 0,
+            255, 0, 255, 0, 255, 0, 255, 0, 
+            255, 0, 255, 0, 255, 0, 255, 0, 
+            255, 0, 255, 0, 255, 0, 255, 0,
         ];
 
         type FE = FieldElement<Stark252PrimeField>;
+
+        // 251 bits should be used (252 of StarkField - 1) to avoid duplicates
+        // This leaves a 7
+        let expected_fe = FE::from_hex_unchecked(
+            "\
+            0700FF00FF00FF00\
+            FF00FF00FF00FF00\
+            FF00FF00FF00FF00\
+            FF00FF00FF00FF00",
+        );
+
         let field_element: FE = randomness_to_field(&mut randomness);
-        let expected_fe = FE::from(2u64.pow(63));
-        let expected_fe = expected_fe * FE::from(2u64);
+
+        println!("{}", field_element.representative().to_string());
 
         assert_eq!(field_element, expected_fe)
     }
 
     #[test]
-    fn test_248_bit_random_to_field() {
+    fn test_241_bit_random_to_field() {
         #[derive(Clone, Debug)]
         pub struct TestModulus;
         impl IsModulus<U256> for TestModulus {
             const MODULUS: U256 = U256::from_hex_unchecked(
-                "001000000000011000000000000000000000000000000000000000000000001",
+                "\
+                0001000000000011\
+                0000000000000000\
+                0000000000000000\
+                0000000000000001",
             );
         }
 
         pub type TestField = U256PrimeField<TestModulus>;
 
+        #[rustfmt::skip]
         let mut randomness: [u8; 32] = [
-            1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0,
+            255, 255, 255, 1, 2, 3, 4, 5, 
+            6, 7, 8, 1, 2, 3, 4, 5, 
+            6, 7, 8, 1, 2, 3, 4, 5, 
+            6, 7, 8, 1, 2, 3, 4, 5,
         ];
 
         type FE = FieldElement<TestField>;
 
+        let expected_fe = FE::from_hex_unchecked(
+            "\
+            0000FF0102030405\
+            0607080102030405\
+            0607080102030405\
+            0607080102030405",
+        );
+
         let field_element: FE = randomness_to_field(&mut randomness);
-        let expected_fe = FE::from(2u64.pow(63));
-        let expected_fe = expected_fe * FE::from(2u64);
-        assert_eq!(field_element, expected_fe)
+
+        assert_eq!(field_element, expected_fe);
     }
 
     #[test]
@@ -268,22 +299,36 @@ mod tests {
         pub struct TestModulus;
         impl IsModulus<U256> for TestModulus {
             const MODULUS: U256 = U256::from_hex_unchecked(
-                "002000000000011000000000000000000000000000000000000000000000001",
+                "\
+                0200000000000011\
+                0000000000000000\
+                0000000000000000\
+                0000000000000001",
             );
         }
 
         pub type TestField = U256PrimeField<TestModulus>;
 
+        #[rustfmt::skip]
         let mut randomness: [u8; 32] = [
-            1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0,
+            255, 0, 255, 0, 255, 0, 255, 0,
+            255, 0, 255, 0, 255, 0, 255, 0, 
+            255, 0, 255, 0, 255, 0, 255, 0, 
+            255, 0, 255, 0, 255, 0, 255, 0,
         ];
+
+        let expected_fe = FE::from_hex_unchecked(
+            "\
+                0100FF00FF00FF00\
+                FF00FF00FF00FF00\
+                FF00FF00FF00FF00\
+                FF00FF00FF00FF00",
+        );
 
         type FE = FieldElement<TestField>;
 
         let field_element: FE = randomness_to_field(&mut randomness);
-        let expected_fe = FE::from(2u64.pow(63));
-        let expected_fe = expected_fe * FE::from(2u64);
+
         assert_eq!(field_element, expected_fe)
     }
 }
