@@ -145,6 +145,14 @@ pub const MEM_A_TRACE_OFFSET: usize = 19;
 // index.
 const BUILTIN_OFFSET: usize = 9;
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum MemorySegment {
+    RangeCheck,
+    Output,
+}
+
+pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
+
 // TODO: For memory constraints and builtins, the commented fields may be useful.
 #[derive(Clone)]
 pub struct PublicInputs {
@@ -162,8 +170,7 @@ pub struct PublicInputs {
     // maximum range check value
     pub range_check_max: Option<u16>,
     // Range-check builtin address range
-    pub range_check_builtin_range: Option<Range<u64>>,
-    // pub builtins: Vec<Builtin>, // list of builtins
+    pub memory_segments: MemorySegmentMap,
     pub public_memory: HashMap<FE, FE>,
     pub num_steps: usize, // number of execution steps
 }
@@ -176,7 +183,7 @@ impl PublicInputs {
         register_states: &RegisterStates,
         memory: &CairoMemory,
         program_size: usize,
-        range_check_builtin_range: Option<Range<u64>>,
+        memory_segments: &MemorySegmentMap,
     ) -> Self {
         let mut public_memory = HashMap::with_capacity(program_size);
 
@@ -194,7 +201,7 @@ impl PublicInputs {
             ap_final: FieldElement::from(last_step.ap),
             range_check_min: None,
             range_check_max: None,
-            range_check_builtin_range,
+            memory_segments: memory_segments.clone(),
             public_memory,
             num_steps: register_states.steps(),
         }
@@ -292,7 +299,7 @@ pub struct CairoRAPChallenges {
     pub z_range_check: FieldElement<Stark252PrimeField>,
 }
 
-fn add_program_in_public_input_section(
+fn add_pub_memory_in_public_input_section(
     addresses: &Vec<FE>,
     values: &[FE],
     public_input: &PublicInputs,
@@ -387,7 +394,7 @@ impl AIR for CairoAIR {
             .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1])
             .table;
 
-        let (addresses, values) = add_program_in_public_input_section(
+        let (addresses, values) = add_pub_memory_in_public_input_section(
             &addresses_original,
             &values_original,
             public_input,
@@ -881,8 +888,8 @@ mod test {
     use crate::{
         air::{
             cairo_air::air::{
-                add_program_in_public_input_section, evaluate_range_check_builtin_constraint,
-                PublicInputs,
+                add_pub_memory_in_public_input_section, evaluate_range_check_builtin_constraint,
+                MemorySegmentMap, PublicInputs,
             },
             debug::validate_trace,
             traits::AIR,
@@ -958,7 +965,7 @@ mod test {
             range_check_max: None,
             range_check_min: None,
             num_steps: 1,
-            range_check_builtin_range: None,
+            memory_segments: MemorySegmentMap::new(),
         };
 
         let a = vec![
@@ -977,7 +984,7 @@ mod test {
             FieldElement::zero(),
             FieldElement::zero(),
         ];
-        let (ap, vp) = add_program_in_public_input_section(&a, &v, &dummy_public_input);
+        let (ap, vp) = add_pub_memory_in_public_input_section(&a, &v, &dummy_public_input);
         assert_eq!(
             ap,
             vec![

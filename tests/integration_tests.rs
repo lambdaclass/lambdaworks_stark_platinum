@@ -3,7 +3,9 @@ use std::ops::Range;
 use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
-use lambdaworks_stark::air::cairo_air::air::{CairoAIR, PublicInputs};
+use lambdaworks_stark::air::cairo_air::air::{
+    CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs,
+};
 use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP};
 use lambdaworks_stark::air::example::{
     dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
@@ -281,12 +283,12 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
         fri_number_of_queries: 3,
         coset_offset: 3,
     };
-    let rc_builtin_range = Some(27..29);
+    let memory_segments = MemorySegmentMap::from([(MemorySegment::RangeCheck, 27..29)]);
     let mut pub_inputs = PublicInputs::from_regs_and_mem(
         &register_states,
         &malicious_memory,
         program_size,
-        rc_builtin_range,
+        &memory_segments,
     );
 
     let malicious_trace = build_main_trace(&register_states, &malicious_memory, &mut pub_inputs);

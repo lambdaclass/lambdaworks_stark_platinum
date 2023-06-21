@@ -11,8 +11,8 @@ use super::{
 use crate::{
     air::{
         cairo_air::air::{
-            PublicInputs, FRAME_DST, FRAME_DST_ADDR, FRAME_INST, FRAME_OP0, FRAME_OP0_ADDR,
-            FRAME_OP1, FRAME_OP1_ADDR, FRAME_PC, OFF_DST, OFF_OP0, OFF_OP1,
+            MemorySegment, PublicInputs, FRAME_DST, FRAME_DST_ADDR, FRAME_INST, FRAME_OP0,
+            FRAME_OP0_ADDR, FRAME_OP1, FRAME_OP1_ADDR, FRAME_PC, OFF_DST, OFF_OP0, OFF_OP1,
         },
         trace::TraceTable,
     },
@@ -96,9 +96,9 @@ pub fn build_main_trace(
 /// See section 9.8 of the Cairo whitepaper.
 fn add_pub_memory_dummy_accesses<F: IsFFTField>(
     main_trace: &mut TraceTable<F>,
-    program_len: usize,
+    pub_memory_len: usize,
 ) {
-    pad_with_last_row_and_zeros(main_trace, (program_len >> 2) + 1, &MEMORY_COLUMNS)
+    pad_with_last_row_and_zeros(main_trace, (pub_memory_len >> 2) + 1, &MEMORY_COLUMNS)
 }
 
 fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usize) {
@@ -351,8 +351,11 @@ pub fn build_cairo_execution_trace(
     trace_cols.push(mul);
     trace_cols.push(selector);
 
-    if let Some(range_check_builtin_range) = public_inputs.range_check_builtin_range.clone() {
-        add_rc_builtin_columns(&mut trace_cols, range_check_builtin_range, memory);
+    if let Some(range_check_builtin_range) = public_inputs
+        .memory_segments
+        .get(&MemorySegment::RangeCheck)
+    {
+        add_rc_builtin_columns(&mut trace_cols, range_check_builtin_range.clone(), memory);
     }
 
     TraceTable::new_from_cols(&trace_cols)
@@ -638,7 +641,7 @@ mod test {
     use lambdaworks_math::field::element::FieldElement;
 
     use crate::{
-        air::cairo_air::air::{FRAME_SELECTOR, OFF_DST, OFF_OP1},
+        air::cairo_air::air::{MemorySegmentMap, FRAME_SELECTOR, OFF_DST, OFF_OP1},
         cairo_run::{
             cairo_layout::CairoLayout,
             run::{program_path, run_program},
@@ -692,8 +695,12 @@ mod test {
             &program_path("simple_program.json"),
         )
         .unwrap();
-        let pub_inputs =
-            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let pub_inputs = PublicInputs::from_regs_and_mem(
+            &register_states,
+            &memory,
+            program_size,
+            &MemorySegmentMap::new(),
+        );
         let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
@@ -799,8 +806,12 @@ mod test {
 
         let (register_states, memory, program_size) =
             run_program(None, CairoLayout::AllCairo, &program_path("call_func.json")).unwrap();
-        let pub_inputs =
-            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let pub_inputs = PublicInputs::from_regs_and_mem(
+            &register_states,
+            &memory,
+            program_size,
+            &MemorySegmentMap::new(),
+        );
         let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.

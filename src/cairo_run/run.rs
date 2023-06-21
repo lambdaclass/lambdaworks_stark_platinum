@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::air::cairo_air::air::{CairoAIR, PublicInputs};
+use crate::air::cairo_air::air::{CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs};
 use crate::air::context::ProofOptions;
 use crate::air::trace::TraceTable;
 use crate::cairo_vm::cairo_mem::CairoMemory;
@@ -118,8 +118,13 @@ pub fn generate_prover_args(
         CairoLayout::Plain
     };
 
+    let memory_segments = if layout == CairoLayout::Plain {
+        MemorySegmentMap::new()
+    } else {
+        MemorySegmentMap::from([(MemorySegment::RangeCheck, rc_builtin_range.unwrap())])
+    };
     let mut pub_inputs =
-        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, rc_builtin_range);
+        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, &memory_segments);
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
@@ -142,7 +147,7 @@ pub fn program_path(program_name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::air::cairo_air::air::PublicInputs;
+    use crate::air::cairo_air::air::{MemorySegmentMap, PublicInputs};
     use crate::air::trace::TraceTable;
     use crate::cairo_run::cairo_layout::CairoLayout;
     use crate::cairo_run::run::run_program;
@@ -162,8 +167,12 @@ mod tests {
 
         let (register_states, memory, program_size) =
             run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
-        let pub_inputs =
-            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let pub_inputs = PublicInputs::from_regs_and_mem(
+            &register_states,
+            &memory,
+            program_size,
+            &MemorySegmentMap::new(),
+        );
         let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
