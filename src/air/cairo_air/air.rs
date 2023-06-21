@@ -333,7 +333,11 @@ fn add_pub_memory_in_public_input_section(
             public_input_section + program_section..,
             output_range.clone().map(FieldElement::from),
         );
-        for i in public_input_section + program_section.. {
+        dbg!(addresses.len());
+        dbg!(public_input.public_memory.len());
+        dbg!(public_input_section);
+        dbg!(program_section);
+        for i in public_input_section + program_section..a_aux.len() {
             let address = &a_aux[i];
             v_aux[i] = public_input.public_memory.get(address).unwrap().clone();
         }
@@ -910,7 +914,7 @@ mod test {
         air::{
             cairo_air::air::{
                 add_pub_memory_in_public_input_section, evaluate_range_check_builtin_constraint,
-                MemorySegmentMap, PublicInputs,
+                MemorySegment, MemorySegmentMap, PublicInputs,
             },
             debug::validate_trace,
             traits::AIR,
@@ -1028,6 +1032,76 @@ mod test {
                 FieldElement::from(10),
                 FieldElement::from(20),
                 FieldElement::from(30)
+            ]
+        );
+    }
+
+    #[test]
+    fn test_build_auxiliary_trace_add_program_with_output_in_public_input_section_works() {
+        let dummy_public_input = PublicInputs {
+            pc_init: FieldElement::zero(),
+            ap_init: FieldElement::zero(),
+            fp_init: FieldElement::zero(),
+            pc_final: FieldElement::zero(),
+            ap_final: FieldElement::zero(),
+            public_memory: HashMap::from([
+                (FieldElement::one(), FieldElement::from(10)),
+                (FieldElement::from(2), FieldElement::from(20)),
+                (FieldElement::from(3), FieldElement::from(30)),
+                (FieldElement::from(20), FieldElement::from(40)),
+                (FieldElement::from(21), FieldElement::from(50)),
+            ]),
+            range_check_max: None,
+            range_check_min: None,
+            num_steps: 1,
+            memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..22)]),
+        };
+
+        let a = vec![
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+        ];
+        let v = vec![
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+        ];
+        let (ap, vp) = add_pub_memory_in_public_input_section(&a, &v, &dummy_public_input);
+        assert_eq!(
+            ap,
+            vec![
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::zero(),
+                FieldElement::one(),
+                FieldElement::from(2),
+                FieldElement::from(3),
+                FieldElement::from(20),
+                FieldElement::from(21)
+            ]
+        );
+        assert_eq!(
+            vp,
+            vec![
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::zero(),
+                FieldElement::from(10),
+                FieldElement::from(20),
+                FieldElement::from(30),
+                FieldElement::from(40),
+                FieldElement::from(50)
             ]
         );
     }
