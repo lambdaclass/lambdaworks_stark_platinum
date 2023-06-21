@@ -201,7 +201,8 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     // TODO: Get trace polys degrees in a better way. The degree may not be trace_length - 1 in some
     // special cases.
     let trace_length = air.context().trace_length;
-    let boundary_term_degree_adjustment = air.composition_poly_degree_bound() - trace_length;
+    let composition_poly_degree_bound = air.composition_poly_degree_bound();
+    let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
 
     let boundary_constraint_domains =
         boundary_constraints.generate_roots_of_unity(&domain.trace_primitive_root, n_trace_cols);
@@ -226,7 +227,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         let boundary_quotient_ood_evaluation_num =
             trace_evaluation - boundary_interpolating_polynomial.evaluate(&challenges.z);
 
-        let boundary_quotient_degree = air.context().trace_length - boundary_zerofier.degree() - 1;
+        let boundary_quotient_degree = trace_length - boundary_zerofier.degree() - 1;
 
         boundary_c_i_evaluations_num.push(boundary_quotient_ood_evaluation_num);
         boundary_c_i_evaluations_den.push(boundary_zerofier_challenges_z_den);
@@ -267,8 +268,8 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     let mut degree_adjustments = Vec::with_capacity(divisors.len());
     for transition_degree in air.context().transition_degrees().iter() {
-        let degree_adjustment = air.composition_poly_degree_bound()
-            - (air.context().trace_length * (transition_degree - 1));
+        let degree_adjustment =
+            composition_poly_degree_bound - (trace_length * (transition_degree - 1));
         degree_adjustments.push(challenges.z.pow(degree_adjustment));
     }
     let transition_c_i_evaluations_sum =
