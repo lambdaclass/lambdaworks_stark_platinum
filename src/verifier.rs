@@ -299,22 +299,23 @@ where
     FieldElement<F>: ByteConversion,
     A: AIR<Field = F>,
 {
-    let mut result = true;
-    // Verify FRI
-    for (proof_s, iota_s) in proof.query_list.iter().zip(challenges.iotas.iter()) {
-        // this is done in constant time
-        result &= verify_query_and_sym_openings(
-            air,
-            &proof.fri_layers_merkle_roots,
-            &proof.fri_last_value,
-            &challenges.zetas,
-            *iota_s,
-            proof_s,
-            domain,
-        );
-    }
-
-    result
+    // verify FRI
+    proof.query_list.iter().zip(challenges.iotas.iter()).fold(
+        true,
+        |mut result, (proof_s, iota_s)| {
+            // this is done in constant time
+            result &= verify_query_and_sym_openings(
+                air,
+                &proof.fri_layers_merkle_roots,
+                &proof.fri_last_value,
+                &challenges.zetas,
+                *iota_s,
+                proof_s,
+                domain,
+            );
+            result
+        },
+    )
 }
 
 fn step_4_verify_deep_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
