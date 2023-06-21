@@ -484,7 +484,7 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
                 - proof.trace_ood_frame_evaluations.get_row(row_idx)[col_idx].clone())
                 / (upsilon_0 - &challenges.z * primitive_root.pow(row_idx as u64));
 
-            trace_terms += poly_evaluation * coeff.clone();
+            trace_terms += &poly_evaluation * coeff;
         }
     }
 
