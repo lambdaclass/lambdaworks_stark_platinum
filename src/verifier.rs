@@ -289,7 +289,6 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 }
 
 fn step_3_verify_fri<F, A>(
-    air: &A,
     proof: &StarkProof<F>,
     domain: &Domain<F>,
     challenges: &Challenges<F, A>,
@@ -305,7 +304,6 @@ where
         |mut result, (proof_s, iota_s)| {
             // this is done in constant time
             result &= verify_query_and_sym_openings(
-                air,
                 &proof.fri_layers_merkle_roots,
                 &proof.fri_last_value,
                 &challenges.zetas,
@@ -385,8 +383,7 @@ where
     result
 }
 
-fn verify_query_and_sym_openings<F: IsField + IsFFTField, A: AIR<Field = F>>(
-    air: &A,
+fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
     fri_layers_merkle_roots: &[Commitment],
     fri_last_value: &FieldElement<F>,
     zetas: &[FieldElement<F>],
@@ -409,10 +406,7 @@ where
         return false;
     }
 
-    let lde_primitive_root = F::get_primitive_root_of_unity(domain.lde_root_order as u64).unwrap();
-    let offset = FieldElement::from(air.options().coset_offset);
-    // evaluation point = offset * w ^ i in the Stark literature
-    let mut evaluation_point = offset * lde_primitive_root.pow(iota);
+    let mut evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
 
     let mut v = fri_decommitment.first_layer_evaluation.clone();
     // For each fri layer merkle proof check:
@@ -547,7 +541,7 @@ where
     #[cfg(feature = "instruments")]
     let timer3 = Instant::now();
 
-    if !step_3_verify_fri(air, proof, &domain, &challenges) {
+    if !step_3_verify_fri(proof, &domain, &challenges) {
         error!("FRI verification failed");
         return false;
     }
