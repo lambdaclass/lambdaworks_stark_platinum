@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use crate::air::cairo_air::air::{CairoAIR, PublicInputs};
 use crate::air::context::ProofOptions;
 use crate::air::trace::TraceTable;
@@ -98,9 +100,10 @@ pub fn run_program(
 
 pub fn generate_prover_args(
     file_path: &str,
+    rc_builtin_range: Option<Range<u64>>,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
     let (register_states, memory, program_size) =
-        run_program(None, CairoLayout::Plain, file_path).unwrap();
+        run_program(None, CairoLayout::Small, file_path).unwrap();
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -108,11 +111,18 @@ pub fn generate_prover_args(
         coset_offset: 3,
     };
 
-    let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+    let mut pub_inputs =
+        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, rc_builtin_range);
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
-    let cairo_air = CairoAIR::new(proof_options, main_trace.n_rows(), register_states.steps());
+    let has_range_check_builtin = pub_inputs.range_check_builtin_range.is_some();
+    let cairo_air = CairoAIR::new(
+        proof_options,
+        main_trace.n_rows(),
+        register_states.steps(),
+        has_range_check_builtin,
+    );
 
     (main_trace, cairo_air, pub_inputs)
 }
@@ -126,10 +136,10 @@ pub fn program_path(program_name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::air::cairo_air::air::PublicInputs;
     use crate::air::trace::TraceTable;
     use crate::cairo_run::cairo_layout::CairoLayout;
-    use crate::cairo_vm::cairo_mem::CairoMemory;
-    use crate::cairo_vm::cairo_trace::RegisterStates;
+    use crate::cairo_run::run::run_program;
     use crate::cairo_vm::execution_trace::build_cairo_execution_trace;
     use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::MontgomeryConfigStark252PrimeField;
     use lambdaworks_math::field::{
@@ -142,21 +152,13 @@ mod tests {
     #[test]
     fn test_parse_cairo_file() {
         let base_dir = env!("CARGO_MANIFEST_DIR");
-
         let json_filename = base_dir.to_owned() + "/src/cairo_run/program.json";
-        let dir_trace = base_dir.to_owned() + "/src/cairo_run/program.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_run/program.memory";
 
-        println!("{}", json_filename);
-
-        super::run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
-
-        // read trace from file
-        let register_states = RegisterStates::from_file(&dir_trace).unwrap();
-        // read memory from file
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
-
-        let execution_trace = build_cairo_execution_trace(&register_states, &memory);
+        let (register_states, memory, program_size) =
+            run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
+        let pub_inputs =
+            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&[

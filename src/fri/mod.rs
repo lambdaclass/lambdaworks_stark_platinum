@@ -15,6 +15,9 @@ pub use lambdaworks_math::{
     polynomial::Polynomial,
 };
 
+#[cfg(debug_assertions)]
+use log::error;
+
 use self::fri_decommit::FriDecommitment;
 use self::fri_functions::fold_polynomial;
 
@@ -63,6 +66,14 @@ where
     let zeta = transcript_to_field(transcript);
 
     let last_poly = fold_polynomial(&current_layer.poly, &zeta);
+
+    #[cfg(debug_assertions)]
+    if last_poly.coefficients().len() > 1 {
+        error!(
+            "Polynomial of last FRI layer must be constant, got polynomial of order {}",
+            last_poly.coefficients().len()
+        );
+    }
 
     let last_value = last_poly
         .coefficients()

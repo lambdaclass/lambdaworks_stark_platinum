@@ -15,6 +15,7 @@ use crate::{
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use log::error;
 
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
@@ -520,6 +521,7 @@ where
 
     if !step_2_verify_claimed_composition_polynomial(air, proof, &domain, public_input, &challenges)
     {
+        error!("Composition Polynomial verification failed");
         return false;
     }
 
@@ -534,6 +536,7 @@ where
     let timer3 = Instant::now();
 
     if !step_3_verify_fri(air, proof, &domain, &challenges) {
+        error!("FRI verification failed");
         return false;
     }
 
@@ -548,7 +551,10 @@ where
     let timer4 = Instant::now();
 
     #[allow(clippy::let_and_return)]
-    let verified = step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges);
+    if !step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges) {
+        error!("DEEP Composition Polynomial verification failed");
+        return false;
+    }
 
     #[cfg(feature = "instruments")]
     let elapsed4 = timer4.elapsed();
@@ -567,5 +573,5 @@ where
         );
     }
 
-    verified
+    true
 }
