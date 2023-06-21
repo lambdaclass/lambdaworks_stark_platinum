@@ -185,12 +185,24 @@ impl PublicInputs {
         program_size: usize,
         memory_segments: &MemorySegmentMap,
     ) -> Self {
-        let mut public_memory = HashMap::with_capacity(program_size);
+        let output_range = memory_segments.get(&MemorySegment::Output);
+
+        let public_memory_size = if let Some(output_range) = output_range {
+            program_size + (output_range.end - output_range.start) as usize
+        } else {
+            program_size
+        };
+        let mut public_memory = HashMap::with_capacity(public_memory_size);
 
         for i in 1..=program_size as u64 {
             public_memory.insert(FE::from(i), memory.get(&i).unwrap().clone());
         }
 
+        if let Some(output_range) = output_range {
+            output_range.clone().for_each(|addr| {
+                public_memory.insert(FE::from(addr), memory.get(&addr).unwrap().clone());
+            });
+        };
         let last_step = &register_states.rows[register_states.steps() - 1];
 
         PublicInputs {
@@ -333,10 +345,12 @@ fn add_pub_memory_in_public_input_section(
             public_input_section + program_section..,
             output_range.clone().map(FieldElement::from),
         );
-        dbg!(addresses.len());
-        dbg!(public_input.public_memory.len());
-        dbg!(public_input_section);
-        dbg!(program_section);
+
+        public_input
+            .public_memory
+            .iter()
+            .for_each(|(addr, val)| println!("{} -> {}", addr, val));
+
         for i in public_input_section + program_section..a_aux.len() {
             let address = &a_aux[i];
             v_aux[i] = public_input.public_memory.get(address).unwrap().clone();

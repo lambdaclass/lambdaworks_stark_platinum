@@ -1,4 +1,4 @@
-use crate::air::cairo_air::air::{CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs};
+use crate::air::cairo_air::air::{CairoAIR, MemorySegmentMap, PublicInputs};
 use crate::air::context::ProofOptions;
 use crate::air::trace::TraceTable;
 use crate::cairo_vm::cairo_mem::CairoMemory;
@@ -101,10 +101,10 @@ pub fn generate_prover_args(
     memory_segments: &MemorySegmentMap,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
     // TODO: If other layouts are added, this must be done in another way.
-    let layout = if memory_segments.get(&MemorySegment::RangeCheck).is_some() {
-        CairoLayout::Small
-    } else {
+    let layout = if memory_segments.is_empty() {
         CairoLayout::Plain
+    } else {
+        CairoLayout::Small
     };
 
     let (register_states, memory, program_size) =

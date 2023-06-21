@@ -168,6 +168,14 @@ fn test_prove_cairo_compare_lesser_array() {
 }
 
 #[test_log::test]
+fn test_prove_cairo_output_program() {
+    test_prove_cairo_program(
+        &program_path("output_program.json"),
+        &MemorySegmentMap::from([(MemorySegment::Output, 19..20)]),
+    );
+}
+
+#[test_log::test]
 fn test_prove_rap_fib() {
     let trace_length = 16;
     let trace = fibonacci_rap_trace([FE::from(1), FE::from(1)], trace_length);
