@@ -198,13 +198,18 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let boundary_constraints = air.boundary_constraints(&challenges.rap_challenges, public_input);
 
     let n_trace_cols = air.context().trace_columns;
+    // TODO: Get trace polys degrees in a better way. The degree may not be trace_length - 1 in some
+    // special cases.
+    let trace_length = air.context().trace_length;
+    let boundary_term_degree_adjustment = air.composition_poly_degree_bound() - trace_length;
 
     let boundary_constraint_domains =
         boundary_constraints.generate_roots_of_unity(&domain.trace_primitive_root, n_trace_cols);
     let values = boundary_constraints.values(n_trace_cols);
 
     // Following naming conventions from https://www.notamonadtutorial.com/diving-deep-fri/
-    let mut boundary_c_i_evaluations = Vec::with_capacity(n_trace_cols);
+    let mut boundary_c_i_evaluations_num = Vec::with_capacity(n_trace_cols);
+    let mut boundary_c_i_evaluations_den = Vec::with_capacity(n_trace_cols);
     let mut boundary_quotient_degrees = Vec::with_capacity(n_trace_cols);
 
     for trace_idx in 0..n_trace_cols {
@@ -216,33 +221,27 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
         let boundary_zerofier =
             boundary_constraints.compute_zerofier(&domain.trace_primitive_root, trace_idx);
+        let boundary_zerofier_challenges_z_den = boundary_zerofier.evaluate(&challenges.z);
 
-        let boundary_quotient_ood_evaluation = (trace_evaluation
-            - boundary_interpolating_polynomial.evaluate(&challenges.z))
-            / boundary_zerofier.evaluate(&challenges.z);
+        let boundary_quotient_ood_evaluation_num =
+            trace_evaluation - boundary_interpolating_polynomial.evaluate(&challenges.z);
 
         let boundary_quotient_degree = air.context().trace_length - boundary_zerofier.degree() - 1;
 
-        boundary_c_i_evaluations.push(boundary_quotient_ood_evaluation);
+        boundary_c_i_evaluations_num.push(boundary_quotient_ood_evaluation_num);
+        boundary_c_i_evaluations_den.push(boundary_zerofier_challenges_z_den);
         boundary_quotient_degrees.push(boundary_quotient_degree);
     }
 
-    // TODO: Get trace polys degrees in a better way. The degree may not be trace_length - 1 in some
-    // special cases.
-    let trace_length = air.context().trace_length;
+    FieldElement::inplace_batch_inverse(&mut boundary_c_i_evaluations_den);
 
-    let boundary_term_degree_adjustment = air.composition_poly_degree_bound() - trace_length;
-
-    let boundary_quotient_ood_evaluations: Vec<FieldElement<F>> = boundary_c_i_evaluations
+    let boundary_quotient_ood_evaluation: FieldElement<F> = boundary_c_i_evaluations_num
         .iter()
+        .zip(&boundary_c_i_evaluations_den)
         .zip(&challenges.boundary_coeffs)
-        .map(|(poly_eval, (alpha, beta))| {
-            poly_eval * (alpha * challenges.z.pow(boundary_term_degree_adjustment) + beta)
+        .map(|((num, den), (alpha, beta))| {
+            num * den * (alpha * challenges.z.pow(boundary_term_degree_adjustment) + beta)
         })
-        .collect();
-
-    let boundary_quotient_ood_evaluation = boundary_quotient_ood_evaluations
-        .iter()
         .fold(FieldElement::<F>::zero(), |acc, x| acc + x);
 
     let transition_ood_frame_evaluations = air.compute_transition(
