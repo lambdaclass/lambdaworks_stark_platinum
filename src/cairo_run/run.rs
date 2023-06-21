@@ -111,17 +111,23 @@ pub fn generate_prover_args(
         coset_offset: 3,
     };
 
+    // TODO: If other layouts are added, this must be done in another way.
+    let layout = if rc_builtin_range.is_some() {
+        CairoLayout::Small
+    } else {
+        CairoLayout::Plain
+    };
+
     let mut pub_inputs =
         PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, rc_builtin_range);
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
-    let has_range_check_builtin = pub_inputs.range_check_builtin_range.is_some();
     let cairo_air = CairoAIR::new(
         proof_options,
         main_trace.n_rows(),
         register_states.steps(),
-        has_range_check_builtin,
+        layout,
     );
 
     (main_trace, cairo_air, pub_inputs)

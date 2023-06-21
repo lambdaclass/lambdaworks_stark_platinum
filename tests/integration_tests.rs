@@ -291,12 +291,12 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 
     let malicious_trace = build_main_trace(&register_states, &malicious_memory, &mut pub_inputs);
 
-    let has_range_check_builtin = pub_inputs.range_check_builtin_range.is_some();
+    let layout = CairoLayout::Small;
     let cairo_air = CairoAIR::new(
         proof_options,
         malicious_trace.n_rows(),
         register_states.steps(),
-        has_range_check_builtin,
+        layout,
     );
 
     let proof = prove(&malicious_trace, &cairo_air, &mut pub_inputs).unwrap();
