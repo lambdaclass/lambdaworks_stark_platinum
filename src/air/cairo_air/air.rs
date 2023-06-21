@@ -904,9 +904,7 @@ mod test {
     use std::collections::HashMap;
 
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-    use lambdaworks_math::field::{
-        element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-    };
+    use lambdaworks_math::field::element::FieldElement;
 
     use crate::{
         air::{
@@ -1021,19 +1019,6 @@ mod test {
                 FieldElement::from(3)
             ]
         );
-        println!("LEFT");
-        vp.iter().for_each(|v| println!("{}", v.representative()));
-        println!("RIGHT");
-        vec![
-            FieldElement::<Stark252PrimeField>::one(),
-            FieldElement::one(),
-            FieldElement::zero(),
-            FieldElement::from(10),
-            FieldElement::from(20),
-            FieldElement::from(30),
-        ]
-        .iter()
-        .for_each(|v| println!("{}", v.representative()));
         assert_eq!(
             vp,
             vec![
