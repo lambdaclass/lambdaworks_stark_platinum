@@ -250,28 +250,25 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         &challenges.rap_challenges,
     );
 
-    let transition_exemptions = air.transition_exemptions();
+    let divisor_x_n = (&challenges.z.pow(trace_length) - FieldElement::<F>::one()).inv();
 
-    let x_n = Polynomial::new_monomial(FieldElement::<F>::one(), trace_length);
-    let x_n_1 = x_n - FieldElement::<F>::one();
+    let denominators = air
+        .transition_exemptions()
+        .iter()
+        .map(|poly| poly.evaluate(&challenges.z) * &divisor_x_n)
+        .collect::<Vec<FieldElement<F>>>();
 
-    let divisors = transition_exemptions
-        .into_iter()
-        .map(|exemption| x_n_1.clone() / exemption)
-        .collect::<Vec<Polynomial<FieldElement<F>>>>();
+    let degree_adjustments = air
+        .context()
+        .transition_degrees()
+        .iter()
+        .map(|transition_degree| {
+            let degree_adjustment =
+                composition_poly_degree_bound - (trace_length * (transition_degree - 1));
+            challenges.z.pow(degree_adjustment)
+        })
+        .collect::<Vec<FieldElement<F>>>();
 
-    let mut denominators = Vec::with_capacity(divisors.len());
-    for divisor in divisors.iter() {
-        denominators.push(divisor.evaluate(&challenges.z));
-    }
-    FieldElement::inplace_batch_inverse(&mut denominators);
-
-    let mut degree_adjustments = Vec::with_capacity(divisors.len());
-    for transition_degree in air.context().transition_degrees().iter() {
-        let degree_adjustment =
-            composition_poly_degree_bound - (trace_length * (transition_degree - 1));
-        degree_adjustments.push(challenges.z.pow(degree_adjustment));
-    }
     let transition_c_i_evaluations_sum =
         ConstraintEvaluator::<F, A>::compute_constraint_composition_poly_evaluations_sum(
             &transition_ood_frame_evaluations,
