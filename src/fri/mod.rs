@@ -92,7 +92,7 @@ pub fn fri_query_phase<F: IsFFTField, A: AIR<Field = F>, T: Transcript>(
     domain_size: usize,
     fri_layers: &Vec<FriLayer<F>>,
     transcript: &mut T,
-) -> (Vec<FriDecommitment<F>>, usize)
+) -> (Vec<FriDecommitment<F>>, Vec<usize>)
 where
     FieldElement<F>: ByteConversion,
 {
@@ -130,8 +130,8 @@ where
             })
             .collect();
 
-        (query_list, iotas[0])
+        (query_list, iotas)
     } else {
-        (vec![], 0)
+        (vec![], vec![])
     }
 }
