@@ -408,7 +408,16 @@ where
         return false;
     }
 
-    let mut evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
+    let evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
+
+    let mut evaluation_point_vec: Vec<FieldElement<F>> =
+        core::iter::successors(Some(evaluation_point), |evaluation_point| {
+            Some(evaluation_point.square())
+        })
+        .take(fri_layers_merkle_roots.len())
+        .collect();
+
+    FieldElement::inplace_batch_inverse(&mut evaluation_point_vec);
 
     let mut v = fri_decommitment.first_layer_evaluation.clone();
     // For each fri layer merkle proof check:
@@ -424,15 +433,17 @@ where
 
     // For each (merkle_root, merkle_auth_path) / fold
     // With the auth path containining the element that the path proves it's existence
-    for (k, (merkle_root, (auth_path, evaluation_sym))) in fri_layers_merkle_roots
-        .iter()
-        .zip(
-            fri_decommitment
-                .layers_auth_paths_sym
-                .iter()
-                .zip(fri_decommitment.layers_evaluations_sym.iter()),
-        )
-        .enumerate()
+    for (k, ((merkle_root, (auth_path, evaluation_sym)), evaluation_point_inv)) in
+        fri_layers_merkle_roots
+            .iter()
+            .zip(
+                fri_decommitment
+                    .layers_auth_paths_sym
+                    .iter()
+                    .zip(fri_decommitment.layers_evaluations_sym.iter()),
+            )
+            .zip(evaluation_point_vec)
+            .enumerate()
     // Since we always derive the current layer from the previous layer
     // We start with the second one, skipping the first, so previous is layer is the first one
     {
@@ -454,8 +465,7 @@ where
         let beta = &zetas[k];
         // v is the calculated element for the co linearity check
         v = (&v + evaluation_sym) * two_inv
-            + beta * (&v - evaluation_sym) * (two_inv / &evaluation_point);
-        evaluation_point = evaluation_point.square();
+            + beta * (&v - evaluation_sym) * two_inv * evaluation_point_inv;
     }
 
     // Check that last value is the given by the prover
