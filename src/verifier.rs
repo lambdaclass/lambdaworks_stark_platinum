@@ -15,6 +15,7 @@ use crate::{
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use log::error;
 
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
@@ -328,48 +329,59 @@ where
 {
     let mut result = true;
 
-    let iota_0 = challenges.iotas[0];
-
-    let evaluations = vec![
-        proof
-            .deep_poly_openings
-            .lde_composition_poly_even_evaluation
-            .clone(),
-        proof
-            .deep_poly_openings
-            .lde_composition_poly_odd_evaluation
-            .clone(),
-    ];
-    // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
-    result &= proof
-        .deep_poly_openings
-        .lde_composition_poly_proof
-        .verify::<BatchStarkProverBackend<F>>(&proof.composition_poly_root, iota_0, &evaluations);
-
-    let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
-    let lde_trace_evaluations = vec![
-        proof.deep_poly_openings.lde_trace_evaluations[..num_main_columns].to_vec(),
-        proof.deep_poly_openings.lde_trace_evaluations[num_main_columns..].to_vec(),
-    ];
-
-    // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
-    for ((merkle_root, merkle_proof), evaluation) in proof
-        .lde_trace_merkle_roots
+    for (i, (iota_n, deep_poly_opening)) in challenges
+        .iotas
         .iter()
-        .zip(&proof.deep_poly_openings.lde_trace_merkle_proofs)
-        .zip(lde_trace_evaluations)
+        .zip(proof.deep_poly_openings.iter())
+        .enumerate()
     {
-        result &=
-            merkle_proof.verify::<BatchStarkProverBackend<F>>(merkle_root, iota_0, &evaluation);
+        let evaluations = vec![
+            deep_poly_opening
+                .lde_composition_poly_even_evaluation
+                .clone(),
+            deep_poly_opening
+                .lde_composition_poly_odd_evaluation
+                .clone(),
+        ];
+
+        // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
+        result &= deep_poly_opening
+            .lde_composition_poly_proof
+            .verify::<BatchStarkProverBackend<F>>(
+                &proof.composition_poly_root,
+                *iota_n,
+                &evaluations,
+            );
+
+        let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
+        let lde_trace_evaluations = vec![
+            deep_poly_opening.lde_trace_evaluations[..num_main_columns].to_vec(),
+            deep_poly_opening.lde_trace_evaluations[num_main_columns..].to_vec(),
+        ];
+
+        // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
+        for ((merkle_root, merkle_proof), evaluation) in proof
+            .lde_trace_merkle_roots
+            .iter()
+            .zip(&deep_poly_opening.lde_trace_merkle_proofs)
+            .zip(lde_trace_evaluations)
+        {
+            result &= merkle_proof.verify::<BatchStarkProverBackend<F>>(
+                merkle_root,
+                *iota_n,
+                &evaluation,
+            );
+        }
+
+        // DEEP consistency check
+        // Verify that Deep(x) is constructed correctly
+        let deep_poly_evaluation =
+            reconstruct_deep_composition_poly_evaluation(proof, domain, challenges, *iota_n, i);
+
+        let deep_poly_claimed_evaluation = &proof.query_list[i].first_layer_evaluation;
+        result &= deep_poly_claimed_evaluation == &deep_poly_evaluation;
     }
 
-    // DEEP consistency check
-    // Verify that Deep(x) is constructed correctly
-    let deep_poly_evaluation =
-        reconstruct_deep_composition_poly_evaluation(proof, domain, challenges);
-    let deep_poly_claimed_evaluation = &proof.query_list[0].first_layer_evaluation;
-
-    result &= deep_poly_claimed_evaluation == &deep_poly_evaluation;
     result
 }
 
@@ -459,9 +471,11 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     proof: &StarkProof<F>,
     domain: &Domain<F>,
     challenges: &Challenges<F, A>,
+    iota_n: usize,
+    i: usize,
 ) -> FieldElement<F> {
     let primitive_root = &F::get_primitive_root_of_unity(domain.root_order as u64).unwrap();
-    let upsilon_0 = &domain.lde_roots_of_unity_coset[challenges.iotas[0]];
+    let upsilon_0 = &domain.lde_roots_of_unity_coset[iota_n];
 
     let mut trace_terms = FieldElement::zero();
 
@@ -469,7 +483,8 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
         (0..proof.trace_ood_frame_evaluations.num_columns()).zip(&challenges.trace_term_coeffs)
     {
         for (row_idx, coeff) in (0..proof.trace_ood_frame_evaluations.num_rows()).zip(coeff_row) {
-            let poly_evaluation = (proof.deep_poly_openings.lde_trace_evaluations[col_idx].clone()
+            let poly_evaluation = (proof.deep_poly_openings[i].lde_trace_evaluations[col_idx]
+                .clone()
                 - proof.trace_ood_frame_evaluations.get_row(row_idx)[col_idx].clone())
                 / (upsilon_0 - &challenges.z * primitive_root.pow(row_idx as u64));
 
@@ -478,11 +493,9 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     }
 
     let z_squared = &(&challenges.z * &challenges.z);
-    let h_1_upsilon_0 = &proof
-        .deep_poly_openings
-        .lde_composition_poly_even_evaluation;
+    let h_1_upsilon_0 = &proof.deep_poly_openings[i].lde_composition_poly_even_evaluation;
     let h_1_zsquared = &proof.composition_poly_even_ood_evaluation;
-    let h_2_upsilon_0 = &proof.deep_poly_openings.lde_composition_poly_odd_evaluation;
+    let h_2_upsilon_0 = &proof.deep_poly_openings[i].lde_composition_poly_odd_evaluation;
     let h_2_zsquared = &proof.composition_poly_odd_ood_evaluation;
 
     let h_1_term = (h_1_upsilon_0 - h_1_zsquared) / (upsilon_0 - z_squared);
@@ -520,6 +533,7 @@ where
 
     if !step_2_verify_claimed_composition_polynomial(air, proof, &domain, public_input, &challenges)
     {
+        error!("Composition Polynomial verification failed");
         return false;
     }
 
@@ -534,6 +548,7 @@ where
     let timer3 = Instant::now();
 
     if !step_3_verify_fri(air, proof, &domain, &challenges) {
+        error!("FRI verification failed");
         return false;
     }
 
@@ -548,7 +563,10 @@ where
     let timer4 = Instant::now();
 
     #[allow(clippy::let_and_return)]
-    let verified = step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges);
+    if !step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges) {
+        error!("DEEP Composition Polynomial verification failed");
+        return false;
+    }
 
     #[cfg(feature = "instruments")]
     let elapsed4 = timer4.elapsed();
@@ -567,5 +585,5 @@ where
         );
     }
 
-    verified
+    true
 }

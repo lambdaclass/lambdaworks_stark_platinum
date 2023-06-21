@@ -44,7 +44,7 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
 
             if boundary_value != trace_value {
                 ret = false;
-                error!("Boundary constraint inconsistency - Expected value {:?} in step {} and column {}, found: {:?}", boundary_value, step, col, trace_value);
+                error!("Boundary constraint inconsistency - Expected value {} in step {} and column {}, found: {}", boundary_value.representative(), step, col, trace_value.representative());
             }
         });
 
@@ -67,11 +67,15 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
         // the exemption steps corresponding to the transition, it should have zero as a
         // result
         evaluations.iter().enumerate().for_each(|(i, eval)| {
+            // Check that all the transition constraint evaluations of the trace are zero.
+            // We don't take into account the transition exemptions.
             if step < exemption_steps[i] && eval != &FieldElement::<F>::zero() {
                 ret = false;
                 error!(
-                    "Inconsistent evaluation of transition {} in step {} - expected 0, got {:?}",
-                    i, step, eval
+                    "Inconsistent evaluation of transition {} in step {} - expected 0, got {}",
+                    i,
+                    step,
+                    eval.representative()
                 );
             }
         })

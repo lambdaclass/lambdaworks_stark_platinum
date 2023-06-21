@@ -1,3 +1,5 @@
+use std::{iter, ops::Range};
+
 use super::{
     cairo_mem::CairoMemory,
     cairo_trace::RegisterStates,
@@ -17,11 +19,15 @@ use crate::{
     cairo_vm::{instruction_flags::CairoInstructionFlags, instruction_offsets::InstructionOffsets},
     FE,
 };
-use lambdaworks_math::field::{
-    element::FieldElement,
-    fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-    traits::{IsFFTField, IsPrimeField},
+use lambdaworks_math::{
+    field::{
+        element::FieldElement,
+        fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+        traits::{IsFFTField, IsPrimeField},
+    },
+    unsigned_integer::element::UnsignedInteger,
 };
+use num_integer::div_ceil;
 
 pub const MEMORY_COLUMNS: [usize; 8] = [
     FRAME_PC,
@@ -33,6 +39,8 @@ pub const MEMORY_COLUMNS: [usize; 8] = [
     FRAME_OP0,
     FRAME_OP1,
 ];
+
+pub const ADDR_COLUMNS: [usize; 4] = [FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR];
 
 // MAIN TRACE LAYOUT
 // -----------------------------------------------------------------------------------------
@@ -48,20 +56,34 @@ pub const MEMORY_COLUMNS: [usize; 8] = [
 // ├xxxxxxxxxxxxxxxx|x|xx|xxxx|xxxx|xxx|xxx┤
 //
 
+/// Builds the Cairo main trace (i.e. the trace without the auxiliary columns).
+/// Builds the execution trace, fills the offset range-check holes and memory holes, adds
+/// public memory dummy accesses (See section 9.8 of the Cairo whitepaper) and pads the result
+/// so that it has a trace length equal to the closest power of two.
 pub fn build_main_trace(
     register_states: &RegisterStates,
     memory: &CairoMemory,
     public_input: &mut PublicInputs,
 ) -> TraceTable<Stark252PrimeField> {
-    let mut main_trace = build_cairo_execution_trace(register_states, memory);
+    let mut main_trace = build_cairo_execution_trace(register_states, memory, public_input);
 
-    add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
+    let mut address_cols = main_trace
+        .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
+        .table;
+    address_cols.sort_by_key(|x| x.representative());
 
     let (rc_holes, rc_min, rc_max) = get_rc_holes(&main_trace, &[OFF_DST, OFF_OP0, OFF_OP1]);
     public_input.range_check_min = Some(rc_min);
     public_input.range_check_max = Some(rc_max);
-
     fill_rc_holes(&mut main_trace, rc_holes);
+
+    let mut memory_holes = get_memory_holes(&address_cols, public_input.program.len());
+
+    if !memory_holes.is_empty() {
+        fill_memory_holes(&mut main_trace, &mut memory_holes);
+    }
+
+    add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
 
     let trace_len_next_power_of_two = main_trace.n_rows().next_power_of_two();
     let padding = trace_len_next_power_of_two - main_trace.n_rows();
@@ -70,6 +92,8 @@ pub fn build_main_trace(
     main_trace
 }
 
+/// Artificial `(0, 0)` dummy memory accesses must be added for the public memory.
+/// See section 9.8 of the Cairo whitepaper.
 fn add_pub_memory_dummy_accesses<F: IsFFTField>(
     main_trace: &mut TraceTable<F>,
     program_len: usize,
@@ -87,6 +111,10 @@ fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usiz
     trace.table.append(&mut pad);
 }
 
+/// Pads trace with its last row, with the exception of the columns specified in
+/// `zero_pad_columns`, where the pad is done with zeros.
+/// If the last row is [2, 1, 4, 1] and the zero pad columns are [0, 1], then the
+/// padding will be [0, 0, 4, 1].
 fn pad_with_last_row_and_zeros<F: IsFFTField>(
     trace: &mut TraceTable<F>,
     number_rows: usize,
@@ -104,6 +132,13 @@ fn pad_with_last_row_and_zeros<F: IsFFTField>(
     trace.table.append(&mut pad);
 }
 
+/// Gets holes from the range-checked columns. These holes must be filled for the
+/// permutation range-checks, as can be read in section 9.9 of the Cairo whitepaper.
+/// Receives the trace and the indexes of the range-checked columns.
+/// Outputs the holes that must be filled to make the range continuous and the extreme
+/// values rc_min and rc_max, corresponding to the minimum and maximum values of the range.
+/// NOTE: These extreme values should be received as public inputs in the future and not
+/// calculated here.
 fn get_rc_holes<F>(
     trace: &TraceTable<F>,
     columns_indices: &[usize],
@@ -143,14 +178,85 @@ where
     )
 }
 
-fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, missing_values: Vec<FieldElement<F>>) {
+/// Fills holes found in the range-checked columns.
+fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldElement<F>>) {
     let zeros_left = vec![FieldElement::zero(); OFF_DST];
     let zeros_right = vec![FieldElement::zero(); trace.n_cols - OFF_OP1 - 1];
 
-    for i in (0..missing_values.len()).step_by(3) {
+    for i in (0..holes.len()).step_by(3) {
         trace.table.append(&mut zeros_left.clone());
-        trace.table.append(&mut missing_values[i..(i + 3)].to_vec());
+        trace.table.append(&mut holes[i..(i + 3)].to_vec());
         trace.table.append(&mut zeros_right.clone());
+    }
+}
+
+/// Get memory holes from accessed addresses. These memory holes appear
+/// as a consequence of interaction with builtins.
+/// Returns a vector of addresses that were not present in the input vector (holes)
+///
+/// # Arguments
+///
+/// * `sorted_addrs` - Vector of sorted memory addresses.
+/// * `codelen` - the length of the Cairo program instructions.
+fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
+    let mut memory_holes = Vec::new();
+    let mut prev_addr = &sorted_addrs[0];
+
+    for addr in sorted_addrs.iter() {
+        let addr_diff = addr - prev_addr;
+
+        // If the candidate memory hole has an address belonging to the program segment (public
+        // memory), that is not accounted here since public memory is added in a posterior step of
+        // the protocol.
+        if addr_diff != FE::one()
+            && addr_diff != FE::zero()
+            && addr.representative() > (codelen as u64).into()
+        {
+            let mut hole_addr = prev_addr + FE::one();
+
+            while hole_addr.representative() < addr.representative() {
+                if hole_addr.representative() > (codelen as u64).into() {
+                    memory_holes.push(hole_addr.clone());
+                }
+                hole_addr += FE::one();
+            }
+        }
+        prev_addr = addr;
+    }
+
+    memory_holes
+}
+
+/// Fill memory holes in each address column of the trace with the missing address, depending on the
+/// trace column. If the trace column refers to memory addresses, it will be filled with the missing
+/// addresses.
+fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut [FE]) {
+    let last_row = trace.last_row().to_vec();
+
+    // This number represents the amount of times we have to pad to fill the memory
+    // holes into the trace.
+    // There are a total of ADDR_COLUMNS.len() address columns, and we have to append
+    // hole addresses in each column until there are no more holes.
+    // If we have that memory_holes = [1, 2, 3, 4, 5] and there are 4 address columns,
+    // we will have to pad with 2 rows, one for the first [1, 2, 3, 4] and one for the
+    // 5 value.
+    let padding_size = div_ceil(memory_holes.len(), ADDR_COLUMNS.len());
+
+    let padding_row_iter = iter::repeat(last_row).take(padding_size);
+    let addr_columns_iter = iter::repeat(ADDR_COLUMNS).take(padding_size);
+    let mut memory_holes_iter = memory_holes.iter();
+
+    for (addr_cols, mut padding_row) in iter::zip(addr_columns_iter, padding_row_iter) {
+        // The particular placement of the holes in each column is not important,
+        // the only thing that matters is that the addresses are put somewhere in the address
+        // columns.
+        addr_cols.iter().for_each(|a_col| {
+            if let Some(hole) = memory_holes_iter.next() {
+                padding_row[*a_col] = hole.clone();
+            }
+        });
+
+        trace.table.append(&mut padding_row);
     }
 }
 
@@ -161,6 +267,7 @@ fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, missing_values: Vec<F
 pub fn build_cairo_execution_trace(
     raw_trace: &RegisterStates,
     memory: &CairoMemory,
+    public_inputs: &PublicInputs,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
 
@@ -244,7 +351,35 @@ pub fn build_cairo_execution_trace(
     trace_cols.push(mul);
     trace_cols.push(selector);
 
+    if let Some(range_check_builtin_range) = public_inputs.range_check_builtin_range.clone() {
+        add_rc_builtin_columns(&mut trace_cols, range_check_builtin_range, memory);
+    }
+
     TraceTable::new_from_cols(&trace_cols)
+}
+
+// Build range-check builtin columns: rc_0, rc_1, ... , rc_7, rc_value
+fn add_rc_builtin_columns(
+    trace_cols: &mut Vec<Vec<FE>>,
+    range_check_builtin_range: Range<u64>,
+    memory: &CairoMemory,
+) {
+    let range_checked_values: Vec<&FE> = range_check_builtin_range
+        .map(|addr| memory.get(&addr).unwrap())
+        .collect();
+    let mut rc_trace_columns = decompose_rc_values_into_trace_columns(&range_checked_values);
+
+    // rc decomposition columns are appended with zeros and then pushed to the trace table
+    rc_trace_columns.iter_mut().for_each(|column| {
+        column.resize(trace_cols[0].len(), FE::zero());
+        trace_cols.push(column.to_vec())
+    });
+
+    let mut rc_values_dereferenced: Vec<FE> =
+        range_checked_values.iter().map(|&x| x.clone()).collect();
+    rc_values_dereferenced.resize(trace_cols[0].len(), FE::zero());
+
+    trace_cols.push(rc_values_dereferenced);
 }
 
 /// Returns the vector of res values.
@@ -345,7 +480,7 @@ fn compute_dst(
 /// Returns the vector of:
 /// - op0_addrs
 /// - op0s
-pub fn compute_op0(
+fn compute_op0(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
     register_states: &RegisterStates,
@@ -379,7 +514,7 @@ pub fn compute_op0(
 /// Returns the vector of:
 /// - op1_addrs
 /// - op1s
-pub fn compute_op1(
+fn compute_op1(
     flags: &[CairoInstructionFlags],
     offsets: &[InstructionOffsets],
     register_states: &RegisterStates,
@@ -476,13 +611,65 @@ fn rows_to_cols<const N: usize>(rows: &[[FE; N]]) -> Vec<Vec<FE>> {
     cols
 }
 
+fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
+    let mask = UnsignedInteger::from_hex("FFFF").unwrap();
+    let mut rc_base_types: Vec<UnsignedInteger<4>> =
+        rc_values.iter().map(|x| x.representative()).collect();
+
+    let mut decomposition_columns: Vec<Vec<FE>> = Vec::new();
+
+    for _ in 0..8 {
+        decomposition_columns.push(
+            rc_base_types
+                .iter()
+                .map(|&x| FE::from(&(x & mask)))
+                .collect(),
+        );
+
+        rc_base_types = rc_base_types.iter().map(|&x| x >> 16).collect();
+    }
+
+    // This can't fail since we have 8 pushes
+    decomposition_columns.try_into().unwrap()
+}
+
 #[cfg(test)]
 mod test {
     use lambdaworks_math::field::element::FieldElement;
 
-    use crate::air::cairo_air::air::{OFF_DST, OFF_OP1};
+    use crate::{
+        air::cairo_air::air::{FRAME_SELECTOR, OFF_DST, OFF_OP1},
+        cairo_run::{
+            cairo_layout::CairoLayout,
+            run::{program_path, run_program},
+        },
+    };
 
     use super::*;
+
+    #[test]
+    fn test_rc_decompose() {
+        let fifteen = FE::from_hex("000F000F000F000F000F000F000F000F").unwrap();
+        let sixteen = FE::from_hex("00100010001000100010001000100010").unwrap();
+        let one_two_three = FE::from_hex("00010002000300040005000600070008").unwrap();
+
+        let decomposition_columns =
+            decompose_rc_values_into_trace_columns(&[&fifteen, &sixteen, &one_two_three]);
+
+        for row in &decomposition_columns {
+            assert_eq!(row[0], FE::from_hex("F").unwrap());
+            assert_eq!(row[1], FE::from_hex("10").unwrap());
+        }
+
+        assert_eq!(decomposition_columns[0][2], FE::from_hex("8").unwrap());
+        assert_eq!(decomposition_columns[1][2], FE::from_hex("7").unwrap());
+        assert_eq!(decomposition_columns[2][2], FE::from_hex("6").unwrap());
+        assert_eq!(decomposition_columns[3][2], FE::from_hex("5").unwrap());
+        assert_eq!(decomposition_columns[4][2], FE::from_hex("4").unwrap());
+        assert_eq!(decomposition_columns[5][2], FE::from_hex("3").unwrap());
+        assert_eq!(decomposition_columns[6][2], FE::from_hex("2").unwrap());
+        assert_eq!(decomposition_columns[7][2], FE::from_hex("1").unwrap());
+    }
 
     #[test]
     fn test_build_main_trace_simple_program() {
@@ -499,17 +686,18 @@ mod test {
         ```
         */
 
-        let base_dir = env!("CARGO_MANIFEST_DIR");
-        let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/simple_program.memory";
-
-        let register_states = RegisterStates::from_file(&dir_trace).unwrap();
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
-
-        let execution_trace = build_cairo_execution_trace(&register_states, &memory);
+        let (register_states, memory, program_size) = run_program(
+            None,
+            CairoLayout::AllCairo,
+            &program_path("simple_program.json"),
+        )
+        .unwrap();
+        let pub_inputs =
+            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
-        let expected_trace = TraceTable::new_from_cols(&[
+        let expected_trace = TraceTable::new_from_cols(&vec![
             // col 0
             vec![FE::zero(), FE::zero(), FE::one()],
             // col 1
@@ -609,14 +797,11 @@ mod test {
         ```
         */
 
-        let base_dir = env!("CARGO_MANIFEST_DIR");
-        let dir_trace = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.trace";
-        let dir_memory = base_dir.to_owned() + "/src/cairo_vm/test_data/call_func.memory";
-
-        let register_states = RegisterStates::from_file(&dir_trace).unwrap();
-        let memory = CairoMemory::from_file(&dir_memory).unwrap();
-
-        let execution_trace = build_cairo_execution_trace(&register_states, &memory);
+        let (register_states, memory, program_size) =
+            run_program(None, CairoLayout::AllCairo, &program_path("call_func.json")).unwrap();
+        let pub_inputs =
+            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&[
@@ -970,6 +1155,7 @@ mod test {
 
         assert_eq!(execution_trace.cols(), expected_trace.cols());
     }
+
     #[test]
     fn test_fill_range_check_values() {
         let columns = vec![
@@ -1027,5 +1213,96 @@ mod test {
         assert_eq!(main_trace.table, expected);
         assert_eq!(main_trace.n_cols, 34);
         assert_eq!(main_trace.table.len(), 34 * 4);
+    }
+
+    #[test]
+    fn test_get_memory_holes_no_codelen() {
+        // We construct a sorted addresses list [1, 2, 3, 6, 7, 8, 9, 13, 14, 15], and
+        // set codelen = 0. With this value of codelen, any holes present between
+        // the min and max addresses should be returned by the function.
+        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
+        let addrs_extension: Vec<FE> = (6..10).map(FE::from).collect();
+        addrs.extend_from_slice(&addrs_extension);
+        let addrs_extension: Vec<FE> = (13..16).map(FE::from).collect();
+        addrs.extend_from_slice(&addrs_extension);
+        let codelen = 0;
+
+        let expected_memory_holes = vec![
+            FE::from(4),
+            FE::from(5),
+            FE::from(10),
+            FE::from(11),
+            FE::from(12),
+        ];
+        let calculated_memory_holes = get_memory_holes(&addrs, codelen);
+
+        assert_eq!(expected_memory_holes, calculated_memory_holes);
+    }
+
+    #[test]
+    fn test_get_memory_holes_inside_program_section() {
+        // We construct a sorted addresses list [1, 2, 3, 8, 9] and we
+        // set a codelen of 9. Since all the holes will be inside the
+        // program segment (meaning from addresses 1 to 9), the function
+        // should not return any of them.
+        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
+        let addrs_extension: Vec<FE> = (8..10).map(FE::from).collect();
+        addrs.extend_from_slice(&addrs_extension);
+        let codelen = 9;
+
+        let calculated_memory_holes = get_memory_holes(&addrs, codelen);
+        let expected_memory_holes: Vec<FE> = Vec::new();
+
+        assert_eq!(expected_memory_holes, calculated_memory_holes);
+    }
+
+    #[test]
+    fn test_get_memory_holes_outside_program_section() {
+        // We construct a sorted addresses list [1, 2, 3, 8, 9] and we
+        // set a codelen of 6. The holes found inside the program section,
+        // i.e. in the address range between 1 to 6, should not be returned.
+        // So addresses 4, 5 and 6 will no be returned, only address 7.
+        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
+        let addrs_extension: Vec<FE> = (8..10).map(FE::from).collect();
+        addrs.extend_from_slice(&addrs_extension);
+        let codelen = 6;
+
+        let calculated_memory_holes = get_memory_holes(&addrs, codelen);
+        let expected_memory_holes = vec![FE::from(7)];
+
+        assert_eq!(expected_memory_holes, calculated_memory_holes);
+    }
+
+    #[test]
+    fn test_fill_memory_holes() {
+        const TRACE_COL_LEN: usize = 2;
+        const NUM_TRACE_COLS: usize = FRAME_SELECTOR + 1;
+
+        let mut trace_cols = vec![vec![FE::zero(); TRACE_COL_LEN]; NUM_TRACE_COLS];
+        trace_cols[FRAME_PC][0] = FE::one();
+        trace_cols[FRAME_DST_ADDR][0] = FE::from(2);
+        trace_cols[FRAME_OP0_ADDR][0] = FE::from(3);
+        trace_cols[FRAME_OP1_ADDR][0] = FE::from(5);
+        trace_cols[FRAME_PC][1] = FE::from(6);
+        trace_cols[FRAME_DST_ADDR][1] = FE::from(9);
+        trace_cols[FRAME_OP0_ADDR][1] = FE::from(10);
+        trace_cols[FRAME_OP1_ADDR][1] = FE::from(11);
+        let mut trace = TraceTable::new_from_cols(&trace_cols);
+
+        let mut memory_holes = vec![FE::from(4), FE::from(7), FE::from(8)];
+        fill_memory_holes(&mut trace, &mut memory_holes);
+
+        let frame_pc = &trace.cols()[FRAME_PC];
+        let dst_addr = &trace.cols()[FRAME_DST_ADDR];
+        let op0_addr = &trace.cols()[FRAME_OP0_ADDR];
+        let op1_addr = &trace.cols()[FRAME_OP1_ADDR];
+        assert_eq!(frame_pc[0], FE::one());
+        assert_eq!(dst_addr[0], FE::from(2));
+        assert_eq!(op0_addr[0], FE::from(3));
+        assert_eq!(op1_addr[0], FE::from(5));
+        assert_eq!(frame_pc[1], FE::from(6));
+        assert_eq!(dst_addr[1], FE::from(9));
+        assert_eq!(op0_addr[1], FE::from(10));
+        assert_eq!(op1_addr[1], FE::from(11));
     }
 }

@@ -15,6 +15,9 @@ pub use lambdaworks_math::{
     polynomial::Polynomial,
 };
 
+#[cfg(debug_assertions)]
+use log::error;
+
 use self::fri_decommit::FriDecommitment;
 use self::fri_functions::fold_polynomial;
 
@@ -64,6 +67,14 @@ where
 
     let last_poly = fold_polynomial(&current_layer.poly, &zeta);
 
+    #[cfg(debug_assertions)]
+    if last_poly.coefficients().len() > 1 {
+        error!(
+            "Polynomial of last FRI layer must be constant, got polynomial of order {}",
+            last_poly.coefficients().len()
+        );
+    }
+
     let last_value = last_poly
         .coefficients()
         .get(0)
@@ -81,7 +92,7 @@ pub fn fri_query_phase<F: IsFFTField, A: AIR<Field = F>, T: Transcript>(
     domain_size: usize,
     fri_layers: &Vec<FriLayer<F>>,
     transcript: &mut T,
-) -> (Vec<FriDecommitment<F>>, usize)
+) -> (Vec<FriDecommitment<F>>, Vec<usize>)
 where
     FieldElement<F>: ByteConversion,
 {
@@ -119,8 +130,8 @@ where
             })
             .collect();
 
-        (query_list, iotas[0])
+        (query_list, iotas)
     } else {
-        (vec![], 0)
+        (vec![], vec![])
     }
 }

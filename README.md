@@ -3,6 +3,8 @@
 We're still moving all the code from [LambdaWorks](https://github.com/lambdaclass/lambdaworks) related to the STARK Cairo prover. 
 The CI, the documentation and the GPU code hasn't yet been yet migrated.
 
+Disclaimer: This prover is still in development and may contain bugs. It is not intended to be used in production yet.
+
 ## Main building blocks
 
 - [AIR](https://github.com/lambdaclass/lambdaworks_cairo_prover/tree/main/src/air)
@@ -22,6 +24,8 @@ To be added:
 - Cargo 1.69+
   
 ## How to try it
+For the moment, only programs with no builtins can be verified with the CLI. This
+feature will be added soon.
 
 ### Using Docker compiler
 
