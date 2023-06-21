@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
@@ -125,8 +123,8 @@ fn test_prove_quadratic() {
 
 #[ignore = "metal"]
 /// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
-fn test_prove_cairo_program(file_path: &str, rc_builtin_range: Option<Range<u64>>) {
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path, rc_builtin_range);
+fn test_prove_cairo_program(file_path: &str, memory_segments: &MemorySegmentMap) {
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path, memory_segments);
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -134,27 +132,39 @@ fn test_prove_cairo_program(file_path: &str, rc_builtin_range: Option<Range<u64>
 
 #[test_log::test]
 fn test_prove_cairo_simple_program() {
-    test_prove_cairo_program(&program_path("simple_program.json"), None);
+    test_prove_cairo_program(
+        &program_path("simple_program.json"),
+        &MemorySegmentMap::new(),
+    );
 }
 
 #[test_log::test]
 fn test_prove_cairo_fibonacci_5() {
-    test_prove_cairo_program(&program_path("fibonacci_5.json"), None);
+    test_prove_cairo_program(&program_path("fibonacci_5.json"), &MemorySegmentMap::new());
 }
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
-    test_prove_cairo_program(&program_path("rc_program.json"), Some(27..29));
+    test_prove_cairo_program(
+        &program_path("rc_program.json"),
+        &MemorySegmentMap::from([(MemorySegment::RangeCheck, 27..29)]),
+    );
 }
 
 #[test_log::test]
 fn test_prove_cairo_lt_comparison() {
-    test_prove_cairo_program(&program_path("lt_comparison.json"), Some(131..132));
+    test_prove_cairo_program(
+        &program_path("lt_comparison.json"),
+        &MemorySegmentMap::from([(MemorySegment::RangeCheck, 131..132)]),
+    );
 }
 
 #[test_log::test]
 fn test_prove_cairo_compare_lesser_array() {
-    test_prove_cairo_program(&program_path("compare_lesser_array.json"), Some(856..866));
+    test_prove_cairo_program(
+        &program_path("compare_lesser_array.json"),
+        &MemorySegmentMap::from([(MemorySegment::RangeCheck, 856..866)]),
+    );
 }
 
 #[test_log::test]
@@ -212,8 +222,10 @@ fn test_prove_dummy() {
 
 #[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
-    let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"), None);
+    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
+        &program_path("simple_program.json"),
+        &MemorySegmentMap::new(),
+    );
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     // We modify the original program and verify using this new "corrupted" version
@@ -228,8 +240,10 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_range_bounds() {
-    let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"), None);
+    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
+        &program_path("simple_program.json"),
+        &MemorySegmentMap::new(),
+    );
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);
@@ -245,8 +259,10 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     // In this test we change the range-check value in the trace, so the constraint
     // that asserts that the sum of the rc decomposed values is equal to the
     // range-checked value won't hold, and the verifier will reject the proof.
-    let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("rc_program.json"), Some(27..29));
+    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
+        &program_path("rc_program.json"),
+        &MemorySegmentMap::from([(MemorySegment::RangeCheck, 27..29)]),
+    );
 
     // The malicious value, we change the previous value to a 35.
     let malicious_rc_value = FE::from(35);

@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use crate::air::cairo_air::air::{CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs};
 use crate::air::context::ProofOptions;
 use crate::air::trace::TraceTable;
@@ -100,10 +98,17 @@ pub fn run_program(
 
 pub fn generate_prover_args(
     file_path: &str,
-    rc_builtin_range: Option<Range<u64>>,
+    memory_segments: &MemorySegmentMap,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
+    // TODO: If other layouts are added, this must be done in another way.
+    let layout = if memory_segments.get(&MemorySegment::RangeCheck).is_some() {
+        CairoLayout::Small
+    } else {
+        CairoLayout::Plain
+    };
+
     let (register_states, memory, program_size) =
-        run_program(None, CairoLayout::Small, file_path).unwrap();
+        run_program(None, layout.clone(), file_path).unwrap();
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -111,20 +116,8 @@ pub fn generate_prover_args(
         coset_offset: 3,
     };
 
-    // TODO: If other layouts are added, this must be done in another way.
-    let layout = if rc_builtin_range.is_some() {
-        CairoLayout::Small
-    } else {
-        CairoLayout::Plain
-    };
-
-    let memory_segments = if layout == CairoLayout::Plain {
-        MemorySegmentMap::new()
-    } else {
-        MemorySegmentMap::from([(MemorySegment::RangeCheck, rc_builtin_range.unwrap())])
-    };
     let mut pub_inputs =
-        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, &memory_segments);
+        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, memory_segments);
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 

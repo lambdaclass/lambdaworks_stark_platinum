@@ -1,7 +1,10 @@
 use std::env;
 use std::time::Instant;
 
-use lambdaworks_stark::{cairo_run::run::generate_prover_args, prover::prove, verifier::verify};
+use lambdaworks_stark::{
+    air::cairo_air::air::MemorySegmentMap, cairo_run::run::generate_prover_args, prover::prove,
+    verifier::verify,
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -10,7 +13,8 @@ fn main() {
     println!("Running program and generating trace ...");
     let timer = Instant::now();
 
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path, None);
+    let (main_trace, cairo_air, mut pub_inputs) =
+        generate_prover_args(file_path, &MemorySegmentMap::new());
     println!("  Time spent: {:?} \n", timer.elapsed());
 
     let timer = Instant::now();
