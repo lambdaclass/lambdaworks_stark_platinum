@@ -209,30 +209,32 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let values = boundary_constraints.values(n_trace_cols);
 
     // Following naming conventions from https://www.notamonadtutorial.com/diving-deep-fri/
-    let mut boundary_c_i_evaluations_num = Vec::with_capacity(n_trace_cols);
-    let mut boundary_c_i_evaluations_den = Vec::with_capacity(n_trace_cols);
-    let mut boundary_quotient_degrees = Vec::with_capacity(n_trace_cols);
+    let (boundary_c_i_evaluations_num, mut boundary_c_i_evaluations_den): (
+        Vec<FieldElement<F>>,
+        Vec<FieldElement<F>>,
+    ) = (0..n_trace_cols)
+        .map(|trace_idx| {
+            let trace_evaluation = &proof.trace_ood_frame_evaluations.get_row(0)[trace_idx];
+            let boundary_constraints_domain = &boundary_constraint_domains[trace_idx];
+            let boundary_interpolating_polynomial =
+                &Polynomial::interpolate(boundary_constraints_domain, &values[trace_idx])
+                    .expect("xs and ys have equal length and xs are unique");
 
-    for trace_idx in 0..n_trace_cols {
-        let trace_evaluation = &proof.trace_ood_frame_evaluations.get_row(0)[trace_idx];
-        let boundary_constraints_domain = &boundary_constraint_domains[trace_idx];
-        let boundary_interpolating_polynomial =
-            &Polynomial::interpolate(boundary_constraints_domain, &values[trace_idx])
-                .expect("xs and ys have equal length and xs are unique");
+            let boundary_zerofier =
+                boundary_constraints.compute_zerofier(&domain.trace_primitive_root, trace_idx);
+            let boundary_zerofier_challenges_z_den = boundary_zerofier.evaluate(&challenges.z);
 
-        let boundary_zerofier =
-            boundary_constraints.compute_zerofier(&domain.trace_primitive_root, trace_idx);
-        let boundary_zerofier_challenges_z_den = boundary_zerofier.evaluate(&challenges.z);
+            let boundary_quotient_ood_evaluation_num =
+                trace_evaluation - boundary_interpolating_polynomial.evaluate(&challenges.z);
 
-        let boundary_quotient_ood_evaluation_num =
-            trace_evaluation - boundary_interpolating_polynomial.evaluate(&challenges.z);
-
-        let boundary_quotient_degree = trace_length - boundary_zerofier.degree() - 1;
-
-        boundary_c_i_evaluations_num.push(boundary_quotient_ood_evaluation_num);
-        boundary_c_i_evaluations_den.push(boundary_zerofier_challenges_z_den);
-        boundary_quotient_degrees.push(boundary_quotient_degree);
-    }
+            (
+                boundary_quotient_ood_evaluation_num,
+                boundary_zerofier_challenges_z_den,
+            )
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .unzip();
 
     FieldElement::inplace_batch_inverse(&mut boundary_c_i_evaluations_den);
 
