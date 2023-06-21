@@ -394,6 +394,8 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
 where
     FieldElement<F>: ByteConversion,
 {
+    let two_inv = &FieldElement::from(2).inv();
+
     // Verify opening Open(p₀(D₀), 𝜐ₛ)
     if !fri_decommitment
         .first_layer_auth_path
@@ -451,9 +453,9 @@ where
 
         let beta = &zetas[k];
         // v is the calculated element for the co linearity check
-        let two = &FieldElement::from(2);
-        v = (&v + evaluation_sym) / two + beta * (&v - evaluation_sym) / (two * &evaluation_point);
-        evaluation_point = evaluation_point.pow(2_u64);
+        v = (&v + evaluation_sym) * two_inv
+            + beta * (&v - evaluation_sym) * (two_inv / &evaluation_point);
+        evaluation_point = evaluation_point.square();
     }
 
     // Check that last value is the given by the prover
