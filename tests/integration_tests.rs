@@ -215,12 +215,12 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     // We modify the original program and verify using this new "corrupted" version
-    let mut corrupted_program = public_input.program.clone();
-    corrupted_program[1] = FieldElement::from(5);
-    corrupted_program[3] = FieldElement::from(5);
+    let mut corrupted_program = public_input.public_memory.clone();
+    corrupted_program.insert(FieldElement::one(), FieldElement::from(5));
+    corrupted_program.insert(FieldElement::from(3), FieldElement::from(5));
 
     // Here we use the corrupted version of the program in the public inputs
-    public_input.program = corrupted_program;
+    public_input.public_memory = corrupted_program;
     assert!(!verify(&result, &cairo_air, &public_input));
 }
 

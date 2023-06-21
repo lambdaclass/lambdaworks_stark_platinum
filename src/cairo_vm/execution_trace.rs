@@ -77,13 +77,13 @@ pub fn build_main_trace(
     public_input.range_check_max = Some(rc_max);
     fill_rc_holes(&mut main_trace, rc_holes);
 
-    let mut memory_holes = get_memory_holes(&address_cols, public_input.program.len());
+    let mut memory_holes = get_memory_holes(&address_cols, public_input.public_memory.len());
 
     if !memory_holes.is_empty() {
         fill_memory_holes(&mut main_trace, &mut memory_holes);
     }
 
-    add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
+    add_pub_memory_dummy_accesses(&mut main_trace, public_input.public_memory.len());
 
     let trace_len_next_power_of_two = main_trace.n_rows().next_power_of_two();
     let padding = trace_len_next_power_of_two - main_trace.n_rows();

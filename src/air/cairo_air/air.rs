@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{collections::HashMap, ops::Range};
 
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
@@ -164,7 +164,7 @@ pub struct PublicInputs {
     // Range-check builtin address range
     pub range_check_builtin_range: Option<Range<u64>>,
     // pub builtins: Vec<Builtin>, // list of builtins
-    pub program: Vec<FE>,
+    pub public_memory: HashMap<FE, FE>,
     pub num_steps: usize, // number of execution steps
 }
 
@@ -178,10 +178,10 @@ impl PublicInputs {
         program_size: usize,
         range_check_builtin_range: Option<Range<u64>>,
     ) -> Self {
-        let mut program = vec![];
+        let mut public_memory = HashMap::with_capacity(program_size);
 
         for i in 1..=program_size as u64 {
-            program.push(memory.get(&i).unwrap().clone());
+            public_memory.insert(FE::from(i), memory.get(&i).unwrap().clone());
         }
 
         let last_step = &register_states.rows[register_states.steps() - 1];
@@ -195,7 +195,7 @@ impl PublicInputs {
             range_check_min: None,
             range_check_max: None,
             range_check_builtin_range,
-            program,
+            public_memory,
             num_steps: register_states.steps(),
         }
     }
@@ -300,11 +300,14 @@ fn add_program_in_public_input_section(
     let mut a_aux = addresses.clone();
     let mut v_aux = values.to_owned();
 
-    let public_input_section = addresses.len() - public_input.program.len();
-    let continous_memory = (1..=public_input.program.len() as u64).map(FieldElement::from);
+    let public_input_section = addresses.len() - public_input.public_memory.len();
+    let continous_memory = (1..=public_input.public_memory.len() as u64).map(FieldElement::from);
 
     a_aux.splice(public_input_section.., continous_memory);
-    v_aux.splice(public_input_section.., public_input.program.clone());
+    for i in public_input_section..v_aux.len() {
+        let address = &a_aux[i];
+        v_aux[i] = public_input.public_memory.get(address).unwrap().clone();
+    }
 
     (a_aux, v_aux)
 }
@@ -516,13 +519,14 @@ impl AIR for CairoAIR {
         let builtin_offset = self.get_builtin_offset();
 
         let mut cumulative_product = FieldElement::one();
-        for (i, value) in public_input.program.iter().enumerate() {
+        for (address, value) in &public_input.public_memory {
             cumulative_product = cumulative_product
-                * (&rap_challenges.z_memory
-                    - (FieldElement::from(i as u64 + 1) + &rap_challenges.alpha_memory * value));
+                * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value));
         }
-        let permutation_final =
-            rap_challenges.z_memory.pow(public_input.program.len()) / cumulative_product;
+        let permutation_final = rap_challenges
+            .z_memory
+            .pow(public_input.public_memory.len())
+            / cumulative_product;
         let permutation_final_constraint = BoundaryConstraint::new(
             PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
             final_index,
@@ -867,8 +871,12 @@ fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
+    use std::collections::HashMap;
+
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-    use lambdaworks_math::field::element::FieldElement;
+    use lambdaworks_math::field::{
+        element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+    };
 
     use crate::{
         air::{
@@ -909,7 +917,7 @@ mod test {
         assert_eq!(evaluate_range_check_builtin_constraint(&row), FE::zero());
     }
 
-    #[test]
+    #[test_log::test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let (main_trace, cairo_air, public_input) =
             generate_prover_args(&program_path("simple_program.json"), None);
@@ -942,11 +950,11 @@ mod test {
             fp_init: FieldElement::zero(),
             pc_final: FieldElement::zero(),
             ap_final: FieldElement::zero(),
-            program: vec![
-                FieldElement::from(10),
-                FieldElement::from(20),
-                FieldElement::from(30),
-            ],
+            public_memory: HashMap::from([
+                (FieldElement::one(), FieldElement::from(10)),
+                (FieldElement::from(2), FieldElement::from(20)),
+                (FieldElement::from(3), FieldElement::from(30)),
+            ]),
             range_check_max: None,
             range_check_min: None,
             num_steps: 1,
@@ -981,6 +989,19 @@ mod test {
                 FieldElement::from(3)
             ]
         );
+        println!("LEFT");
+        vp.iter().for_each(|v| println!("{}", v.representative()));
+        println!("RIGHT");
+        vec![
+            FieldElement::<Stark252PrimeField>::one(),
+            FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::from(10),
+            FieldElement::from(20),
+            FieldElement::from(30),
+        ]
+        .iter()
+        .for_each(|v| println!("{}", v.representative()));
         assert_eq!(
             vp,
             vec![
