@@ -4,7 +4,7 @@
 
 This is the watcher - dispatcher service for the proving system.
 
-The architecture consists of a watcher thats monitors the blockchain for new transactions and a dispatcher that sends these new transactions to the provers. It could be pluged to any blockchain that supports smart contracts.
+The architecture consists of a watcher thats monitors the blockchain for confirmed blocks and a dispatcher that sends these blocks to the provers. It could be plugged to any blockchain that supports smart contracts.
 
 When the watcher finds a new transaction with a program, it first calls [cairo-rs](https://github.com/lambdaclass/cairo-rs/) to run the Cairo program and generate the trace. This trace is then sent to lambdaworks prover that creates the proof. The proof is then put in a later block in the blockchain.
 
