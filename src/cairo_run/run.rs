@@ -77,19 +77,6 @@ pub fn run_program(
             }
         };
 
-    let (idx, stop_offset) = vm
-        .get_range_check_builtin()
-        .unwrap()
-        .get_memory_segment_addresses();
-    let stop_offset = stop_offset.unwrap();
-
-    let mut rangecheck_base = 0;
-    for i in 0..idx {
-        rangecheck_base += vm.get_segment_size(i).unwrap()
-    }
-    let range_check_end = rangecheck_base + stop_offset + 1;
-    rangecheck_base += 1;
-
     let relocated_trace = vm.get_relocated_trace()?;
 
     let mut trace_vec = Vec::<u8>::new();
@@ -109,15 +96,21 @@ pub fn run_program(
 
     let data_len = cairo_runner.get_program().data_len();
 
-    println!("Range check base: {}", rangecheck_base);
-    println!("Range check end: {}", range_check_end);
+    // get range start and end
+    let range = vm
+        .get_range_check_builtin()
+        .map(|builtin| {
+            let (idx, stop_offset) = builtin.get_memory_segment_addresses();
+            let stop_offset = stop_offset.unwrap_or_default();
+            let rangecheck_base =
+                (0..idx).fold(1, |acc, i| acc + vm.get_segment_size(i).unwrap_or_default());
+            let range_check_end = rangecheck_base + stop_offset;
 
-    Ok((
-        register_states,
-        cairo_mem,
-        data_len,
-        Some((rangecheck_base, range_check_end)),
-    ))
+            (rangecheck_base, range_check_end)
+        })
+        .ok();
+
+    Ok((register_states, cairo_mem, data_len, range))
 }
 
 pub fn generate_prover_args(
