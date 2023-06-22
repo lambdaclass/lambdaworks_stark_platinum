@@ -2,7 +2,8 @@ use lambdaworks_math::field::fields::{
     fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
 };
 use lambdaworks_stark::air::cairo_air::air::{
-    CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs,
+    CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs, FRAME_DST_ADDR, FRAME_OP0_ADDR,
+    FRAME_OP1_ADDR, FRAME_PC,
 };
 use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP};
 use lambdaworks_stark::air::example::{
@@ -327,4 +328,39 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 
     let proof = prove(&malicious_trace, &cairo_air, &mut pub_inputs).unwrap();
     assert!(!verify(&proof, &cairo_air, &pub_inputs));
+}
+
+#[test_log::test]
+fn test_verifier_rejects_proof_with_changed_output() {
+    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
+        &program_path("output_program.json"),
+        &MemorySegmentMap::from([(MemorySegment::Output, 19..20)]),
+    );
+
+    // The malicious value, we change the previous value to a 100.
+    let malicious_output_value = FE::from(100);
+
+    let mut output_col_idx = None;
+    let mut output_row_idx = None;
+    for (i, row) in main_trace.rows().iter().enumerate() {
+        let output_col_found = [FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR]
+            .iter()
+            .find(|&&col_idx| row[col_idx] != FE::from(19));
+        if output_col_found.is_some() {
+            output_col_idx = output_col_found;
+            output_row_idx = Some(i);
+            break;
+        }
+    }
+    let output_col_idx = *output_col_idx.unwrap();
+    let output_row_idx = output_row_idx.unwrap();
+
+    let mut malicious_trace_columns = main_trace.cols();
+    let mut output_column = malicious_trace_columns[output_col_idx].clone();
+    output_column[output_row_idx] = malicious_output_value;
+    malicious_trace_columns[output_col_idx] = output_column;
+
+    let malicious_trace = TraceTable::new_from_cols(&malicious_trace_columns);
+    let proof = prove(&malicious_trace, &cairo_air, &mut public_input).unwrap();
+    assert!(!verify(&proof, &cairo_air, &public_input));
 }
