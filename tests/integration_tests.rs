@@ -1,26 +1,29 @@
-use lambdaworks_math::field::fields::{
-    fft_friendly::stark_252_prime_field::Stark252PrimeField, u64_prime_field::FE17,
-};
-use lambdaworks_stark::air::cairo_air::air::{
-    CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs, FRAME_DST_ADDR, FRAME_OP0_ADDR,
-    FRAME_OP1_ADDR, FRAME_PC,
-};
-use lambdaworks_stark::air::example::fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP};
-use lambdaworks_stark::air::example::{
-    dummy_air, fibonacci_2_columns, fibonacci_f17, quadratic_air, simple_fibonacci,
-};
-use lambdaworks_stark::air::trace::TraceTable;
-use lambdaworks_stark::cairo_run::cairo_layout::CairoLayout;
-use lambdaworks_stark::cairo_run::run::{generate_prover_args, program_path, run_program};
-use lambdaworks_stark::cairo_vm::execution_trace::build_main_trace;
-use lambdaworks_stark::{
-    air::context::{AirContext, ProofOptions},
-    fri::FieldElement,
-    prover::prove,
-    verifier::verify,
-};
+use std::ops::Range;
 
-pub type FE = FieldElement<Stark252PrimeField>;
+use lambdaworks_math::field::fields::u64_prime_field::FE17;
+use lambdaworks_stark::{
+    cairo::{
+        air::{
+            CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs, FRAME_DST_ADDR,
+            FRAME_OP0_ADDR, FRAME_OP1_ADDR, FRAME_PC,
+        },
+        cairo_layout::CairoLayout,
+        execution_trace::build_main_trace,
+        runner::run::{generate_prover_args, program_path, run_program},
+    },
+    starks::{
+        context::{AirContext, ProofOptions},
+        example::{
+            dummy_air, fibonacci_2_columns, fibonacci_f17,
+            fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP},
+            quadratic_air, simple_fibonacci,
+        },
+        prover::prove,
+        trace::TraceTable,
+        verifier::verify,
+    },
+    FE,
+};
 
 #[test_log::test]
 fn test_prove_fib() {
@@ -242,8 +245,8 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 
     // We modify the original program and verify using this new "corrupted" version
     let mut corrupted_program = public_input.public_memory.clone();
-    corrupted_program.insert(FieldElement::one(), FieldElement::from(5));
-    corrupted_program.insert(FieldElement::from(3), FieldElement::from(5));
+    corrupted_program.insert(FE::one(), FE::from(5));
+    corrupted_program.insert(FE::from(3), FE::from(5));
 
     // Here we use the corrupted version of the program in the public inputs
     public_input.public_memory = corrupted_program;

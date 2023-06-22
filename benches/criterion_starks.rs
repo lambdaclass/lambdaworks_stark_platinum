@@ -2,13 +2,12 @@ use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
 use lambdaworks_stark::{
-    air::cairo_air::air::MemorySegmentMap, cairo_run::run::generate_prover_args, prover::prove,
-    verifier::verify,
+    cairo::runner::run::generate_prover_args,
+    starks::{prover::prove, verifier::verify},
 };
 use std::time::Duration;
 
 pub mod functions;
-pub mod util;
 
 fn cairo_benches(c: &mut Criterion) {
     let mut group = c.benchmark_group("CAIRO");
@@ -28,7 +27,7 @@ fn cairo_benches(c: &mut Criterion) {
 
 fn program_path(program_name: &str) -> String {
     const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const PROGRAM_BASE_REL_PATH: &str = "/src/cairo_vm/test_data/";
+    const PROGRAM_BASE_REL_PATH: &str = "/cairo_programs/";
     let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
     program_base_path + program_name
 }
