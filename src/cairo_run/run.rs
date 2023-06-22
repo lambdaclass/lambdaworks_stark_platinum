@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::ops::{Range, Index};
 
 use crate::air::cairo_air::air::{CairoAIR, PublicInputs};
 use crate::air::context::ProofOptions;
@@ -11,6 +11,7 @@ use super::cairo_layout::CairoLayout;
 use super::vec_writer::VecWriter;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
+use cairo_vm::hint_processor::builtin_hint_processor::segments;
 use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
 use cairo_vm::vm::errors::trace_errors::TraceError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
@@ -50,7 +51,7 @@ pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
     filename: &str,
-) -> Result<(RegisterStates, CairoMemory, usize), Error> {
+) -> Result<(RegisterStates, CairoMemory, usize, Option<usize>, Option<usize>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
@@ -67,7 +68,7 @@ pub fn run_program(
 
     let program_content = std::fs::read(filename).map_err(Error::IO)?;
 
-    let (cairo_runner, vm) =
+    let (cairo_runner, mut vm) =
         match cairo_run::cairo_run(&program_content, &cairo_run_config, &mut hint_executor) {
             Ok(runner) => runner,
             Err(error) => {
@@ -75,6 +76,16 @@ pub fn run_program(
                 return Err(Error::Runner(error));
             }
         };
+
+    let (idx, stop_offset) = vm.get_range_check_builtin().unwrap().get_memory_segment_addresses();
+    let stop_offset = stop_offset.unwrap();
+
+    let mut rangecheck_base = 0;
+    for i in 0..idx {
+        rangecheck_base += vm.get_segment_size(i).unwrap()
+    }
+    let range_check_end = rangecheck_base + stop_offset + 1;
+    rangecheck_base += 1;
 
     let relocated_trace = vm.get_relocated_trace()?;
 
@@ -95,14 +106,18 @@ pub fn run_program(
 
     let data_len = cairo_runner.get_program().data_len();
 
-    Ok((register_states, cairo_mem, data_len))
+    println!("Range check base: {}", rangecheck_base);
+    println!("Range check end: {}", range_check_end);
+
+
+    Ok((register_states, cairo_mem, data_len, Some(rangecheck_base), Some(range_check_end)))
 }
 
 pub fn generate_prover_args(
     file_path: &str,
     rc_builtin_range: Option<Range<u64>>,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
-    let (register_states, memory, program_size) =
+    let (register_states, memory, program_size, rg_init, rg_end) =
         run_program(None, CairoLayout::Small, file_path).unwrap();
 
     let proof_options = ProofOptions {
@@ -154,7 +169,7 @@ mod tests {
         let base_dir = env!("CARGO_MANIFEST_DIR");
         let json_filename = base_dir.to_owned() + "/src/cairo_run/program.json";
 
-        let (register_states, memory, program_size) =
+        let (register_states, memory, program_size, rg_in, rg_out) =
             run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
         let pub_inputs =
             PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);

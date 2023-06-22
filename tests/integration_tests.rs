@@ -268,7 +268,7 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
     let overflowing_rc_value = FE::from_hex("0x100000000000000000000000000000001").unwrap();
 
     let program_path = program_path("rc_program.json");
-    let (register_states, mut malicious_memory, program_size) =
+    let (register_states, mut malicious_memory, program_size, _, _) =
         run_program(None, CairoLayout::Small, &program_path).unwrap();
 
     // The malicious value is inserted in memory here.
