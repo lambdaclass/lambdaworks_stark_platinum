@@ -169,10 +169,13 @@ fn test_prove_cairo_compare_lesser_array() {
 }
 
 #[test_log::test]
-fn test_prove_cairo_output_program() {
+fn test_prove_cairo_output_and_rc_program() {
     test_prove_cairo_program(
-        &program_path("output_program.json"),
-        &MemorySegmentMap::from([(MemorySegment::Output, 19..20)]),
+        &program_path("signed_div_rem.json"),
+        &MemorySegmentMap::from([
+            (MemorySegment::Output, 289..293),
+            (MemorySegment::RangeCheck, 293..309),
+        ]),
     );
 }
 
