@@ -12,7 +12,6 @@ use super::{
     trace::TraceTable,
 };
 
-// use crate::get_powers_of_primitive_root_coset;
 /// AIR is a representation of the Constraints
 pub trait AIR: Clone {
     type Field: IsFFTField;

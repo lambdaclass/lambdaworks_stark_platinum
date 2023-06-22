@@ -5,8 +5,6 @@ use lambdaworks_stark::cairo::runner::run::generate_prover_args;
 use lambdaworks_stark::starks::prover::prove;
 use lambdaworks_stark::starks::verifier::verify;
 
-// use lambdaworks_stark::{cairo_run::run::generate_prover_args, prover::prove, verifier::verify};
-
 fn main() {
     let args: Vec<String> = env::args().collect();
 
