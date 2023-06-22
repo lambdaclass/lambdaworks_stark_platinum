@@ -1,13 +1,20 @@
 .PHONY: test clippy
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+TEST_DIR=cairo_programs
+CAIRO_PROGRAMS:=$(wildcard $(TEST_DIR)/*.cairo)
+COMPILED_PROGRAMS:=$(patsubst $(TEST_DIR)/%.cairo, $(TEST_DIR)/%.json, $(CAIRO_PROGRAMS))
+
+$(TEST_DIR)/%.json: $(TEST_DIR)/%.cairo
+	cairo-compile --cairo_path="$(TEST_DIR)" $< --output $@
+
 build: 
 	cargo build --release
 
 run: build
 	cargo run --release $(PROGRAM_PATH)
 	
-test:
+test: $(COMPILED_PROGRAMS)
 	cargo test
 
 clippy:
@@ -38,3 +45,7 @@ compile_and_run: target/release/lambdaworks-stark
 	@echo "Compiling done \n"
 	@cargo run --features instruments --quiet --release $(PROGRAM).json 
 	@rm $(PROGRAM).json
+
+clean:
+	rm -f $(TEST_DIR)/*.json
+
