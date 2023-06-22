@@ -1,4 +1,4 @@
-use lambdaworks_stark::cairo_vm::{cairo_mem::CairoMemory, cairo_trace::RegisterStates};
+use lambdaworks_stark::cairo::{cairo_mem::CairoMemory, register_states::RegisterStates};
 
 pub fn generate_cairo_trace(filename: &str) -> (RegisterStates, CairoMemory) {
     let base_dir = env!("CARGO_MANIFEST_DIR").to_string() + "/src/cairo_vm/test_data/";

@@ -7,10 +7,8 @@ Disclaimer: This prover is still in development and may contain bugs. It is not 
 
 ## Main building blocks
 
-- [AIR](https://github.com/lambdaclass/lambdaworks_cairo_prover/tree/main/src/air)
-- [FRI protocol](https://github.com/lambdaclass/lambdaworks_cairo_prover/tree/main/src/fri)
-- [Verifier](https://github.com/lambdaclass/lambdaworks_cairo_prover/blob/main/src/verifier.rs)
-- [CairoVM](https://github.com/lambdaclass/lambdaworks_cairo_prover/tree/main/src/cairo_vm)
+- [STARKS](https://github.com/lambdaclass/lambdaworks_cairo_prover/tree/main/src/starks): Everything related to STARKs building blocks such as the prover, verifier and FRI.
+- [Cairo](https://github.com/lambdaclass/lambdaworks_cairo_prover/tree/main/src/cairo): Implementation of the Cairo AIR.
 
 To be added:
 - Grinding
