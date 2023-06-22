@@ -198,7 +198,6 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let boundary_constraints = air.boundary_constraints(&challenges.rap_challenges, public_input);
 
     let n_trace_cols = air.context().trace_columns;
-    // TODO: Get trace polys degrees in a better way. The degree may not be trace_length - 1 in some
     // special cases.
     let trace_length = air.context().trace_length;
     let composition_poly_degree_bound = air.composition_poly_degree_bound();
