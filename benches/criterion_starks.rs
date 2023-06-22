@@ -2,7 +2,7 @@ use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
 use lambdaworks_stark::{
-    cairo::runner::run::generate_prover_args,
+    cairo::{air::MemorySegmentMap, runner::run::generate_prover_args},
     starks::{prover::prove, verifier::verify},
 };
 use std::time::Duration;

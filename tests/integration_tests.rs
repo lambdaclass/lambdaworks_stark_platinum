@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use lambdaworks_math::field::fields::u64_prime_field::FE17;
 use lambdaworks_stark::{
     cairo::{
