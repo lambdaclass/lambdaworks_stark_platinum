@@ -13,8 +13,13 @@ fn cairo_benches(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(30));
     run_cairo_bench(
         &mut group,
-        "fibonacci/1000",
-        &program_path("fibonacci_1000.json"),
+        "fibonacci/10",
+        &program_path("fibonacci_10.json"),
+    );
+    run_cairo_bench(
+        &mut group,
+        "fibonacci/30",
+        &program_path("fibonacci_30.json"),
     );
 }
 
@@ -39,8 +44,13 @@ fn verifier_benches(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(30));
     run_verifier_bench(
         &mut group,
-        "fibonacci/1000",
-        &program_path("fibonacci_1000.json"),
+        "fibonacci/10",
+        &program_path("fibonacci_10.json"),
+    );
+    run_verifier_bench(
+        &mut group,
+        "fibonacci/30",
+        &program_path("fibonacci_30.json"),
     );
 }
 
