@@ -5,10 +5,11 @@ use lambdaworks_math::{
     traits::ByteConversion,
 };
 
-#[cfg(debug_assertions)]
-use log::error;
-
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
+
+#[cfg(debug_assertions)]
+use crate::air::debug::check_boundary_polys_divisibility;
+
 use crate::{
     air::{frame::Frame, trace::TraceTable, traits::AIR},
     prover::evaluate_polynomial_on_lde_domain,
@@ -111,16 +112,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             .collect();
 
         #[cfg(debug_assertions)]
-        for (i, (poly, z)) in boundary_polys
-            .iter()
-            .zip(boundary_zerofiers.iter())
-            .enumerate()
-        {
-            let (_, b) = poly.clone().long_division_with_remainder(z);
-            if b != Polynomial::zero() {
-                error!("Expected remainder of boundary poly and boundary zerofier {} to be zero, but it's {:?}", i, b);
-            }
-        }
+        check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
 
         let blowup_factor = self.air.blowup_factor();
 
