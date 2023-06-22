@@ -5,6 +5,7 @@ use lambdaworks_math::{
     traits::ByteConversion,
 };
 
+#[cfg(debug_assertions)]
 use crate::starks::debug::check_boundary_polys_divisibility;
 use crate::starks::domain::Domain;
 use crate::starks::frame::Frame;
