@@ -198,9 +198,9 @@ impl PublicInputs {
         }
 
         if let Some(output_range) = output_range {
-            output_range.clone().for_each(|addr| {
+            for addr in output_range.clone() {
                 public_memory.insert(FE::from(addr), memory.get(&addr).unwrap().clone());
-            });
+            }
         };
         let last_step = &register_states.rows[register_states.steps() - 1];
 
@@ -318,40 +318,40 @@ fn add_pub_memory_in_public_input_section(
     let mut a_aux = addresses.clone();
     let mut v_aux = values.to_owned();
 
-    let output_range = public_input.memory_segments.get(&MemorySegment::Output);
-    let output_section = if let Some(output_range) = output_range {
-        output_range.end - output_range.start
-    } else {
-        0
-    } as usize;
     let public_input_section = addresses.len() - public_input.public_memory.len();
-    let program_section = public_input.public_memory.len() - output_section;
-    let continous_memory = (1..=program_section as u64).map(FieldElement::from);
+    let output_range = public_input.memory_segments.get(&MemorySegment::Output);
+    let pub_memory_addrs = get_pub_memory_addrs(output_range, public_input);
 
-    // Program
-    a_aux.splice(
-        public_input_section..public_input_section + program_section,
-        continous_memory,
-    );
-    for i in public_input_section..public_input_section + program_section {
+    a_aux.splice(public_input_section.., pub_memory_addrs);
+    for i in public_input_section..a_aux.len() {
         let address = &a_aux[i];
         v_aux[i] = public_input.public_memory.get(address).unwrap().clone();
     }
 
-    // Output
-    if let Some(output_range) = output_range {
-        a_aux.splice(
-            public_input_section + program_section..,
-            output_range.clone().map(FieldElement::from),
-        );
-
-        for i in public_input_section + program_section..a_aux.len() {
-            let address = &a_aux[i];
-            v_aux[i] = public_input.public_memory.get(address).unwrap().clone();
-        }
-    }
-
     (a_aux, v_aux)
+}
+
+/// Gets public memory addresses of a program. First, this function builds a `Vec` of `FieldElement`s, filling it
+/// incrementally with addresses from `1` to `program_len - 1`, where `program_len` is the length of the program.
+/// If the output builtin is used, `output_range` is `Some(...)` and this function adds incrementally to the resulting
+/// `Vec` addresses from the start to the end of the unwrapped `output_range`.
+fn get_pub_memory_addrs(
+    output_range: Option<&Range<u64>>,
+    public_input: &PublicInputs,
+) -> Vec<FieldElement<Stark252PrimeField>> {
+    let public_memory_len = public_input.public_memory.len() as u64;
+
+    if let Some(output_range) = output_range {
+        let output_section = output_range.end - output_range.start;
+        let program_section = public_memory_len - output_section;
+
+        (1..=program_section)
+            .map(FieldElement::from)
+            .chain(output_range.clone().map(FieldElement::from))
+            .collect()
+    } else {
+        (1..=public_memory_len).map(FieldElement::from).collect()
+    }
 }
 
 fn sort_columns_by_memory_address(adresses: Vec<FE>, values: Vec<FE>) -> (Vec<FE>, Vec<FE>) {
@@ -957,7 +957,7 @@ mod test {
         assert_eq!(evaluate_range_check_builtin_constraint(&row), FE::zero());
     }
 
-    #[test_log::test]
+    #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let (main_trace, cairo_air, public_input) = generate_prover_args(
             &program_path("simple_program.json"),

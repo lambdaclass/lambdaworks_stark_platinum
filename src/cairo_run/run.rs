@@ -120,11 +120,12 @@ pub fn generate_prover_args(
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
+    let has_range_check_builtin = memory_segments.get(&MemorySegment::RangeCheck).is_some();
     let cairo_air = CairoAIR::new(
         proof_options,
         main_trace.n_rows(),
         register_states.steps(),
-        memory_segments.get(&MemorySegment::RangeCheck).is_some(),
+        has_range_check_builtin,
     );
 
     (main_trace, cairo_air, pub_inputs)

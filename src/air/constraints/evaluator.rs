@@ -4,6 +4,8 @@ use lambdaworks_math::{
     polynomial::Polynomial,
     traits::ByteConversion,
 };
+
+#[cfg(debug_assertions)]
 use log::error;
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
