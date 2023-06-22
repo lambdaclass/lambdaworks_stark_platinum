@@ -13,7 +13,6 @@ use crate::{
         trace::TraceTable,
         traits::AIR,
     },
-    cairo_run::cairo_layout::CairoLayout,
     cairo_vm::{cairo_mem::CairoMemory, cairo_trace::RegisterStates},
     transcript_to_field, FE,
 };
@@ -223,7 +222,7 @@ impl PublicInputs {
 pub struct CairoAIR {
     pub context: AirContext,
     pub number_steps: usize,
-    layout: CairoLayout,
+    has_rc_builtin: bool,
 }
 
 impl CairoAIR {
@@ -235,7 +234,7 @@ impl CairoAIR {
     /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
     /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
     #[rustfmt::skip]
-    pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize, layout: CairoLayout) -> Self {
+    pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize, has_rc_builtin: bool) -> Self {
         let mut trace_columns = 34 + 3 + 12 + 3;
         let mut transition_degrees = vec![
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
@@ -261,7 +260,7 @@ impl CairoAIR {
         ];
         let mut num_transition_constraints = 49;
 
-        if layout == CairoLayout::Small {
+        if has_rc_builtin {
             trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
             transition_degrees.push(1); // Range check builtin constraint
             transition_exemptions.push(0); // range-check builtin exemption
@@ -292,12 +291,12 @@ impl CairoAIR {
         Self {
             context,
             number_steps,
-            layout,
+            has_rc_builtin,
         }
     }
 
     fn get_builtin_offset(&self) -> usize {
-        if self.layout == CairoLayout::Small {
+        if self.has_rc_builtin {
             0
         } else {
             BUILTIN_OFFSET
@@ -345,11 +344,6 @@ fn add_pub_memory_in_public_input_section(
             public_input_section + program_section..,
             output_range.clone().map(FieldElement::from),
         );
-
-        public_input
-            .public_memory
-            .iter()
-            .for_each(|(addr, val)| println!("{} -> {}", addr, val));
 
         for i in public_input_section + program_section..a_aux.len() {
             let address = &a_aux[i];
@@ -525,7 +519,7 @@ impl AIR for CairoAIR {
         permutation_argument(&mut constraints, frame, rap_challenges, builtin_offset);
         permutation_argument_range_check(&mut constraints, frame, rap_challenges, builtin_offset);
 
-        if self.layout == CairoLayout::Small {
+        if self.has_rc_builtin {
             range_check_builtin(&mut constraints, frame);
         }
 

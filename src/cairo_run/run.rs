@@ -1,4 +1,4 @@
-use crate::air::cairo_air::air::{CairoAIR, MemorySegmentMap, PublicInputs};
+use crate::air::cairo_air::air::{CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs};
 use crate::air::context::ProofOptions;
 use crate::air::trace::TraceTable;
 use crate::cairo_vm::cairo_mem::CairoMemory;
@@ -107,8 +107,7 @@ pub fn generate_prover_args(
         CairoLayout::Small
     };
 
-    let (register_states, memory, program_size) =
-        run_program(None, layout.clone(), file_path).unwrap();
+    let (register_states, memory, program_size) = run_program(None, layout, file_path).unwrap();
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -125,7 +124,7 @@ pub fn generate_prover_args(
         proof_options,
         main_trace.n_rows(),
         register_states.steps(),
-        layout,
+        memory_segments.get(&MemorySegment::RangeCheck).is_some(),
     );
 
     (main_trace, cairo_air, pub_inputs)
