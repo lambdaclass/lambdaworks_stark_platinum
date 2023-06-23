@@ -92,11 +92,11 @@ pub fn run_program(
 
     let mut trace_vec = Vec::<u8>::new();
     let mut trace_writer = VecWriter::new(&mut trace_vec);
-    cairo_run::write_encoded_trace(relocated_trace, &mut trace_writer)?;
+    trace_writer.write_encoded_trace(relocated_trace);
 
     let mut memory_vec = Vec::<u8>::new();
     let mut memory_writer = VecWriter::new(&mut memory_vec);
-    cairo_run::write_encoded_memory(&cairo_runner.relocated_memory, &mut memory_writer)?;
+    memory_writer.write_encoded_memory(&cairo_runner.relocated_memory);
 
     trace_writer.flush()?;
     memory_writer.flush()?;
@@ -248,16 +248,16 @@ pub fn run_program_cairo_1(
     runner.relocate(&mut vm, true);
 
     let relocated_trace = vm.get_relocated_trace()?;
-    let relocated_memory = runner.relocated_memory;
+    let relocated_memory = &runner.relocated_memory;
 
     // (RegisterStates, CairoMemory, usize)
     let mut trace_vec = Vec::<u8>::new();
     let mut trace_writer = VecWriter::new(&mut trace_vec);
-    cairo_run::write_encoded_trace(relocated_trace, &mut trace_writer)?;
+    trace_writer.write_encoded_trace(relocated_trace);
 
     let mut memory_vec = Vec::<u8>::new();
     let mut memory_writer = VecWriter::new(&mut memory_vec);
-    cairo_run::write_encoded_memory(&runner.relocated_memory, &mut memory_writer)?;
+    memory_writer.write_encoded_memory(relocated_memory);
 
     trace_writer.flush()?;
     memory_writer.flush()?;
@@ -315,6 +315,8 @@ pub fn generate_prover_args_cairo_1(
         coset_offset: 3,
     };
 
+    let has_builtin = range_check_builtin_range.is_some();
+
     let mut pub_inputs = PublicInputs::from_regs_and_mem(
         &register_states,
         &memory,
@@ -328,7 +330,7 @@ pub fn generate_prover_args_cairo_1(
         proof_options,
         main_trace.n_rows(),
         register_states.steps(),
-        range_check_builtin_range.is_some(),
+        has_builtin,
     );
 
     (main_trace, cairo_air, pub_inputs)

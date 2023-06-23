@@ -1,3 +1,4 @@
+use cairo_vm::felt::Felt252;
 use std::io::{self, Write};
 
 pub struct VecWriter<'a> {
@@ -21,5 +22,37 @@ impl<'a> VecWriter<'a> {
 
     pub fn flush(&mut self) -> io::Result<()> {
         self.buf_writer.flush()
+    }
+
+    pub fn write_encoded_trace(
+        &mut self,
+        relocated_trace: &[cairo_vm::vm::trace::trace_entry::TraceEntry],
+    ) {
+        for entry in relocated_trace.iter() {
+            self.buf_writer
+                .extend_from_slice(&((entry.ap as u64).to_le_bytes()));
+            self.buf_writer
+                .extend_from_slice(&((entry.fp as u64).to_le_bytes()));
+            self.buf_writer
+                .extend_from_slice(&((entry.pc as u64).to_le_bytes()));
+        }
+    }
+
+    /// Writes a binary representation of the relocated memory.
+    ///
+    /// The memory pairs (address, value) are encoded and concatenated:
+    /// * address -> 8-byte encoded
+    /// * value -> 32-byte encoded
+    pub fn write_encoded_memory(&mut self, relocated_memory: &[Option<Felt252>]) {
+        for (i, memory_cell) in relocated_memory.iter().enumerate() {
+            match memory_cell {
+                None => continue,
+                Some(unwrapped_memory_cell) => {
+                    self.buf_writer.extend_from_slice(&(i as u64).to_le_bytes());
+                    self.buf_writer
+                        .extend_from_slice(&unwrapped_memory_cell.to_le_bytes());
+                }
+            }
+        }
     }
 }
