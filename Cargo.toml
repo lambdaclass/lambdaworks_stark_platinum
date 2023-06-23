@@ -33,7 +33,7 @@ metal = ["lambdaworks-math/metal"]
 [[bench]]
 name = "criterion_starks"
 harness = false
-metal = ["lambdaworks-fft/metal"]
+metal = ["lambdaworks-math/metal"]
 
 [profile.release]
 lto = true
