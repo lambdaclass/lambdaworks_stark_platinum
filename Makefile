@@ -1,12 +1,19 @@
-.PHONY: test clippy
+.PHONY: test coverage clippy clean
+
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 CAIRO_PROGRAMS_DIR=cairo_programs
 CAIRO_PROGRAMS:=$(wildcard $(CAIRO_PROGRAMS_DIR)/*.cairo)
 COMPILED_PROGRAMS:=$(patsubst $(CAIRO_PROGRAMS_DIR)/%.cairo, $(CAIRO_PROGRAMS_DIR)/%.json, $(CAIRO_PROGRAMS))
 
+# Rule to compile Cairo programs for testing purposes.
+# If the `cairo-lang` toolchain is installed, programs will be compiled with it
+# Otherwise, the docker image will be used
+# When using the docker version, we sure to build the image using `make docker_build_compiler`.
 $(CAIRO_PROGRAMS_DIR)/%.json: $(CAIRO_PROGRAMS_DIR)/%.cairo
-	cairo-compile --cairo_path="$(CAIRO_PROGRAMS_DIR)" $< --output $@
+	@echo "Compiling Cairo program..."
+	@cairo-compile --cairo_path="$(CAIRO_PROGRAMS_DIR)" $< --output $@ 2> /dev/null || \
+	docker run -v $(ROOT_DIR)/$(CAIRO_PROGRAMS_DIR):/pwd/$(CAIRO_PROGRAMS_DIR) cairo cairo-compile /pwd/$< > $@
 
 build: 
 	cargo build --release
@@ -37,7 +44,7 @@ target/release/lambdaworks-stark:
 	
 docker_compile_and_run: target/release/lambdaworks-stark
 	@echo "Compiling program with docker"
-	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
+	docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
 	@cargo run --features instruments --quiet --release $(PROGRAM).json 
 	@rm $(PROGRAM).json
@@ -51,4 +58,6 @@ compile_and_run: target/release/lambdaworks-stark
 
 clean:
 	rm -f $(CAIRO_PROGRAMS_DIR)/*.json
+	rm -f $(CAIRO_PROGRAMS_DIR)/*.trace
+	rm -f $(CAIRO_PROGRAMS_DIR)/*.memory
 
