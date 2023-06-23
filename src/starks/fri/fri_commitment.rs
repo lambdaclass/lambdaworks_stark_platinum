@@ -1,18 +1,19 @@
 use lambdaworks_math::{
+    fft::polynomial::FFTPoly,
     field::{
         element::FieldElement,
         traits::{IsFFTField, IsField},
     },
+    polynomial::Polynomial,
     traits::ByteConversion,
 };
 
-pub use super::{FriMerkleTree, Polynomial};
-use lambdaworks_math::fft::polynomial::FFTPoly;
+use super::FriMerkleTree;
 
 #[derive(Clone)]
 pub struct FriLayer<F>
 where
-    F: IsField,
+    F: lambdaworks_math::field::traits::IsField,
     FieldElement<F>: ByteConversion,
 {
     pub poly: Polynomial<FieldElement<F>>,
