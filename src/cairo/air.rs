@@ -360,31 +360,23 @@ fn generate_range_check_permutation_argument_column(
     let mut permutation_col = Vec::with_capacity(offset_column_original.len());
     permutation_col.push(f(&offset_column_original[0], &offset_column_sorted[0]));
 
-    let first = z - &offset_column_sorted[0];
-
-    let mut denom: Vec<_> = offset_column_sorted
-        .iter()
-        .scan(first, |state, x| {
-            let res = Some(state.clone());
-            *state = &*state * &(z - x);
-            res
-        })
-        .take(offset_column_sorted.len())
-        .collect();
+    let mut denom: Vec<_> = offset_column_sorted.iter().map(|x| z - x).collect();
     FieldElement::inplace_batch_inverse(&mut denom);
 
-    let first_num = z - &offset_column_original[0];
-
-    offset_column_original
+    let num: Vec<_> = offset_column_original
         .iter()
-        .scan(FE::one(), |state, x| {
-            let res = Some(state.clone());
-            *state = &*state * &(z - x);
-            res
-        })
         .zip(denom.iter())
-        .map(|(num, denom)| num * denom)
-        .collect()
+        .map(|(num_i, den_i)| (z - num_i) * den_i)
+        .collect();
+
+    let mut ret = Vec::with_capacity(num.len());
+    ret.push(num[0].clone());
+
+    for i in 1..num.len() {
+        ret.push(&ret[i - 1] * &num[i]);
+    }
+
+    ret
 }
 
 impl AIR for CairoAIR {
