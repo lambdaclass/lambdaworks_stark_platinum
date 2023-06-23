@@ -101,11 +101,11 @@ pub fn run_program(
         .map(|builtin| {
             let (idx, stop_offset) = builtin.get_memory_segment_addresses();
             let stop_offset = stop_offset.unwrap_or_default();
-            let rangecheck_base =
+            let range_check_base =
                 (0..idx).fold(1, |acc, i| acc + vm.get_segment_size(i).unwrap_or_default());
-            let range_check_end = rangecheck_base + stop_offset;
+            let range_check_end = range_check_base + stop_offset;
 
-            (rangecheck_base, range_check_end)
+            (range_check_base, range_check_end)
         })
         .ok();
 
