@@ -7,9 +7,9 @@ CAIRO_PROGRAMS:=$(wildcard $(CAIRO_PROGRAMS_DIR)/*.cairo)
 COMPILED_PROGRAMS:=$(patsubst $(CAIRO_PROGRAMS_DIR)/%.cairo, $(CAIRO_PROGRAMS_DIR)/%.json, $(CAIRO_PROGRAMS))
 
 # Rule to compile Cairo programs for testing purposes.
-# If the `cairo-lang` toolchain is installed, programs will be compiled with it
-# Otherwise, the docker image will be used
-# When using the docker version, we sure to build the image using `make docker_build_compiler`.
+# If the `cairo-lang` toolchain is installed, programs will be compiled with it.
+# Otherwise, the cairo_compile docker image will be used
+# When using the docker version, be sure to build the image using `make docker_build_compiler`.
 $(CAIRO_PROGRAMS_DIR)/%.json: $(CAIRO_PROGRAMS_DIR)/%.cairo
 	@echo "Compiling Cairo program..."
 	@cairo-compile --cairo_path="$(CAIRO_PROGRAMS_DIR)" $< --output $@ 2> /dev/null || \
@@ -44,7 +44,7 @@ target/release/lambdaworks-stark:
 	
 docker_compile_and_run: target/release/lambdaworks-stark
 	@echo "Compiling program with docker"
-	docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
+	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
 	@cargo run --features instruments --quiet --release $(PROGRAM).json 
 	@rm $(PROGRAM).json
