@@ -251,14 +251,13 @@ pub fn run_program_cairo_1(
     let relocated_memory = runner.relocated_memory;
 
     // (RegisterStates, CairoMemory, usize)
-    /*
     let mut trace_vec = Vec::<u8>::new();
     let mut trace_writer = VecWriter::new(&mut trace_vec);
     cairo_run::write_encoded_trace(relocated_trace, &mut trace_writer)?;
 
     let mut memory_vec = Vec::<u8>::new();
     let mut memory_writer = VecWriter::new(&mut memory_vec);
-    cairo_run::write_encoded_memory(&cairo_runner.relocated_memory, &mut memory_writer)?;
+    cairo_run::write_encoded_memory(&runner.relocated_memory, &mut memory_writer)?;
 
     trace_writer.flush()?;
     memory_writer.flush()?;
@@ -267,10 +266,9 @@ pub fn run_program_cairo_1(
     let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();
     let register_states = RegisterStates::from_bytes_le(&trace_vec).unwrap();
 
-    let data_len = cairo_runner.get_program().data_len();
+    let data_len = runner.get_program().data_len();
 
     Ok((register_states, cairo_mem, data_len))
-    */
 }
 
 pub fn generate_prover_args(
