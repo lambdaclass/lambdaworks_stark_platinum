@@ -43,7 +43,11 @@ pub enum Error {
 ///
 /// # Returns
 ///
-/// Ok(()) in case of succes
+/// Ok() in case of succes, with the following values:
+/// - register_states
+/// - cairo_mem
+/// - data_len
+/// - range_check: an Option<(usize, usize)> containing the start and end of range check.
 /// `Error` indicating the type of error.
 #[allow(clippy::type_complexity)]
 pub fn run_program(
@@ -96,7 +100,7 @@ pub fn run_program(
     let data_len = cairo_runner.get_program().data_len();
 
     // get range start and end
-    let range = vm
+    let range_check = vm
         .get_range_check_builtin()
         .map(|builtin| {
             let (idx, stop_offset) = builtin.get_memory_segment_addresses();
@@ -109,7 +113,7 @@ pub fn run_program(
         })
         .ok();
 
-    Ok((register_states, cairo_mem, data_len, range))
+    Ok((register_states, cairo_mem, data_len, range_check))
 }
 
 pub fn generate_prover_args(
