@@ -361,6 +361,7 @@ fn generate_range_check_permutation_argument_column(
     permutation_col.push(f(&offset_column_original[0], &offset_column_sorted[0]));
 
     let first = z - &offset_column_sorted[0];
+
     let mut denom: Vec<_> = offset_column_sorted
         .iter()
         .scan(first, |state, x| {
@@ -376,7 +377,7 @@ fn generate_range_check_permutation_argument_column(
 
     offset_column_original
         .iter()
-        .scan(first_num, |state, x| {
+        .scan(FE::one(), |state, x| {
             let res = Some(state.clone());
             *state = &*state * &(z - x);
             res
@@ -384,20 +385,6 @@ fn generate_range_check_permutation_argument_column(
         .zip(denom.iter())
         .map(|(num, denom)| num * denom)
         .collect()
-
-    /*
-    let permutation_col = denom
-        * offset_column_original
-            .iter()
-            .fold(FE::one(), |acc, x| acc * (z - x));
-    */
-    /*
-    for i in 1..offset_column_sorted.len() {
-        let last = permutation_col.last().unwrap();
-        permutation_col.push(last * f(&offset_column_original[i], &offset_column_sorted[i]));
-    }*/
-    //permutation_col
-    //vec![]
 }
 
 impl AIR for CairoAIR {
