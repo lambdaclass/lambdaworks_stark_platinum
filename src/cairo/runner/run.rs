@@ -43,13 +43,18 @@ pub enum Error {
 ///
 /// # Returns
 ///
-/// Ok(()) in case of succes
+/// Ok() in case of succes, with the following values:
+/// - register_states
+/// - cairo_mem
+/// - data_len
+/// - range_check: an Option<(usize, usize)> containing the start and end of range check.
 /// `Error` indicating the type of error.
+#[allow(clippy::type_complexity)]
 pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
     filename: &str,
-) -> Result<(RegisterStates, CairoMemory, usize), Error> {
+) -> Result<(RegisterStates, CairoMemory, usize, Option<(usize, usize)>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
@@ -94,14 +99,27 @@ pub fn run_program(
 
     let data_len = cairo_runner.get_program().data_len();
 
-    Ok((register_states, cairo_mem, data_len))
+    // get range start and end
+    let range_check = vm
+        .get_range_check_builtin()
+        .map(|builtin| {
+            let (idx, stop_offset) = builtin.get_memory_segment_addresses();
+            let stop_offset = stop_offset.unwrap_or_default();
+            let range_check_base =
+                (0..idx).fold(1, |acc, i| acc + vm.get_segment_size(i).unwrap_or_default());
+            let range_check_end = range_check_base + stop_offset;
+
+            (range_check_base, range_check_end)
+        })
+        .ok();
+
+    Ok((register_states, cairo_mem, data_len, range_check))
 }
 
 pub fn generate_prover_args(
     file_path: &str,
-    rc_builtin_range: Option<Range<u64>>,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
-    let (register_states, memory, program_size) =
+    let (register_states, memory, program_size, range_check_init_end) =
         run_program(None, CairoLayout::Small, file_path).unwrap();
 
     let proof_options = ProofOptions {
@@ -110,8 +128,17 @@ pub fn generate_prover_args(
         coset_offset: 3,
     };
 
-    let mut pub_inputs =
-        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, rc_builtin_range);
+    let range_check_builtin_range = range_check_init_end.map(|(start, end)| Range {
+        start: start as u64,
+        end: end as u64,
+    });
+
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(
+        &register_states,
+        &memory,
+        program_size,
+        range_check_builtin_range,
+    );
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
@@ -151,7 +178,7 @@ mod tests {
         let base_dir = env!("CARGO_MANIFEST_DIR");
         let json_filename = base_dir.to_owned() + "/src/cairo/runner/program.json";
 
-        let (register_states, memory, program_size) =
+        let (register_states, memory, program_size, _rg_in_out) =
             run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
         let pub_inputs =
             PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
