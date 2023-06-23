@@ -118,9 +118,8 @@ pub fn run_program(
 
 pub fn generate_prover_args(
     file_path: &str,
-    rc_builtin_range: Option<Range<u64>>,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
-    let (register_states, memory, program_size, _rg_init_end) =
+    let (register_states, memory, program_size, range_check_init_end) =
         run_program(None, CairoLayout::Small, file_path).unwrap();
 
     let proof_options = ProofOptions {
@@ -129,8 +128,17 @@ pub fn generate_prover_args(
         coset_offset: 3,
     };
 
-    let mut pub_inputs =
-        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, rc_builtin_range);
+    let range_check_builtin_range = range_check_init_end.map(|(start, end)| Range {
+        start: start as u64,
+        end: end as u64,
+    });
+
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(
+        &register_states,
+        &memory,
+        program_size,
+        range_check_builtin_range,
+    );
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
