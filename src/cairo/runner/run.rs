@@ -62,7 +62,7 @@ pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
     filename: &str,
-) -> Result<(RegisterStates, CairoMemory, usize, Option<(usize, usize)>), Error> {
+) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
@@ -121,7 +121,17 @@ pub fn run_program(
         })
         .ok();
 
-    Ok((register_states, cairo_mem, data_len, range_check))
+    let range_check_builtin_range = range_check.map(|(start, end)| Range {
+        start: start as u64,
+        end: end as u64,
+    });
+
+    Ok((
+        register_states,
+        cairo_mem,
+        data_len,
+        range_check_builtin_range,
+    ))
 }
 
 pub fn run_program_cairo_1(
@@ -240,6 +250,7 @@ pub fn run_program_cairo_1(
     let relocated_trace = vm.get_relocated_trace()?;
     let relocated_memory = runner.relocated_memory;
 
+    // (RegisterStates, CairoMemory, usize)
     /*
     let mut trace_vec = Vec::<u8>::new();
     let mut trace_writer = VecWriter::new(&mut trace_vec);
@@ -265,7 +276,7 @@ pub fn run_program_cairo_1(
 pub fn generate_prover_args(
     file_path: &str,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
-    let (register_states, memory, program_size, range_check_init_end) =
+    let (register_states, memory, program_size, range_check_builtin_range) =
         run_program(None, CairoLayout::Small, file_path).unwrap();
 
     let proof_options = ProofOptions {
@@ -273,11 +284,6 @@ pub fn generate_prover_args(
         fri_number_of_queries: 3,
         coset_offset: 3,
     };
-
-    let range_check_builtin_range = range_check_init_end.map(|(start, end)| Range {
-        start: start as u64,
-        end: end as u64,
-    });
 
     let mut pub_inputs = PublicInputs::from_regs_and_mem(
         &register_states,
@@ -302,7 +308,7 @@ pub fn generate_prover_args(
 pub fn generate_prover_args_cairo_1(
     file_path: &str,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
-    let (register_states, memory, program_size) =
+    let (register_states, memory, program_size, range_check_builtin_range) =
         run_program(None, CairoLayout::Plain, file_path).unwrap();
 
     let proof_options = ProofOptions {
@@ -311,11 +317,21 @@ pub fn generate_prover_args_cairo_1(
         coset_offset: 3,
     };
 
-    let mut pub_inputs = PublicInputs::from_regs_and_mem(&register_states, &memory, program_size);
+    let mut pub_inputs = PublicInputs::from_regs_and_mem(
+        &register_states,
+        &memory,
+        program_size,
+        range_check_builtin_range,
+    );
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
-    let cairo_air = CairoAIR::new(proof_options, main_trace.n_rows(), register_states.steps());
+    let cairo_air = CairoAIR::new(
+        proof_options,
+        main_trace.n_rows(),
+        register_states.steps(),
+        range_check_builtin_range.is_some(),
+    );
 
     (main_trace, cairo_air, pub_inputs)
 }
