@@ -1,5 +1,9 @@
 use lambdaworks_crypto::merkle_tree::proof::Proof;
-use lambdaworks_math::field::{element::FieldElement, traits::IsFFTField};
+use lambdaworks_math::{
+    errors::ByteConversionError,
+    field::{element::FieldElement, traits::IsFFTField},
+    traits::ByteConversion,
+};
 
 use super::{
     frame::Frame,
@@ -36,4 +40,28 @@ pub struct StarkProof<F: IsFFTField> {
     pub query_list: Vec<FriDecommitment<F>>,
     // Open(H₁(D_LDE, 𝜐₀), Open(H₂(D_LDE, 𝜐₀), Open(tⱼ(D_LDE), 𝜐₀)
     pub deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,
+}
+
+impl<F: IsFFTField> ByteConversion for StarkProof<F> {
+    fn to_bytes_be(&self) -> Vec<u8> {
+        todo!()
+    }
+
+    fn to_bytes_le(&self) -> Vec<u8> {
+        todo!()
+    }
+
+    fn from_bytes_be(bytes: &[u8]) -> Result<Self, ByteConversionError>
+    where
+        Self: std::marker::Sized,
+    {
+        todo!()
+    }
+
+    fn from_bytes_le(bytes: &[u8]) -> Result<Self, ByteConversionError>
+    where
+        Self: std::marker::Sized,
+    {
+        todo!()
+    }
 }
