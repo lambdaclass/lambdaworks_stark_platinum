@@ -12,6 +12,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
 use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
+use cairo_vm::hint_processor::cairo_1_hint_processor::hint_processor::Cairo1HintProcessor;
 use cairo_vm::hint_processor::hint_processor_definition::HintProcessor;
 use cairo_vm::serde::deserialize_program::BuiltinName;
 use cairo_vm::types::program::Program;
@@ -138,7 +139,7 @@ pub fn run_program_cairo_1(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
     filename: &str,
-) -> Result<(RegisterStates, CairoMemory, usize), Error> {
+) -> Result<(RegisterStates, CairoMemory, usize,Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
@@ -165,7 +166,7 @@ pub fn run_program_cairo_1(
     let args = [
         Felt252::new(1).into(),
         Felt252::new(1).into(),
-        Felt252::new(1).into(),
+        Felt252::new(100).into(),
     ];
 
     let builtins: Vec<&'static str> = runner
@@ -218,7 +219,7 @@ pub fn run_program_cairo_1(
     ]);
     let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
 
-    let mut hint_processor = BuiltinHintProcessor::new_empty();
+    let mut hint_processor = Cairo1HintProcessor::new(&casm_contract.hints);
 
     // Run contract entrypoint
     // We assume entrypoint 0 for only one function
@@ -270,7 +271,26 @@ pub fn run_program_cairo_1(
 
     let data_len = runner.get_program().data_len();
 
-    Ok((register_states, cairo_mem, data_len))
+    // get range start and end
+    let range_check = vm
+        .get_range_check_builtin()
+        .map(|builtin| {
+            let (idx, stop_offset) = builtin.get_memory_segment_addresses();
+            let stop_offset = stop_offset.unwrap_or_default();
+            let range_check_base =
+                (0..idx).fold(1, |acc, i| acc + vm.get_segment_size(i).unwrap_or_default());
+            let range_check_end = range_check_base + stop_offset;
+
+            (range_check_base, range_check_end)
+        })
+        .ok();
+
+    let range_check_builtin_range = range_check.map(|(start, end)| Range {
+        start: start as u64,
+        end: end as u64,
+    });
+
+    Ok((register_states, cairo_mem, data_len, range_check_builtin_range))
 }
 
 pub fn generate_prover_args(
@@ -309,7 +329,7 @@ pub fn generate_prover_args_cairo_1(
     file_path: &str,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
     let (register_states, memory, program_size, range_check_builtin_range) =
-        run_program(None, CairoLayout::Plain, file_path).unwrap();
+        run_program_cairo_1(None, CairoLayout::Plain, file_path).unwrap();
 
     let proof_options = ProofOptions {
         blowup_factor: 4,

@@ -4,7 +4,7 @@ use lambdaworks_stark::{
         air::{CairoAIR, PublicInputs},
         cairo_layout::CairoLayout,
         execution_trace::build_main_trace,
-        runner::run::{generate_prover_args, program_path, run_program},
+        runner::run::{generate_prover_args, program_path, run_program, generate_prover_args_cairo_1},
     },
     starks::{
         context::{AirContext, ProofOptions},
@@ -129,6 +129,14 @@ fn test_prove_cairo_program(file_path: &str) {
     assert!(verify(&result, &cairo_air, &pub_inputs));
 }
 
+/// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
+fn test_prove_cairo1_program(file_path: &str) {
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args_cairo_1(file_path);
+    let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
+
+    assert!(verify(&result, &cairo_air, &pub_inputs));
+}
+
 #[test_log::test]
 fn test_prove_cairo_simple_program() {
     test_prove_cairo_program(&program_path("simple_program.json"));
@@ -138,6 +146,12 @@ fn test_prove_cairo_simple_program() {
 fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&program_path("fibonacci_5.json"));
 }
+
+#[test_log::test]
+fn test_prove_cairo_fibonacci_casm() {
+    test_prove_cairo1_program(&program_path("fibo.casm"));
+}
+
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
