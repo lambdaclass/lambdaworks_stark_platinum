@@ -19,7 +19,7 @@ use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
 use cairo_vm::vm::errors::trace_errors::TraceError;
 use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
-use cairo_vm::vm::runners::cairo_runner::{CairoArg, CairoRunner};
+use cairo_vm::vm::runners::cairo_runner::{CairoArg, CairoRunner, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use thiserror::Error;
@@ -222,11 +222,13 @@ pub fn run_program_cairo_1(
 
     // Run contract entrypoint
     // We assume entrypoint 0 for only one function
+    let mut run_resources = RunResources::default();
+
     runner
         .run_from_entrypoint(
             0,
             &entrypoint_args,
-            &mut None,
+            &mut run_resources,
             true,
             Some(program.data_len() + program_extra_data.len()),
             &mut vm,
