@@ -1,12 +1,13 @@
-use std::time::Duration;
-
 use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use lambdaworks_stark::{cairo_run::run::generate_prover_args, prover::prove};
+use lambdaworks_stark::{
+    cairo::runner::run::generate_prover_args,
+    starks::{prover::prove, verifier::verify},
+};
+use std::time::Duration;
 
 pub mod functions;
-pub mod util;
 
 fn cairo_benches(c: &mut Criterion) {
     let mut group = c.benchmark_group("CAIRO");
@@ -26,18 +27,47 @@ fn cairo_benches(c: &mut Criterion) {
 
 fn program_path(program_name: &str) -> String {
     const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const PROGRAM_BASE_REL_PATH: &str = "/src/cairo_vm/test_data/";
+    const PROGRAM_BASE_REL_PATH: &str = "/cairo_programs/";
     let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
     program_base_path + program_name
 }
 
 fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(program_path);
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(program_path, None);
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| black_box(prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap()));
     });
 }
 
-criterion_group!(benches, cairo_benches);
+fn verifier_benches(c: &mut Criterion) {
+    let mut group = c.benchmark_group("VERIFIER");
+    group.sample_size(10);
+    group.measurement_time(Duration::from_secs(30));
+    run_verifier_bench(
+        &mut group,
+        "fibonacci/10",
+        &program_path("fibonacci_10.json"),
+    );
+    run_verifier_bench(
+        &mut group,
+        "fibonacci/30",
+        &program_path("fibonacci_30.json"),
+    );
+}
+
+fn run_verifier_bench(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    benchname: &str,
+    program_path: &str,
+) {
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(program_path, None);
+    let proof = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
+
+    group.bench_function(benchname, |bench| {
+        bench.iter(|| black_box(verify(&proof, &cairo_air, &pub_inputs)));
+    });
+}
+
+criterion_group!(benches, cairo_benches, verifier_benches);
 criterion_main!(benches);

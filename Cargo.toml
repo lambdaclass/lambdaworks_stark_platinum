@@ -15,8 +15,9 @@ log = "0.4.17"
 bincode = { version = "2.0.0-rc.2", tag = "v2.0.0-rc.2", git = "https://github.com/bincode-org/bincode.git" }
 cairo-vm = { version = "0.5.2", features = ["cairo-1-hints"] }
 sha3 = "0.10.6"
-cairo-lang-starknet = { version = "1.1.0"}
-serde_json = { version = "1.0" }
+cairo-lang-starknet = "1.1.0"
+serde_json = "1.0"
+num-integer = "0.1.45"
 
 [dev-dependencies]
 hex = "0.4.3"
@@ -28,6 +29,7 @@ rstest = "0.17.0"
 
 [features]
 test_fiat_shamir = []
+instruments = []      # This enables timing prints in prover and verifier
 
 [[bench]]
 name = "criterion_starks"
@@ -38,3 +40,8 @@ metal = ["lambdaworks-fft/metal"]
 lto = true
 opt-level = 3
 codegen-units = 1
+
+[profile.test]
+lto = true
+opt-level = 3
+debug = 2
