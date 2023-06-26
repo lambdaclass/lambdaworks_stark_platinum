@@ -41,8 +41,8 @@ pub enum Error {
 /// Indicates the version of the Cairo program.
 /// This is used to determine how to parse and run the program.
 pub enum CairoVersion {
-    Zero = 0,
-    One = 1,
+    V0 = 0,
+    V1 = 1,
 }
 
 /// Runs a cairo program in JSON format and returns trace, memory and program length.
@@ -297,9 +297,12 @@ pub fn run_program_cairo_1(
 
 pub fn generate_prover_args(
     file_path: &str,
+    cairo_version: &CairoVersion,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
-    let (register_states, memory, program_size, range_check_builtin_range) =
-        run_program(None, CairoLayout::Small, file_path).unwrap();
+    let (register_states, memory, program_size, range_check_builtin_range) = match cairo_version {
+        CairoVersion::V0 => run_program(None, CairoLayout::Small, file_path).unwrap(),
+        CairoVersion::V1 => run_program_cairo_1(None, CairoLayout::Plain, file_path).unwrap(),
+    };
 
     println!("Trace length: {}", register_states.rows.len());
 
@@ -324,41 +327,6 @@ pub fn generate_prover_args(
         main_trace.n_rows(),
         register_states.steps(),
         has_range_check_builtin,
-    );
-
-    (main_trace, cairo_air, pub_inputs)
-}
-
-pub fn generate_prover_args_cairo_1(
-    file_path: &str,
-) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
-    let (register_states, memory, program_size, range_check_builtin_range) =
-        run_program_cairo_1(None, CairoLayout::Plain, file_path).unwrap();
-
-    println!("Trace length: {}", register_states.rows.len());
-
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-    };
-
-    let has_builtin = range_check_builtin_range.is_some();
-
-    let mut pub_inputs = PublicInputs::from_regs_and_mem(
-        &register_states,
-        &memory,
-        program_size,
-        range_check_builtin_range,
-    );
-
-    let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
-
-    let cairo_air = CairoAIR::new(
-        proof_options,
-        main_trace.n_rows(),
-        register_states.steps(),
-        has_builtin,
     );
 
     (main_trace, cairo_air, pub_inputs)

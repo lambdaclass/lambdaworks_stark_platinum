@@ -4,7 +4,7 @@ use lambdaworks_stark::{
         air::{CairoAIR, PublicInputs},
         cairo_layout::CairoLayout,
         execution_trace::build_main_trace,
-        runner::run::{generate_prover_args, program_path, run_program, generate_prover_args_cairo_1},
+        runner::run::{generate_prover_args, program_path, run_program, CairoVersion},
     },
     starks::{
         context::{AirContext, ProofOptions},
@@ -121,17 +121,19 @@ fn test_prove_quadratic() {
 }
 
 #[ignore = "metal"]
-/// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
+/// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo_program(file_path: &str) {
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path);
+    let (main_trace, cairo_air, mut pub_inputs) =
+        generate_prover_args(file_path, &CairoVersion::V0);
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
 }
 
-/// Loads the program in path, runs it with the Cairo VM, and amkes a proof of it
+/// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo1_program(file_path: &str) {
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args_cairo_1(file_path);
+    let (main_trace, cairo_air, mut pub_inputs) =
+        generate_prover_args(file_path, &CairoVersion::V1);
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -151,7 +153,6 @@ fn test_prove_cairo_fibonacci_5() {
 fn test_prove_cairo_fibonacci_casm() {
     test_prove_cairo1_program(&program_path("fibo.casm"));
 }
-
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
@@ -224,7 +225,7 @@ fn test_prove_dummy() {
 #[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"));
+        generate_prover_args(&program_path("simple_program.json"), &CairoVersion::V0);
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     // We modify the original program and verify using this new "corrupted" version
@@ -240,7 +241,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_range_bounds() {
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("simple_program.json"));
+        generate_prover_args(&program_path("simple_program.json"), &CairoVersion::V0);
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);
@@ -257,7 +258,7 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     // that asserts that the sum of the rc decomposed values is equal to the
     // range-checked value won't hold, and the verifier will reject the proof.
     let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("rc_program.json"));
+        generate_prover_args(&program_path("rc_program.json"), &CairoVersion::V0);
 
     // The malicious value, we change the previous value to a 35.
     let malicious_rc_value = FE::from(35);

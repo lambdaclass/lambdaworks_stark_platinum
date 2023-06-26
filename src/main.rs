@@ -1,13 +1,7 @@
+use lambdaworks_stark::cairo::runner::run::{generate_prover_args, CairoVersion};
+use lambdaworks_stark::starks::{prover::prove, verifier::verify};
 use std::env;
-
 use std::time::Instant;
-
-use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
-use lambdaworks_stark::cairo::air::{CairoAIR, PublicInputs};
-use lambdaworks_stark::cairo::runner::run::{generate_prover_args, generate_prover_args_cairo_1};
-use lambdaworks_stark::starks::prover::prove;
-use lambdaworks_stark::starks::trace::TraceTable;
-use lambdaworks_stark::starks::verifier::verify;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -16,18 +10,16 @@ fn main() {
 
     let timer = Instant::now();
 
-    let main_trace: TraceTable<Stark252PrimeField>;
-    let cairo_air: CairoAIR;
-    let mut pub_inputs: PublicInputs;
-
-    if file_path.contains(".casm"){
+    let cairo_version = if file_path.contains(".casm") {
         println!("Running casm on CairoVM and generating trace ...");
-        (main_trace, cairo_air, pub_inputs) = generate_prover_args_cairo_1(file_path);
+        CairoVersion::V1
     } else {
         println!("Running program on CairoVM and generating trace ...");
-        (main_trace, cairo_air, pub_inputs) = generate_prover_args(file_path);
-    }
-    
+        CairoVersion::V0
+    };
+
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path, &cairo_version);
+
     println!("  Time spent: {:?} \n", timer.elapsed());
 
     let timer = Instant::now();
