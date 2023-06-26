@@ -156,7 +156,10 @@ where
         for commitment in &self.lde_trace_merkle_roots {
             bytes.extend(commitment);
         }
-        bytes.extend(self.trace_ood_frame_evaluations.serialize());
+        let trace_ood_frame_evaluations_bytes = self.trace_ood_frame_evaluations.serialize();
+        bytes.extend(trace_ood_frame_evaluations_bytes.len().to_be_bytes());
+        bytes.extend(trace_ood_frame_evaluations_bytes);
+
         bytes.extend(self.composition_poly_root);
 
         let composition_poly_even_ood_evaluation_bytes =
@@ -178,10 +181,172 @@ where
 
         bytes.extend(self.query_list.len().to_be_bytes());
         for query in &self.query_list {
-            bytes.extend(query.serialize());
+            let query_bytes = query.serialize();
+            bytes.extend(query_bytes.len().to_be_bytes());
+            bytes.extend(query_bytes);
+        }
+
+        bytes.extend(self.deep_poly_openings.len().to_be_bytes());
+        for opening in &self.deep_poly_openings {
+            let opening_bytes = opening.serialize();
+            bytes.extend(opening_bytes.len().to_be_bytes());
+            bytes.extend(opening_bytes);
         }
 
         bytes
+    }
+}
+
+impl<F> Deserializable for StarkProof<F>
+where
+    F: IsFFTField,
+    FieldElement<F>: ByteConversion,
+{
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError>
+    where
+        Self: Sized,
+    {
+        let mut bytes = bytes;
+        let lde_trace_merkle_roots_len = usize::from_be_bytes(
+            bytes[..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+
+        let mut lde_trace_merkle_roots = vec![];
+        for _ in 0..lde_trace_merkle_roots_len {
+            let commitment = bytes[..32]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
+            lde_trace_merkle_roots.push(commitment);
+            bytes = &bytes[32..];
+        }
+
+        let trace_ood_frame_evaluations_len = usize::from_be_bytes(
+            bytes[..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+        let trace_ood_frame_evaluations: Frame<F> = Frame::deserialize(
+            bytes[..trace_ood_frame_evaluations_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[trace_ood_frame_evaluations_len..];
+
+        let composition_poly_root = bytes[..32]
+            .try_into()
+            .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
+        bytes = &bytes[32..];
+
+        let felt_len = usize::from_be_bytes(
+            bytes[..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+
+        let composition_poly_even_ood_evaluation = FieldElement::from_bytes_be(
+            bytes[..felt_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[felt_len..];
+
+        let composition_poly_odd_ood_evaluation = FieldElement::from_bytes_be(
+            bytes[..felt_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[felt_len..];
+
+        let fri_layers_merkle_roots_len = usize::from_be_bytes(
+            bytes[..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+
+        let mut fri_layers_merkle_roots = vec![];
+        for _ in 0..fri_layers_merkle_roots_len {
+            let commitment = bytes[..32]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
+            fri_layers_merkle_roots.push(commitment);
+            bytes = &bytes[32..];
+        }
+
+        let fri_last_value = FieldElement::from_bytes_be(
+            bytes[..felt_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[felt_len..];
+
+        let query_list_len = usize::from_be_bytes(
+            bytes[..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+
+        let mut query_list = vec![];
+        for _ in 0..query_list_len {
+            let query_len = usize::from_be_bytes(
+                bytes[..8]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            );
+            bytes = &bytes[8..];
+
+            let query = FriDecommitment::deserialize(
+                bytes[..query_len]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            )?;
+            bytes = &bytes[query_len..];
+
+            query_list.push(query);
+        }
+
+        let deep_poly_openings_len = usize::from_be_bytes(
+            bytes[..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+        let mut deep_poly_openings = vec![];
+        for _ in 0..deep_poly_openings_len {
+            let opening_len = usize::from_be_bytes(
+                bytes[..8]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            );
+            bytes = &bytes[8..];
+
+            let opening = DeepPolynomialOpenings::deserialize(
+                bytes[..opening_len]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            )?;
+            bytes = &bytes[opening_len..];
+
+            deep_poly_openings.push(opening);
+        }
+
+        Ok(StarkProof {
+            lde_trace_merkle_roots,
+            trace_ood_frame_evaluations,
+            composition_poly_root,
+            composition_poly_even_ood_evaluation,
+            composition_poly_odd_ood_evaluation,
+            fri_layers_merkle_roots,
+            fri_last_value,
+            query_list,
+            deep_poly_openings,
+        })
     }
 }
 
@@ -194,8 +359,9 @@ mod test {
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
     use crate::starks::{
+        frame::Frame,
         fri::{fri_decommit::FriDecommitment, Commitment},
-        proof::DeepPolynomialOpenings,
+        proof::{DeepPolynomialOpenings, StarkProof},
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
 
@@ -257,6 +423,12 @@ mod test {
     }
 
     prop_compose! {
+        fn fri_decommitment_vec()(vec in collection::vec(some_fri_decommitment(), 32)) -> Vec<FriDecommitment<Stark252PrimeField>> {
+            vec
+        }
+    }
+
+    prop_compose! {
         fn some_deep_polynomial_openings()(
             lde_composition_poly_proof in some_proof(),
             lde_composition_poly_even_evaluation in some_felt(),
@@ -270,6 +442,45 @@ mod test {
                 lde_composition_poly_odd_evaluation,
                 lde_trace_merkle_proofs,
                 lde_trace_evaluations
+            }
+        }
+    }
+
+    prop_compose! {
+        fn deep_polynomial_openings_vec()(vec in collection::vec(some_deep_polynomial_openings(), 16)) -> Vec<DeepPolynomialOpenings<Stark252PrimeField>> {
+            vec
+        }
+    }
+
+    prop_compose! {
+        fn some_frame()(data in field_vec(), row_width in any::<usize>()) -> Frame<Stark252PrimeField> {
+            Frame::new(data, row_width)
+        }
+    }
+
+    prop_compose! {
+        fn some_stark_proof()(
+            lde_trace_merkle_roots in commitment_vec(),
+            trace_ood_frame_evaluations in some_frame(),
+            composition_poly_root in some_commitment(),
+            composition_poly_even_ood_evaluation in some_felt(),
+            composition_poly_odd_ood_evaluation in some_felt(),
+            fri_layers_merkle_roots in commitment_vec(),
+            fri_last_value in some_felt(),
+            query_list in fri_decommitment_vec(),
+            deep_poly_openings in deep_polynomial_openings_vec()
+
+    ) -> StarkProof<Stark252PrimeField> {
+            StarkProof {
+                lde_trace_merkle_roots,
+                trace_ood_frame_evaluations,
+                composition_poly_root,
+                composition_poly_even_ood_evaluation,
+                composition_poly_odd_ood_evaluation,
+                fri_layers_merkle_roots,
+                fri_last_value,
+                query_list,
+                deep_poly_openings
             }
         }
     }
@@ -290,6 +501,44 @@ mod test {
             prop_assert_eq!(deep_polynomial_openings.lde_composition_poly_odd_evaluation, deserialized.lde_composition_poly_odd_evaluation);
             prop_assert_eq!(deep_polynomial_openings.lde_composition_poly_proof.merkle_path, deserialized.lde_composition_poly_proof.merkle_path);
             prop_assert_eq!(deep_polynomial_openings.lde_trace_evaluations, deserialized.lde_trace_evaluations);
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_stark_proof_serialization(
+            stark_proof in some_stark_proof()
+        ) {
+            let serialized = stark_proof.serialize();
+            let deserialized = StarkProof::<Stark252PrimeField>::deserialize(&serialized).unwrap();
+
+            prop_assert_eq!(stark_proof.lde_trace_merkle_roots, deserialized.lde_trace_merkle_roots);
+            prop_assert_eq!(stark_proof.trace_ood_frame_evaluations.num_columns(), deserialized.trace_ood_frame_evaluations.num_columns());
+            prop_assert_eq!(stark_proof.trace_ood_frame_evaluations.num_rows(), deserialized.trace_ood_frame_evaluations.num_rows());
+            prop_assert_eq!(stark_proof.composition_poly_root, deserialized.composition_poly_root);
+            prop_assert_eq!(stark_proof.composition_poly_even_ood_evaluation, deserialized.composition_poly_even_ood_evaluation);
+            prop_assert_eq!(stark_proof.composition_poly_odd_ood_evaluation, deserialized.composition_poly_odd_ood_evaluation);
+            prop_assert_eq!(stark_proof.fri_layers_merkle_roots, deserialized.fri_layers_merkle_roots);
+            prop_assert_eq!(stark_proof.fri_last_value, deserialized.fri_last_value);
+
+            for (a, b) in stark_proof.query_list.iter().zip(deserialized.query_list.iter()) {
+                for (x, y) in a.clone().layers_auth_paths_sym.iter().zip(b.clone().layers_auth_paths_sym.iter()) {
+                    prop_assert_eq!(&x.merkle_path, &y.merkle_path);
+                };
+                prop_assert_eq!(&a.layers_evaluations_sym, &b.layers_evaluations_sym);
+                prop_assert_eq!(&a.first_layer_evaluation, &b.first_layer_evaluation);
+                prop_assert_eq!(&a.first_layer_auth_path.merkle_path, &b.first_layer_auth_path.merkle_path);
+            };
+
+            for (a, b) in stark_proof.deep_poly_openings.iter().zip(deserialized.deep_poly_openings.iter()){
+                for (x, y) in a.clone().lde_trace_merkle_proofs.iter().zip(b.clone().lde_trace_merkle_proofs.iter()) {
+                    prop_assert_eq!(&x.merkle_path, &y.merkle_path);
+                };
+                prop_assert_eq!(&a.lde_composition_poly_even_evaluation, &b.lde_composition_poly_even_evaluation);
+                prop_assert_eq!(&a.lde_composition_poly_odd_evaluation, &b.lde_composition_poly_odd_evaluation);
+                prop_assert_eq!(&a.lde_composition_poly_proof.merkle_path, &b.lde_composition_poly_proof.merkle_path);
+                prop_assert_eq!(&a.lde_trace_evaluations, &b.lde_trace_evaluations);
+            }
         }
     }
 }

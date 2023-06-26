@@ -91,7 +91,7 @@ where
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.extend(self.data.len().to_be_bytes());
-        let felt_len = if self.data.len() == 0 {
+        let felt_len = if self.data.is_empty() {
             0
         } else {
             self.data[0].to_bytes_be().len()
