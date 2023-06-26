@@ -5,6 +5,8 @@ use lambdaworks_math::{
     traits::ByteConversion,
 };
 
+#[cfg(debug_assertions)]
+use crate::starks::debug::check_boundary_polys_divisibility;
 use crate::starks::domain::Domain;
 use crate::starks::frame::Frame;
 use crate::starks::prover::evaluate_polynomial_on_lde_domain;
@@ -109,10 +111,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             .collect();
 
         #[cfg(debug_assertions)]
-        for (poly, z) in boundary_polys.iter().zip(boundary_zerofiers.iter()) {
-            let (_, b) = poly.clone().long_division_with_remainder(z);
-            assert_eq!(b, Polynomial::zero());
-        }
+        check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
 
         let blowup_factor = self.air.blowup_factor();
 
