@@ -66,7 +66,11 @@ Clone `cairo` repository:
 git clone https://github.com/starkware-libs/cairo
 ```
 
-in the `cairo` folder, run:
+Checkout version 1.1.0 (corresponding to that tag of the repository). In the `cairo` folder, run:
+
+``` bash
+git checkout v1.1.0
+```
 
 - To create json file from Cairo contract:
 
