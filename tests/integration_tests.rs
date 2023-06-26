@@ -336,8 +336,12 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 
 #[test_log::test]
 fn test_verifier_rejects_proof_with_changed_output() {
-    let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("output_program.json"), &Some(19..20));
+    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
+        &program_path("output_program.json"),
+        &CairoVersion::V0,
+        &None,
+    )
+    .unwrap();
 
     // The malicious value, we change the previous value to a 100.
     let malicious_output_value = FE::from(100);
