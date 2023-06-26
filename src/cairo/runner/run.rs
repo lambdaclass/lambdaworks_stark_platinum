@@ -38,6 +38,13 @@ pub enum Error {
     Trace(#[from] TraceError),
 }
 
+/// Indicates the version of the Cairo program.
+/// This is used to determine how to parse and run the program.
+pub enum CairoVersion {
+    Zero = 0,
+    One = 1,
+}
+
 /// Runs a cairo program in JSON format and returns trace, memory and program length.
 /// Uses [cairo-rs](https://github.com/lambdaclass/cairo-rs/) project to run the program.
 ///
@@ -138,7 +145,7 @@ pub fn run_program_cairo_1(
     _entrypoint_function: Option<&str>,
     layout: CairoLayout,
     filename: &str,
-) -> Result<(RegisterStates, CairoMemory, usize,Option<Range<u64>>), Error> {
+) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     // let entrypoint = entrypoint_function.unwrap_or("main");
 
@@ -157,7 +164,9 @@ pub fn run_program_cairo_1(
 
     let mut vm = VirtualMachine::new(true);
 
-    runner.initialize_function_runner_cairo_1(&mut vm, &[BuiltinName::range_check]).unwrap();
+    runner
+        .initialize_function_runner_cairo_1(&mut vm, &[BuiltinName::range_check])
+        .unwrap();
 
     // Implicit Args
     let syscall_segment = MaybeRelocatable::from(vm.add_memory_segment());
@@ -236,7 +245,7 @@ pub fn run_program_cairo_1(
         )
         .unwrap();
 
-    let _ =runner.relocate(&mut vm, true);
+    let _ = runner.relocate(&mut vm, true);
 
     let relocated_trace = vm.get_relocated_trace()?;
     let relocated_memory = &runner.relocated_memory;
@@ -278,7 +287,12 @@ pub fn run_program_cairo_1(
         end: end as u64,
     });
 
-    Ok((register_states, cairo_mem, data_len, range_check_builtin_range))
+    Ok((
+        register_states,
+        cairo_mem,
+        data_len,
+        range_check_builtin_range,
+    ))
 }
 
 pub fn generate_prover_args(
@@ -288,7 +302,6 @@ pub fn generate_prover_args(
         run_program(None, CairoLayout::Small, file_path).unwrap();
 
     println!("Trace length: {}", register_states.rows.len());
-
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
