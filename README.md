@@ -24,10 +24,9 @@ To be added:
   
 ## How to try it
 
-For the moment, only programs with no builtins can be verified with the CLI. This
-feature will be added soon.
+For the moment, only programs in Cairo 0 with no arguments and contracts in Cairo 1 with no arguments are supported.
 
-### Using Docker compiler
+### Using Docker compiler for Cairo 0 programs
 
 Build the compiler image with:
 
@@ -37,10 +36,24 @@ Then for example, if you have a Cairo program in the project folder, you can use
 
 `make docker_compile_and_run PROGRAM=program_name.cairo`
 
-### Using cairo-compile
+### Using cairo-compile for Cairo 0 programs
 
 If you have `cairo-lang`installed, you can use it instead of the Dockerfile
 
 Then for example, if you have some Cairo program in the project folder, you can use:
 
 `make compile_and_run PROGRAM=program_name.cairo`
+
+### Compiling Cairo 1 contracts
+
+To run, prove and verify Cairo 1 contracts, use the following command:
+
+``` bash
+cargo run -- <PATH-TO-casm-FILE>
+```
+
+for example:
+
+``` bash
+cargo run -- cairo_programs/fibonacci.casm
+```
