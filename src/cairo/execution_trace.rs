@@ -679,7 +679,7 @@ mod test {
         ```
         */
 
-        let (register_states, memory, program_size) = run_program(
+        let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
             &program_path("simple_program.json"),
@@ -794,7 +794,7 @@ mod test {
         ```
         */
 
-        let (register_states, memory, program_size) =
+        let (register_states, memory, program_size, _rangecheck_base_end) =
             run_program(None, CairoLayout::AllCairo, &program_path("call_func.json")).unwrap();
         let pub_inputs = PublicInputs::from_regs_and_mem(
             &register_states,

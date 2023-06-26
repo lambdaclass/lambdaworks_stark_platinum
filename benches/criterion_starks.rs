@@ -2,7 +2,7 @@ use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
 use lambdaworks_stark::{
-    cairo::{air::MemorySegmentMap, runner::run::generate_prover_args},
+    cairo::runner::run::generate_prover_args,
     starks::{prover::prove, verifier::verify},
 };
 use std::time::Duration;
@@ -33,8 +33,7 @@ fn program_path(program_name: &str) -> String {
 }
 
 fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
-    let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(program_path, &MemorySegmentMap::new());
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(program_path, &None);
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| black_box(prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap()));
@@ -62,8 +61,7 @@ fn run_verifier_bench(
     benchname: &str,
     program_path: &str,
 ) {
-    let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(program_path, &MemorySegmentMap::new());
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(program_path, &None);
     let proof = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     group.bench_function(benchname, |bench| {

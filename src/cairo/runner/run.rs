@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use super::vec_writer::VecWriter;
 use crate::cairo::air::{CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs};
 use crate::cairo::cairo_layout::CairoLayout;
@@ -41,13 +43,18 @@ pub enum Error {
 ///
 /// # Returns
 ///
-/// Ok(()) in case of succes
+/// Ok() in case of succes, with the following values:
+/// - register_states
+/// - cairo_mem
+/// - data_len
+/// - range_check: an Option<(usize, usize)> containing the start and end of range check.
 /// `Error` indicating the type of error.
+#[allow(clippy::type_complexity)]
 pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
     filename: &str,
-) -> Result<(RegisterStates, CairoMemory, usize), Error> {
+) -> Result<(RegisterStates, CairoMemory, usize, Option<(usize, usize)>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
@@ -92,21 +99,30 @@ pub fn run_program(
 
     let data_len = cairo_runner.get_program().data_len();
 
-    Ok((register_states, cairo_mem, data_len))
+    // get range start and end
+    let range_check = vm
+        .get_range_check_builtin()
+        .map(|builtin| {
+            let (idx, stop_offset) = builtin.get_memory_segment_addresses();
+            let stop_offset = stop_offset.unwrap_or_default();
+            let range_check_base =
+                (0..idx).fold(1, |acc, i| acc + vm.get_segment_size(i).unwrap_or_default());
+            let range_check_end = range_check_base + stop_offset;
+
+            (range_check_base, range_check_end)
+        })
+        .ok();
+
+    Ok((register_states, cairo_mem, data_len, range_check))
 }
 
 pub fn generate_prover_args(
     file_path: &str,
-    memory_segments: &MemorySegmentMap,
+    output_range: &Option<Range<u64>>,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
     // TODO: If other layouts are added, this must be done in another way.
-    let layout = if memory_segments.is_empty() {
-        CairoLayout::Plain
-    } else {
-        CairoLayout::Small
-    };
-
-    let (register_states, memory, program_size) = run_program(None, layout, file_path).unwrap();
+    let (register_states, memory, program_size, range_check_init_end) =
+        run_program(None, CairoLayout::Small, file_path).unwrap();
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -114,8 +130,15 @@ pub fn generate_prover_args(
         coset_offset: 3,
     };
 
+    let range_check_builtin_range = range_check_init_end.map(|(start, end)| Range {
+        start: start as u64,
+        end: end as u64,
+    });
+
+    let memory_segments = create_memory_segment_map(range_check_builtin_range, output_range);
+
     let mut pub_inputs =
-        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, memory_segments);
+        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, &memory_segments);
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
@@ -128,6 +151,22 @@ pub fn generate_prover_args(
     );
 
     (main_trace, cairo_air, pub_inputs)
+}
+
+fn create_memory_segment_map(
+    range_check_builtin_range: Option<Range<u64>>,
+    output_range: &Option<Range<u64>>,
+) -> MemorySegmentMap {
+    let mut memory_segments = MemorySegmentMap::new();
+
+    if let Some(range_check_builtin_range) = range_check_builtin_range {
+        memory_segments.insert(MemorySegment::RangeCheck, range_check_builtin_range);
+    }
+    if let Some(output_range) = output_range {
+        memory_segments.insert(MemorySegment::Output, output_range.clone());
+    }
+
+    memory_segments
 }
 
 pub fn program_path(program_name: &str) -> String {
@@ -155,7 +194,7 @@ mod tests {
         let base_dir = env!("CARGO_MANIFEST_DIR");
         let json_filename = base_dir.to_owned() + "/src/cairo/runner/program.json";
 
-        let (register_states, memory, program_size) =
+        let (register_states, memory, program_size, _rg_in_out) =
             run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
         let pub_inputs = PublicInputs::from_regs_and_mem(
             &register_states,
