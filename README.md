@@ -57,3 +57,25 @@ for example:
 ``` bash
 cargo run -- cairo_programs/fibonacci.casm
 ```
+
+#### Generating casm file from cairo contract file
+
+Clone `cairo` repository:
+
+``` bash
+git clone https://github.com/starkware-libs/cairo
+```
+
+in the `cairo` folder, run:
+
+- To create json file from Cairo contract:
+
+  ``` bash
+  cargo run --bin starknet-compile -- /path/to/input.cairo /path/to/output.json
+  ```
+
+- To create casm file from json file:
+
+  ``` bash
+  cargo run --bin starknet-sierra-compile -- /path/to/input.json /path/to/output.casm
+  ```
