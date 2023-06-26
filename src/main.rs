@@ -18,7 +18,11 @@ fn main() {
         CairoVersion::V0
     };
 
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path, &cairo_version);
+    let Ok((main_trace, cairo_air, mut pub_inputs)) =
+        generate_prover_args(file_path, &cairo_version) else {
+            println!("Error generating prover args");
+            return;
+        };
 
     println!("  Time spent: {:?} \n", timer.elapsed());
 

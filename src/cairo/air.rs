@@ -901,7 +901,7 @@ mod test {
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let (main_trace, cairo_air, public_input) =
-            generate_prover_args(&program_path("simple_program.json"), &CairoVersion::V0);
+            generate_prover_args(&program_path("simple_program.json"), &CairoVersion::V0).unwrap();
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);

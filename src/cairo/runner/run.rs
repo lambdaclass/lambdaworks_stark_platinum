@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use super::vec_writer::VecWriter;
 use crate::cairo::air::{CairoAIR, PublicInputs};
 use crate::cairo::cairo_layout::CairoLayout;
@@ -14,14 +12,14 @@ use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
 use cairo_vm::hint_processor::cairo_1_hint_processor::hint_processor::Cairo1HintProcessor;
 use cairo_vm::serde::deserialize_program::BuiltinName;
-use cairo_vm::types::program::Program;
-use cairo_vm::types::relocatable::MaybeRelocatable;
-use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
-use cairo_vm::vm::errors::trace_errors::TraceError;
-use cairo_vm::vm::errors::vm_errors::VirtualMachineError;
+use cairo_vm::types::{program::Program, relocatable::MaybeRelocatable};
+use cairo_vm::vm::errors::{
+    cairo_run_errors::CairoRunError, trace_errors::TraceError, vm_errors::VirtualMachineError,
+};
 use cairo_vm::vm::runners::cairo_runner::{CairoArg, CairoRunner, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
+use std::ops::Range;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -69,107 +67,11 @@ pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
     filename: &str,
+    cairo_version: &CairoVersion,
 ) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
-
-    let trace_enabled = true;
-    let mut hint_executor = BuiltinHintProcessor::new_empty();
-    let cairo_run_config = cairo_run::CairoRunConfig {
-        entrypoint,
-        trace_enabled,
-        relocate_mem: true,
-        layout: layout.as_str(),
-        proof_mode: false,
-        secure_run: None,
-    };
-
     let program_content = std::fs::read(filename).map_err(Error::IO)?;
-
-    let (cairo_runner, vm) =
-        match cairo_run::cairo_run(&program_content, &cairo_run_config, &mut hint_executor) {
-            Ok(runner) => runner,
-            Err(error) => {
-                eprintln!("{error}");
-                return Err(Error::Runner(error));
-            }
-        };
-
-    let relocated_trace = vm.get_relocated_trace()?;
-
-    let mut trace_vec = Vec::<u8>::new();
-    let mut trace_writer = VecWriter::new(&mut trace_vec);
-    trace_writer.write_encoded_trace(relocated_trace);
-
-    let mut memory_vec = Vec::<u8>::new();
-    let mut memory_writer = VecWriter::new(&mut memory_vec);
-    memory_writer.write_encoded_memory(&cairo_runner.relocated_memory);
-
-    trace_writer.flush()?;
-    memory_writer.flush()?;
-
-    //TO DO: Better error handling
-    let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();
-    let register_states = RegisterStates::from_bytes_le(&trace_vec).unwrap();
-
-    let data_len = cairo_runner.get_program().data_len();
-
-    // get range start and end
-    let range_check = vm
-        .get_range_check_builtin()
-        .map(|builtin| {
-            let (idx, stop_offset) = builtin.get_memory_segment_addresses();
-            let stop_offset = stop_offset.unwrap_or_default();
-            let range_check_base =
-                (0..idx).fold(1, |acc, i| acc + vm.get_segment_size(i).unwrap_or_default());
-            let range_check_end = range_check_base + stop_offset;
-
-            (range_check_base, range_check_end)
-        })
-        .ok();
-
-    let range_check_builtin_range = range_check.map(|(start, end)| Range {
-        start: start as u64,
-        end: end as u64,
-    });
-
-    Ok((
-        register_states,
-        cairo_mem,
-        data_len,
-        range_check_builtin_range,
-    ))
-}
-
-pub fn run_program_cairo_1(
-    _entrypoint_function: Option<&str>,
-    layout: CairoLayout,
-    filename: &str,
-) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
-    // default value for entrypoint is "main"
-    // let entrypoint = entrypoint_function.unwrap_or("main");
-
-    let program_content = std::fs::read(filename).map_err(Error::IO)?;
-
-    let casm_contract: CasmContractClass = serde_json::from_slice(&program_content).unwrap();
-
-    let program: Program = casm_contract.clone().try_into().unwrap();
-
-    let mut runner = CairoRunner::new(
-        &(casm_contract.clone().try_into().unwrap()),
-        layout.as_str(),
-        false,
-    )
-    .unwrap();
-
-    let mut vm = VirtualMachine::new(true);
-
-    runner
-        .initialize_function_runner_cairo_1(&mut vm, &[BuiltinName::range_check])
-        .unwrap();
-
-    // Implicit Args
-    let syscall_segment = MaybeRelocatable::from(vm.add_memory_segment());
 
     let args = [
         Felt252::new(1).into(),
@@ -177,83 +79,131 @@ pub fn run_program_cairo_1(
         Felt252::new(100).into(),
     ];
 
-    let builtins: Vec<&'static str> = runner
-        .get_program_builtins()
-        .iter()
-        .map(|b| b.name())
-        .collect();
+    let (vm, runner) = match cairo_version {
+        CairoVersion::V0 => {
+            let trace_enabled = true;
+            let mut hint_executor = BuiltinHintProcessor::new_empty();
+            let cairo_run_config = cairo_run::CairoRunConfig {
+                entrypoint,
+                trace_enabled,
+                relocate_mem: true,
+                layout: layout.as_str(),
+                proof_mode: false,
+                secure_run: None,
+            };
 
-    let builtin_segment: Vec<MaybeRelocatable> = vm
-        .get_builtin_runners()
-        .iter()
-        .filter(|b| builtins.contains(&b.name()))
-        .flat_map(|b| b.initial_stack())
-        .collect();
+            let (runner, vm) =
+                match cairo_run::cairo_run(&program_content, &cairo_run_config, &mut hint_executor)
+                {
+                    Ok(runner) => runner,
+                    Err(error) => {
+                        eprintln!("{error}");
+                        return Err(Error::Runner(error));
+                    }
+                };
 
-    let initial_gas = MaybeRelocatable::from(usize::MAX);
+            (vm, runner)
+        }
+        CairoVersion::V1 => {
+            let casm_contract: CasmContractClass =
+                serde_json::from_slice(&program_content).unwrap();
+            let program: Program = casm_contract.clone().try_into().unwrap();
+            let mut runner = CairoRunner::new(
+                &(casm_contract.clone().try_into().unwrap()),
+                layout.as_str(),
+                false,
+            )
+            .unwrap();
+            let mut vm = VirtualMachine::new(true);
 
-    let mut implicit_args = builtin_segment;
-    implicit_args.extend([initial_gas]);
-    implicit_args.extend([syscall_segment]);
+            runner
+                .initialize_function_runner_cairo_1(&mut vm, &[BuiltinName::range_check])
+                .unwrap();
 
-    // Other args
+            // Implicit Args
+            let syscall_segment = MaybeRelocatable::from(vm.add_memory_segment());
 
-    // Load builtin costs
-    let builtin_costs: Vec<MaybeRelocatable> =
-        vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
-    let builtin_costs_ptr = vm.add_memory_segment();
-    vm.load_data(builtin_costs_ptr, &builtin_costs).unwrap();
+            let builtins: Vec<&'static str> = runner
+                .get_program_builtins()
+                .iter()
+                .map(|b| b.name())
+                .collect();
 
-    // Load extra data
-    let core_program_end_ptr = (runner.program_base.unwrap() + program.data_len()).unwrap();
-    let program_extra_data: Vec<MaybeRelocatable> =
-        vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
-    vm.load_data(core_program_end_ptr, &program_extra_data)
-        .unwrap();
+            let builtin_segment: Vec<MaybeRelocatable> = vm
+                .get_builtin_runners()
+                .iter()
+                .filter(|b| builtins.contains(&b.name()))
+                .flat_map(|b| b.initial_stack())
+                .collect();
 
-    // Load calldata
-    let calldata_start = vm.add_memory_segment();
-    let calldata_end = vm.load_data(calldata_start, &args.to_vec()).unwrap();
+            let initial_gas = MaybeRelocatable::from(usize::MAX);
 
-    // Create entrypoint_args
+            let mut implicit_args = builtin_segment;
+            implicit_args.extend([initial_gas]);
+            implicit_args.extend([syscall_segment]);
 
-    let mut entrypoint_args: Vec<CairoArg> = implicit_args
-        .iter()
-        .map(|m| CairoArg::from(m.clone()))
-        .collect();
-    entrypoint_args.extend([
-        MaybeRelocatable::from(calldata_start).into(),
-        MaybeRelocatable::from(calldata_end).into(),
-    ]);
-    let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
+            // Other args
 
-    let mut hint_processor = Cairo1HintProcessor::new(&casm_contract.hints);
+            // Load builtin costs
+            let builtin_costs: Vec<MaybeRelocatable> =
+                vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
+            let builtin_costs_ptr = vm.add_memory_segment();
+            vm.load_data(builtin_costs_ptr, &builtin_costs).unwrap();
 
-    // Run contract entrypoint
-    // We assume entrypoint 0 for only one function
-    let mut run_resources = RunResources::default();
+            // Load extra data
+            let core_program_end_ptr = (runner.program_base.unwrap() + program.data_len()).unwrap();
+            let program_extra_data: Vec<MaybeRelocatable> =
+                vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
+            vm.load_data(core_program_end_ptr, &program_extra_data)
+                .unwrap();
 
-    runner
-        .run_from_entrypoint(
-            0,
-            &entrypoint_args,
-            &mut run_resources,
-            true,
-            Some(program.data_len() + program_extra_data.len()),
-            &mut vm,
-            &mut hint_processor,
-        )
-        .unwrap();
+            // Load calldata
+            let calldata_start = vm.add_memory_segment();
+            let calldata_end = vm.load_data(calldata_start, &args.to_vec()).unwrap();
 
-    let _ = runner.relocate(&mut vm, true);
+            // Create entrypoint_args
+
+            let mut entrypoint_args: Vec<CairoArg> = implicit_args
+                .iter()
+                .map(|m| CairoArg::from(m.clone()))
+                .collect();
+            entrypoint_args.extend([
+                MaybeRelocatable::from(calldata_start).into(),
+                MaybeRelocatable::from(calldata_end).into(),
+            ]);
+            let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
+
+            let mut hint_processor = Cairo1HintProcessor::new(&casm_contract.hints);
+
+            // Run contract entrypoint
+            // We assume entrypoint 0 for only one function
+            let mut run_resources = RunResources::default();
+
+            runner
+                .run_from_entrypoint(
+                    0,
+                    &entrypoint_args,
+                    &mut run_resources,
+                    true,
+                    Some(program.data_len() + program_extra_data.len()),
+                    &mut vm,
+                    &mut hint_processor,
+                )
+                .unwrap();
+
+            let _ = runner.relocate(&mut vm, true);
+
+            (vm, runner)
+        }
+    };
 
     let relocated_trace = vm.get_relocated_trace()?;
-    let relocated_memory = &runner.relocated_memory;
 
-    // (RegisterStates, CairoMemory, usize)
     let mut trace_vec = Vec::<u8>::new();
     let mut trace_writer = VecWriter::new(&mut trace_vec);
     trace_writer.write_encoded_trace(relocated_trace);
+
+    let relocated_memory = &runner.relocated_memory;
 
     let mut memory_vec = Vec::<u8>::new();
     let mut memory_writer = VecWriter::new(&mut memory_vec);
@@ -298,13 +248,14 @@ pub fn run_program_cairo_1(
 pub fn generate_prover_args(
     file_path: &str,
     cairo_version: &CairoVersion,
-) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
-    let (register_states, memory, program_size, range_check_builtin_range) = match cairo_version {
-        CairoVersion::V0 => run_program(None, CairoLayout::Small, file_path).unwrap(),
-        CairoVersion::V1 => run_program_cairo_1(None, CairoLayout::Plain, file_path).unwrap(),
+) -> Result<(TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs), Error> {
+    let cairo_layout = match cairo_version {
+        CairoVersion::V0 => CairoLayout::Small,
+        CairoVersion::V1 => CairoLayout::Plain,
     };
 
-    println!("Trace length: {}", register_states.rows.len());
+    let (register_states, memory, program_size, range_check_builtin_range) =
+        run_program(None, cairo_layout, file_path, cairo_version)?;
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -329,7 +280,7 @@ pub fn generate_prover_args(
         has_range_check_builtin,
     );
 
-    (main_trace, cairo_air, pub_inputs)
+    Ok((main_trace, cairo_air, pub_inputs))
 }
 
 pub fn program_path(program_name: &str) -> String {
@@ -357,8 +308,13 @@ mod tests {
         let base_dir = env!("CARGO_MANIFEST_DIR");
         let json_filename = base_dir.to_owned() + "/src/cairo/runner/program.json";
 
-        let (register_states, memory, program_size, _rg_in_out) =
-            run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
+        let (register_states, memory, program_size, _rg_in_out) = run_program(
+            None,
+            CairoLayout::AllCairo,
+            &json_filename,
+            &CairoVersion::V0,
+        )
+        .unwrap();
         let pub_inputs =
             PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
         let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
