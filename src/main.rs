@@ -19,7 +19,7 @@ fn main() {
     };
 
     let Ok((main_trace, cairo_air, mut pub_inputs)) =
-        generate_prover_args(file_path, &cairo_version) else {
+        generate_prover_args(file_path, &cairo_version, &None) else {
             println!("Error generating prover args");
             return;
         };

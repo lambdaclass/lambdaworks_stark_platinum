@@ -71,13 +71,13 @@ pub fn build_main_trace(
     public_input.range_check_max = Some(rc_max);
     fill_rc_holes(&mut main_trace, rc_holes);
 
-    let mut memory_holes = get_memory_holes(&address_cols, public_input.program.len());
+    let mut memory_holes = get_memory_holes(&address_cols, public_input.public_memory.len());
 
     if !memory_holes.is_empty() {
         fill_memory_holes(&mut main_trace, &mut memory_holes);
     }
 
-    add_pub_memory_dummy_accesses(&mut main_trace, public_input.program.len());
+    add_pub_memory_dummy_accesses(&mut main_trace, public_input.public_memory.len());
 
     let trace_len_next_power_of_two = main_trace.n_rows().next_power_of_two();
     let padding = trace_len_next_power_of_two - main_trace.n_rows();
@@ -90,9 +90,9 @@ pub fn build_main_trace(
 /// See section 9.8 of the Cairo whitepaper.
 fn add_pub_memory_dummy_accesses<F: IsFFTField>(
     main_trace: &mut TraceTable<F>,
-    program_len: usize,
+    pub_memory_len: usize,
 ) {
-    pad_with_last_row_and_zeros(main_trace, (program_len >> 2) + 1, &MEMORY_COLUMNS)
+    pad_with_last_row_and_zeros(main_trace, (pub_memory_len >> 2) + 1, &MEMORY_COLUMNS)
 }
 
 fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usize) {
@@ -345,8 +345,11 @@ pub fn build_cairo_execution_trace(
     trace_cols.push(mul);
     trace_cols.push(selector);
 
-    if let Some(range_check_builtin_range) = public_inputs.range_check_builtin_range.clone() {
-        add_rc_builtin_columns(&mut trace_cols, range_check_builtin_range, memory);
+    if let Some(range_check_builtin_range) = public_inputs
+        .memory_segments
+        .get(&MemorySegment::RangeCheck)
+    {
+        add_rc_builtin_columns(&mut trace_cols, range_check_builtin_range.clone(), memory);
     }
 
     TraceTable::new_from_cols(&trace_cols)
@@ -683,8 +686,12 @@ mod test {
             &CairoVersion::V0,
         )
         .unwrap();
-        let pub_inputs =
-            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let pub_inputs = PublicInputs::from_regs_and_mem(
+            &register_states,
+            &memory,
+            program_size,
+            &MemorySegmentMap::new(),
+        );
         let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
@@ -795,8 +802,14 @@ mod test {
             &CairoVersion::V0,
         )
         .unwrap();
-        let pub_inputs =
-            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+
+        let pub_inputs = PublicInputs::from_regs_and_mem(
+            &register_states,
+            &memory,
+            program_size,
+            &MemorySegmentMap::new(),
+        );
+
         let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.

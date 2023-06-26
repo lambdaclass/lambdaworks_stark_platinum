@@ -81,3 +81,19 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
     info!("Constraints validation check ended");
     ret
 }
+
+pub fn check_boundary_polys_divisibility<F: IsFFTField>(
+    boundary_polys: Vec<Polynomial<FieldElement<F>>>,
+    boundary_zerofiers: Vec<Polynomial<FieldElement<F>>>,
+) {
+    for (i, (poly, z)) in boundary_polys
+        .iter()
+        .zip(boundary_zerofiers.iter())
+        .enumerate()
+    {
+        let (_, b) = poly.clone().long_division_with_remainder(z);
+        if b != Polynomial::zero() {
+            error!("Boundary poly {} is not divisible by its zerofier", i);
+        }
+    }
+}
