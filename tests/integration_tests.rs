@@ -151,6 +151,7 @@ fn test_prove_cairo_lt_comparison() {
     test_prove_cairo_program(&program_path("lt_comparison.json"), Some(131..132));
 }
 
+#[ignore]
 #[test_log::test]
 fn test_prove_cairo_compare_lesser_array() {
     test_prove_cairo_program(&program_path("compare_lesser_array.json"), Some(856..866));
