@@ -12,4 +12,5 @@ pub mod prover;
 pub mod trace;
 pub mod traits;
 pub mod transcript;
+pub mod utils;
 pub mod verifier;
