@@ -8,7 +8,6 @@ use crate::starks::context::ProofOptions;
 use crate::starks::trace::TraceTable;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
-use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
 use cairo_vm::hint_processor::cairo_1_hint_processor::hint_processor::Cairo1HintProcessor;
 use cairo_vm::serde::deserialize_program::BuiltinName;
