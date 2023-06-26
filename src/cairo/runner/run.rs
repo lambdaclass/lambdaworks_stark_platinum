@@ -73,11 +73,7 @@ pub fn run_program(
     let entrypoint = entrypoint_function.unwrap_or("main");
     let program_content = std::fs::read(filename).map_err(Error::IO)?;
 
-    let args = [
-        Felt252::new(1).into(),
-        Felt252::new(1).into(),
-        Felt252::new(100).into(),
-    ];
+    let args = [];
 
     let (vm, runner) = match cairo_version {
         CairoVersion::V0 => {
