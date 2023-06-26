@@ -34,7 +34,6 @@ instruments = []      # This enables timing prints in prover and verifier
 [[bench]]
 name = "criterion_starks"
 harness = false
-metal = ["lambdaworks-fft/metal"]
 
 [profile.release]
 lto = true
