@@ -13,7 +13,7 @@ use super::FriMerkleTree;
 #[derive(Clone)]
 pub struct FriLayer<F>
 where
-    F: lambdaworks_math::field::traits::IsField,
+    F: IsField,
     FieldElement<F>: ByteConversion,
 {
     pub poly: Polynomial<FieldElement<F>>,
