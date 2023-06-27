@@ -38,7 +38,7 @@ Then for example, if you have a Cairo program in the project folder, you can use
 
 ### Using cairo-compile for Cairo 0 programs
 
-If you have `cairo-lang`installed, you can use it instead of the Dockerfile
+If you have `cairo-lang` installed, you can use it instead of the Dockerfile
 
 Then for example, if you have some Cairo program in the project folder, you can use:
 
@@ -83,3 +83,17 @@ git checkout v1.1.0
   ``` bash
   cargo run --bin starknet-sierra-compile -- /path/to/input.json /path/to/output.casm
   ```
+
+## Running tests
+To run tests, simply use
+```
+make test
+```
+If you have the `cairo-lang` toolchain installed, this will compile the Cairo programs needed
+for tests.
+If you have built the cairo-compile docker image, that will be used for compiling instead.
+
+Be sure to build the docker image if you don't want to install the `cairo-lang` toolchain:
+```
+make docker_build_cairo_compiler
+```
