@@ -8,8 +8,9 @@ use lambdaworks_math::field::{
 use crate::{
     starks::{
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
-        context::{AirContext, ProofOptions},
+        context::AirContext,
         frame::Frame,
+        proof_options::ProofOptions,
         trace::TraceTable,
         traits::AIR,
         transcript::transcript_to_field,
@@ -951,6 +952,7 @@ mod test {
             &program_path("simple_program.json"),
             &CairoVersion::V0,
             &None,
+            1,
         )
         .unwrap();
         let mut trace_polys = main_trace.compute_trace_polys();

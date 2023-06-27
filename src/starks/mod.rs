@@ -8,6 +8,7 @@ pub mod example;
 pub mod frame;
 pub mod fri;
 pub mod proof;
+pub mod proof_options;
 pub mod prover;
 pub mod trace;
 pub mod traits;

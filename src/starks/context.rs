@@ -1,3 +1,5 @@
+use super::proof_options::ProofOptions;
+
 #[derive(Clone, Debug)]
 pub struct AirContext {
     pub options: ProofOptions,
@@ -27,11 +29,4 @@ impl AirContext {
     pub fn transition_degrees_len(&self) -> usize {
         self.transition_degrees.len()
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct ProofOptions {
-    pub blowup_factor: u8,
-    pub fri_number_of_queries: usize,
-    pub coset_offset: u64,
 }

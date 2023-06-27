@@ -6,10 +6,8 @@ use lambdaworks_math::{
 };
 
 use super::{
-    constraints::boundary::BoundaryConstraints,
-    context::{AirContext, ProofOptions},
-    frame::Frame,
-    trace::TraceTable,
+    constraints::boundary::BoundaryConstraints, context::AirContext, frame::Frame,
+    proof_options::ProofOptions, trace::TraceTable,
 };
 
 /// AIR is a representation of the Constraints

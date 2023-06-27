@@ -12,12 +12,13 @@ use lambdaworks_stark::{
         runner::run::{generate_prover_args, program_path, run_program, CairoVersion},
     },
     starks::{
-        context::{AirContext, ProofOptions},
+        context::AirContext,
         example::{
             dummy_air, fibonacci_2_columns, fibonacci_f17,
             fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP},
             quadratic_air, simple_fibonacci,
         },
+        proof_options::ProofOptions,
         prover::prove,
         trace::TraceTable,
         verifier::verify,
@@ -35,6 +36,7 @@ fn test_prove_fib() {
             blowup_factor: 2,
             fri_number_of_queries: 1,
             coset_offset: 3,
+            grinding_factor: 1,
         },
         trace_length,
         trace_columns: 1,
@@ -60,6 +62,7 @@ fn test_prove_fib17() {
             blowup_factor: 2,
             fri_number_of_queries: 1,
             coset_offset: 3,
+            grinding_factor: 1,
         },
         trace_length,
         trace_columns: 1,
@@ -85,6 +88,7 @@ fn test_prove_fib_2_cols() {
             blowup_factor: 2,
             fri_number_of_queries: 7,
             coset_offset: 3,
+            grinding_factor: 1,
         },
         trace_length,
         transition_degrees: vec![1, 1],
@@ -110,6 +114,7 @@ fn test_prove_quadratic() {
             blowup_factor: 2,
             fri_number_of_queries: 1,
             coset_offset: 3,
+            grinding_factor: 1,
         },
         trace_length,
         trace_columns: 1,
@@ -129,7 +134,7 @@ fn test_prove_quadratic() {
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) {
     let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(file_path, &CairoVersion::V0, output_range).unwrap();
+        generate_prover_args(file_path, &CairoVersion::V0, output_range, 1).unwrap();
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -138,7 +143,7 @@ fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo1_program(file_path: &str) {
     let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(file_path, &CairoVersion::V1, &None).unwrap();
+        generate_prover_args(file_path, &CairoVersion::V1, &None, 1).unwrap();
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -193,6 +198,7 @@ fn test_prove_rap_fib() {
             blowup_factor: 2,
             fri_number_of_queries: 1,
             coset_offset: 3,
+            grinding_factor: 1,
         },
         trace_columns: 3,
         trace_length: trace_cols[0].len(),
@@ -218,6 +224,7 @@ fn test_prove_dummy() {
             blowup_factor: 2,
             fri_number_of_queries: 1,
             coset_offset: 3,
+            grinding_factor: 1,
         },
         trace_length,
         trace_columns: 2,
@@ -239,6 +246,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
         &program_path("simple_program.json"),
         &CairoVersion::V0,
         &None,
+        1,
     )
     .unwrap();
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
@@ -259,6 +267,7 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
         &program_path("simple_program.json"),
         &CairoVersion::V0,
         &None,
+        1,
     )
     .unwrap();
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
@@ -276,8 +285,13 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     // In this test we change the range-check value in the trace, so the constraint
     // that asserts that the sum of the rc decomposed values is equal to the
     // range-checked value won't hold, and the verifier will reject the proof.
-    let (main_trace, cairo_air, mut public_input) =
-        generate_prover_args(&program_path("rc_program.json"), &CairoVersion::V0, &None).unwrap();
+    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
+        &program_path("rc_program.json"),
+        &CairoVersion::V0,
+        &None,
+        1,
+    )
+    .unwrap();
 
     // The malicious value, we change the previous value to a 35.
     let malicious_rc_value = FE::from(35);
@@ -313,6 +327,7 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
         blowup_factor: 4,
         fri_number_of_queries: 3,
         coset_offset: 3,
+        grinding_factor: 1,
     };
     let memory_segments = MemorySegmentMap::from([(MemorySegment::RangeCheck, 27..29)]);
     let mut pub_inputs = PublicInputs::from_regs_and_mem(
@@ -341,6 +356,7 @@ fn test_verifier_rejects_proof_with_changed_output() {
         &program_path("output_program.json"),
         &CairoVersion::V0,
         &None,
+        1,
     )
     .unwrap();
 

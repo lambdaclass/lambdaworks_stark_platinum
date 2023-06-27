@@ -723,10 +723,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        starks::{
-            context::{AirContext, ProofOptions},
-            example::simple_fibonacci,
-        },
+        starks::{context::AirContext, example::simple_fibonacci, proof_options::ProofOptions},
         FE,
     };
 
@@ -745,12 +742,14 @@ mod tests {
         let trace_length = trace.n_rows();
         let coset_offset = 3;
         let blowup_factor: usize = 2;
+        let grinding_factor = 20;
 
         let context = AirContext {
             options: ProofOptions {
                 blowup_factor: blowup_factor as u8,
                 fri_number_of_queries: 1,
                 coset_offset,
+                grinding_factor,
             },
             trace_length,
             trace_columns: trace.n_cols,

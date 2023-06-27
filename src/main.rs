@@ -7,6 +7,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     let file_path = &args[1];
+    let grinding_factor = 20;
 
     let timer = Instant::now();
 
@@ -19,7 +20,7 @@ fn main() {
     };
 
     let Ok((main_trace, cairo_air, mut pub_inputs)) =
-        generate_prover_args(file_path, &cairo_version, &None) else {
+        generate_prover_args(file_path, &cairo_version, &None, grinding_factor) else {
             println!("Error generating prover args");
             return;
         };

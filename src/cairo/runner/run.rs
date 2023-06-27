@@ -4,7 +4,7 @@ use crate::cairo::cairo_layout::CairoLayout;
 use crate::cairo::cairo_mem::CairoMemory;
 use crate::cairo::execution_trace::build_main_trace;
 use crate::cairo::register_states::RegisterStates;
-use crate::starks::context::ProofOptions;
+use crate::starks::proof_options::ProofOptions;
 use crate::starks::trace::TraceTable;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
@@ -244,6 +244,7 @@ pub fn generate_prover_args(
     file_path: &str,
     cairo_version: &CairoVersion,
     output_range: &Option<Range<u64>>,
+    grinding_factor: u8,
 ) -> Result<(TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs), Error> {
     let cairo_layout = match cairo_version {
         CairoVersion::V0 => CairoLayout::Small,
@@ -257,6 +258,7 @@ pub fn generate_prover_args(
         blowup_factor: 4,
         fri_number_of_queries: 3,
         coset_offset: 3,
+        grinding_factor,
     };
 
     let memory_segments = create_memory_segment_map(range_check_builtin_range, output_range);
