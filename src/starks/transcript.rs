@@ -1,6 +1,11 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::{field::{traits::{IsPrimeField, IsFFTField}, element::FieldElement}, traits::ByteConversion};
-
+use lambdaworks_math::{
+    field::{
+        element::FieldElement,
+        traits::{IsFFTField, IsPrimeField},
+    },
+    traits::ByteConversion,
+};
 
 /// Uses randomness from the transcript to create a FieldElement
 /// One bit less than the max used by the FieldElement is used as randomness. For StarkFields, this would be 251 bits randomness.
