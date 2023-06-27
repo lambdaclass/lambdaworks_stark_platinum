@@ -99,7 +99,9 @@ jobs:
           CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install -r requirements.txt ;
 
       - name: Run tests
-        run: make test_metal
+        run: |
+          . cairo0-venv/bin/activate
+          make test_metal
 
   test_nvidia:
     name: Test (Ubuntu, NVIDIA GPU)
