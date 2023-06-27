@@ -496,6 +496,18 @@ where
     ret
 }
 
+/// Performs grinding, generating a new nonce for the proof.
+/// The nonce generated is such that:
+/// Hash(transcript_hash || nonce) has a number of leading zeros
+/// greater or equal than `grinding_factor`.
+///
+/// # Parameters
+/// * `transcript` - the hash of the transcript
+fn generate_nonce_with_grinding<T: Transcript>(transcript: &mut T, grinding_factor: u8) -> u64 {
+    // TODO! implement
+    0
+}
+
 // FIXME remove unwrap() calls and return errors
 pub fn prove<F: IsFFTField, A: AIR<Field = F>>(
     main_trace: &TraceTable<F>,
