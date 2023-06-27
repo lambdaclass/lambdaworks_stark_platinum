@@ -60,8 +60,16 @@ jobs:
           components: clippy
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Python3 build
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Install cairo-lang toolchain and dependencies
+        run: pip install -r requirements.txt
+
       - name: Run tests and generate code coverage
-        run: cargo llvm-cov --lcov --output-path lcov.info
+        run: make coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
@@ -80,8 +88,24 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+
+      - name: Install gmp
+        run: brew install gmp
+
+      - name: Install cairo-lang toolchain and dependencies
+        run: |
+          python3 -m venv cairo0-venv
+          . cairo0-venv/bin/activate
+          CFLAGS=-I/opt/homebrew/opt/gmp/include LDFLAGS=-L/opt/homebrew/opt/gmp/lib pip install -r requirements.txt ;
+
       - name: Run tests
-        run: cargo test -F metal
+        run: |
+          . cairo0-venv/bin/activate
+          make test_metal
+
+      - name: Clean compiled programs
+        run: make clean
+
   test_nvidia:
     name: Test (Ubuntu, NVIDIA GPU)
     runs-on: [self-hosted, cuda]

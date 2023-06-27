@@ -37,8 +37,22 @@ Then for example, if you have a Cairo program in the project folder, you can use
 
 ### Using cairo-compile
 
-If you have `cairo-lang`installed, you can use it instead of the Dockerfile
+If you have `cairo-lang` installed, you can use it instead of the Dockerfile
 
 Then for example, if you have some Cairo program in the project folder, you can use:
 
 `make compile_and_run PROGRAM=program_name.cairo`
+
+## Running tests
+To run tests, simply use
+```
+make test
+```
+If you have the `cairo-lang` toolchain installed, this will compile the Cairo programs needed
+for tests.
+If you have built the cairo-compile docker image, that will be used for compiling instead.
+
+Be sure to build the docker image if you don't want to install the `cairo-lang` toolchain:
+```
+make docker_build_cairo_compiler
+```
