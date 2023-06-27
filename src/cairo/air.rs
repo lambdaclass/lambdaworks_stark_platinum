@@ -916,7 +916,7 @@ fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
 #[cfg(debug_assertions)]
 mod test {
     use crate::{
-        cairo::runner::run::{generate_prover_args, program_path, CairoVersion},
+        cairo::runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
         starks::{debug::validate_trace, domain::Domain},
     };
 
@@ -948,7 +948,7 @@ mod test {
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let (main_trace, cairo_air, public_input) = generate_prover_args(
-            &program_path("simple_program.json"),
+            &cairo0_program_path("simple_program.json"),
             &CairoVersion::V0,
             &None,
         )

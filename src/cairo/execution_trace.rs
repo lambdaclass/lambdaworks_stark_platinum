@@ -634,7 +634,7 @@ fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
 mod test {
     use crate::cairo::{
         cairo_layout::CairoLayout,
-        runner::run::{program_path, run_program, CairoVersion},
+        runner::run::{cairo0_program_path, run_program, CairoVersion},
     };
 
     use super::*;
@@ -682,7 +682,7 @@ mod test {
         let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
-            &program_path("simple_program.json"),
+            &cairo0_program_path("simple_program.json"),
             &CairoVersion::V0,
         )
         .unwrap();
@@ -798,7 +798,7 @@ mod test {
         let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
-            &program_path("call_func.json"),
+            &cairo0_program_path("call_func.json"),
             &CairoVersion::V0,
         )
         .unwrap();
