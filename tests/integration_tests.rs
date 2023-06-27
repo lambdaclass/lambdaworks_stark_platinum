@@ -156,7 +156,7 @@ fn test_prove_cairo_fibonacci_5() {
 
 #[test_log::test]
 fn test_prove_cairo_fibonacci_casm() {
-    test_prove_cairo1_program(&program_path("fibonacci.casm"));
+    test_prove_cairo1_program(&program_path("fibonacci_cairo1.casm"));
 }
 
 #[test_log::test]

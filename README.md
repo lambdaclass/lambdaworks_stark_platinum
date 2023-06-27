@@ -55,7 +55,7 @@ cargo run -- <PATH-TO-casm-FILE>
 for example:
 
 ``` bash
-cargo run -- cairo_programs/fibonacci.casm
+cargo run -- cairo_programs/fibonacci_cairo1.casm
 ```
 
 #### Generating casm file from cairo contract file
