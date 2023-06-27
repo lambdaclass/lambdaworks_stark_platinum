@@ -24,6 +24,9 @@ run: build
 test: $(COMPILED_PROGRAMS)
 	cargo test
 
+test_metal: $(COMPILED_PROGRAMS)
+	cargo test -F metal
+
 coverage: $(COMPILED_PROGRAMS)
 	cargo llvm-cov --lcov --output-path lcov.info
 
