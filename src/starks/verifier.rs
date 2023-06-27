@@ -3,7 +3,9 @@ use std::time::Instant;
 
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use lambdaworks_crypto::{
+    fiat_shamir::transcript::Transcript, merkle_tree::backends::sha3_256::Sha3_256Tree,
+};
 use log::error;
 
 #[cfg(feature = "test_fiat_shamir")]
@@ -22,7 +24,7 @@ use super::{
     commitment::BatchStarkProverBackend,
     constraints::evaluator::ConstraintEvaluator,
     domain::Domain,
-    fri::{fri_decommit::FriDecommitment, Commitment, FriMerkleBackend},
+    fri::{fri_decommit::FriDecommitment, Commitment},
     proof::StarkProof,
     traits::AIR,
     transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize},
@@ -401,7 +403,7 @@ where
     // Verify opening Open(p₀(D₀), 𝜐ₛ)
     if !fri_decommitment
         .first_layer_auth_path
-        .verify::<FriMerkleBackend<F>>(
+        .verify::<Sha3_256Tree<F>>(
             &fri_layers_merkle_roots[0],
             iota,
             &fri_decommitment.first_layer_evaluation,
@@ -456,7 +458,7 @@ where
         let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
 
         // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
-        if !auth_path.verify::<FriMerkleBackend<F>>(
+        if !auth_path.verify::<Sha3_256Tree<F>>(
             merkle_root,
             layer_evaluation_index_sym,
             evaluation_sym,
