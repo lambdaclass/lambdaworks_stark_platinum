@@ -2,18 +2,18 @@
 
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-CAIRO_PROGRAMS_DIR=cairo_programs
-CAIRO_PROGRAMS:=$(wildcard $(CAIRO_PROGRAMS_DIR)/*.cairo)
-COMPILED_PROGRAMS:=$(patsubst $(CAIRO_PROGRAMS_DIR)/%.cairo, $(CAIRO_PROGRAMS_DIR)/%.json, $(CAIRO_PROGRAMS))
+CAIRO0_PROGRAMS_DIR=cairo_programs/cairo0
+CAIRO0_PROGRAMS:=$(wildcard $(CAIRO0_PROGRAMS_DIR)/*.cairo)
+COMPILED_CAIRO0_PROGRAMS:=$(patsubst $(CAIRO0_PROGRAMS_DIR)/%.cairo, $(CAIRO0_PROGRAMS_DIR)/%.json, $(CAIRO0_PROGRAMS))
 
 # Rule to compile Cairo programs for testing purposes.
 # If the `cairo-lang` toolchain is installed, programs will be compiled with it.
 # Otherwise, the cairo_compile docker image will be used
 # When using the docker version, be sure to build the image using `make docker_build_compiler`.
-$(CAIRO_PROGRAMS_DIR)/%.json: $(CAIRO_PROGRAMS_DIR)/%.cairo
+$(CAIRO0_PROGRAMS_DIR)/%.json: $(CAIRO0_PROGRAMS_DIR)/%.cairo
 	@echo "Compiling Cairo program..."
-	@cairo-compile --cairo_path="$(CAIRO_PROGRAMS_DIR)" $< --output $@ 2> /dev/null || \
-	docker run -v $(ROOT_DIR)/$(CAIRO_PROGRAMS_DIR):/pwd/$(CAIRO_PROGRAMS_DIR) cairo cairo-compile /pwd/$< > $@
+	@cairo-compile --cairo_path="$(CAIRO0_PROGRAMS_DIR)" $< --output $@ 2> /dev/null || \
+	docker run -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-compile /pwd/$< > $@
 
 build: 
 	cargo build --release
@@ -21,13 +21,13 @@ build:
 run: build
 	cargo run --release $(PROGRAM_PATH)
 	
-test: $(COMPILED_PROGRAMS)
+test: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo test
 
-test_metal: $(COMPILED_PROGRAMS)
+test_metal: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo test -F metal
 
-coverage: $(COMPILED_PROGRAMS)
+coverage: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo llvm-cov --lcov --output-path lcov.info
 
 clippy:
@@ -60,7 +60,7 @@ compile_and_run: target/release/lambdaworks-stark
 	@rm $(PROGRAM).json
 
 clean:
-	rm -f $(CAIRO_PROGRAMS_DIR)/*.json
-	rm -f $(CAIRO_PROGRAMS_DIR)/*.trace
-	rm -f $(CAIRO_PROGRAMS_DIR)/*.memory
+	rm -f $(CAIRO0_PROGRAMS_DIR)/*.json
+	rm -f $(CAIRO0_PROGRAMS_DIR)/*.trace
+	rm -f $(CAIRO0_PROGRAMS_DIR)/*.memory
 
