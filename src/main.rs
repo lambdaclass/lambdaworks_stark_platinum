@@ -12,7 +12,7 @@ fn main() {
     println!("Running program and generating trace ...");
     let timer = Instant::now();
 
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path);
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(file_path, &None);
     println!("  Time spent: {:?} \n", timer.elapsed());
 
     let timer = Instant::now();

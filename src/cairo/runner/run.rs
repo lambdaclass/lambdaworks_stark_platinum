@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use super::vec_writer::VecWriter;
-use crate::cairo::air::{CairoAIR, PublicInputs};
+use crate::cairo::air::{CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs};
 use crate::cairo::cairo_layout::CairoLayout;
 use crate::cairo::cairo_mem::CairoMemory;
 use crate::cairo::execution_trace::build_main_trace;
@@ -118,7 +118,9 @@ pub fn run_program(
 
 pub fn generate_prover_args(
     file_path: &str,
+    output_range: &Option<Range<u64>>,
 ) -> (TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs) {
+    // TODO: If other layouts are added, this must be done in another way.
     let (register_states, memory, program_size, range_check_init_end) =
         run_program(None, CairoLayout::Small, file_path).unwrap();
 
@@ -133,16 +135,14 @@ pub fn generate_prover_args(
         end: end as u64,
     });
 
-    let mut pub_inputs = PublicInputs::from_regs_and_mem(
-        &register_states,
-        &memory,
-        program_size,
-        range_check_builtin_range,
-    );
+    let memory_segments = create_memory_segment_map(range_check_builtin_range, output_range);
+
+    let mut pub_inputs =
+        PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, &memory_segments);
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
-    let has_range_check_builtin = pub_inputs.range_check_builtin_range.is_some();
+    let has_range_check_builtin = memory_segments.get(&MemorySegment::RangeCheck).is_some();
     let cairo_air = CairoAIR::new(
         proof_options,
         main_trace.n_rows(),
@@ -151,6 +151,22 @@ pub fn generate_prover_args(
     );
 
     (main_trace, cairo_air, pub_inputs)
+}
+
+fn create_memory_segment_map(
+    range_check_builtin_range: Option<Range<u64>>,
+    output_range: &Option<Range<u64>>,
+) -> MemorySegmentMap {
+    let mut memory_segments = MemorySegmentMap::new();
+
+    if let Some(range_check_builtin_range) = range_check_builtin_range {
+        memory_segments.insert(MemorySegment::RangeCheck, range_check_builtin_range);
+    }
+    if let Some(output_range) = output_range {
+        memory_segments.insert(MemorySegment::Output, output_range.clone());
+    }
+
+    memory_segments
 }
 
 pub fn program_path(program_name: &str) -> String {
@@ -180,8 +196,12 @@ mod tests {
 
         let (register_states, memory, program_size, _rg_in_out) =
             run_program(None, CairoLayout::AllCairo, &json_filename).unwrap();
-        let pub_inputs =
-            PublicInputs::from_regs_and_mem(&register_states, &memory, program_size, None);
+        let pub_inputs = PublicInputs::from_regs_and_mem(
+            &register_states,
+            &memory,
+            program_size,
+            &MemorySegmentMap::new(),
+        );
         let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.

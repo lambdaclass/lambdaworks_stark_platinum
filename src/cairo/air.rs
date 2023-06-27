@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{collections::HashMap, ops::Range};
 
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::{
@@ -146,6 +146,14 @@ pub const MEM_A_TRACE_OFFSET: usize = 19;
 // index.
 const BUILTIN_OFFSET: usize = 9;
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum MemorySegment {
+    RangeCheck,
+    Output,
+}
+
+pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
+
 // TODO: For memory constraints and builtins, the commented fields may be useful.
 #[derive(Clone)]
 pub struct PublicInputs {
@@ -163,9 +171,8 @@ pub struct PublicInputs {
     // maximum range check value
     pub range_check_max: Option<u16>,
     // Range-check builtin address range
-    pub range_check_builtin_range: Option<Range<u64>>,
-    // pub builtins: Vec<Builtin>, // list of builtins
-    pub program: Vec<FE>,
+    pub memory_segments: MemorySegmentMap,
+    pub public_memory: HashMap<FE, FE>,
     pub num_steps: usize, // number of execution steps
 }
 
@@ -177,14 +184,26 @@ impl PublicInputs {
         register_states: &RegisterStates,
         memory: &CairoMemory,
         program_size: usize,
-        range_check_builtin_range: Option<Range<u64>>,
+        memory_segments: &MemorySegmentMap,
     ) -> Self {
-        let mut program = vec![];
+        let output_range = memory_segments.get(&MemorySegment::Output);
+
+        let public_memory_size = if let Some(output_range) = output_range {
+            program_size + (output_range.end - output_range.start) as usize
+        } else {
+            program_size
+        };
+        let mut public_memory = HashMap::with_capacity(public_memory_size);
 
         for i in 1..=program_size as u64 {
-            program.push(memory.get(&i).unwrap().clone());
+            public_memory.insert(FE::from(i), memory.get(&i).unwrap().clone());
         }
 
+        if let Some(output_range) = output_range {
+            for addr in output_range.clone() {
+                public_memory.insert(FE::from(addr), memory.get(&addr).unwrap().clone());
+            }
+        };
         let last_step = &register_states.rows[register_states.steps() - 1];
 
         PublicInputs {
@@ -195,8 +214,8 @@ impl PublicInputs {
             ap_final: FieldElement::from(last_step.ap),
             range_check_min: None,
             range_check_max: None,
-            range_check_builtin_range,
-            program,
+            memory_segments: memory_segments.clone(),
+            public_memory,
             num_steps: register_states.steps(),
         }
     }
@@ -293,7 +312,7 @@ pub struct CairoRAPChallenges {
     pub z_range_check: FieldElement<Stark252PrimeField>,
 }
 
-fn add_program_in_public_input_section(
+fn add_pub_memory_in_public_input_section(
     addresses: &Vec<FE>,
     values: &[FE],
     public_input: &PublicInputs,
@@ -301,13 +320,40 @@ fn add_program_in_public_input_section(
     let mut a_aux = addresses.clone();
     let mut v_aux = values.to_owned();
 
-    let public_input_section = addresses.len() - public_input.program.len();
-    let continous_memory = (1..=public_input.program.len() as u64).map(FieldElement::from);
+    let public_input_section = addresses.len() - public_input.public_memory.len();
+    let output_range = public_input.memory_segments.get(&MemorySegment::Output);
+    let pub_memory_addrs = get_pub_memory_addrs(output_range, public_input);
 
-    a_aux.splice(public_input_section.., continous_memory);
-    v_aux.splice(public_input_section.., public_input.program.clone());
+    a_aux.splice(public_input_section.., pub_memory_addrs);
+    for i in public_input_section..a_aux.len() {
+        let address = &a_aux[i];
+        v_aux[i] = public_input.public_memory.get(address).unwrap().clone();
+    }
 
     (a_aux, v_aux)
+}
+
+/// Gets public memory addresses of a program. First, this function builds a `Vec` of `FieldElement`s, filling it
+/// incrementally with addresses from `1` to `program_len - 1`, where `program_len` is the length of the program.
+/// If the output builtin is used, `output_range` is `Some(...)` and this function adds incrementally to the resulting
+/// `Vec` addresses from the start to the end of the unwrapped `output_range`.
+fn get_pub_memory_addrs(
+    output_range: Option<&Range<u64>>,
+    public_input: &PublicInputs,
+) -> Vec<FieldElement<Stark252PrimeField>> {
+    let public_memory_len = public_input.public_memory.len() as u64;
+
+    if let Some(output_range) = output_range {
+        let output_section = output_range.end - output_range.start;
+        let program_section = public_memory_len - output_section;
+
+        (1..=program_section)
+            .map(FieldElement::from)
+            .chain(output_range.clone().map(FieldElement::from))
+            .collect()
+    } else {
+        (1..=public_memory_len).map(FieldElement::from).collect()
+    }
 }
 
 fn sort_columns_by_memory_address(adresses: Vec<FE>, values: Vec<FE>) -> (Vec<FE>, Vec<FE>) {
@@ -385,7 +431,7 @@ impl AIR for CairoAIR {
             .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1])
             .table;
 
-        let (addresses, values) = add_program_in_public_input_section(
+        let (addresses, values) = add_pub_memory_in_public_input_section(
             &addresses_original,
             &values_original,
             public_input,
@@ -517,13 +563,14 @@ impl AIR for CairoAIR {
         let builtin_offset = self.get_builtin_offset();
 
         let mut cumulative_product = FieldElement::one();
-        for (i, value) in public_input.program.iter().enumerate() {
+        for (address, value) in &public_input.public_memory {
             cumulative_product = cumulative_product
-                * (&rap_challenges.z_memory
-                    - (FieldElement::from(i as u64 + 1) + &rap_challenges.alpha_memory * value));
+                * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value));
         }
-        let permutation_final =
-            rap_challenges.z_memory.pow(public_input.program.len()) / cumulative_product;
+        let permutation_final = rap_challenges
+            .z_memory
+            .pow(public_input.public_memory.len())
+            / cumulative_product;
         let permutation_final_constraint = BoundaryConstraint::new(
             PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
             final_index,
@@ -901,7 +948,7 @@ mod test {
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let (main_trace, cairo_air, public_input) =
-            generate_prover_args(&program_path("simple_program.json"));
+            generate_prover_args(&program_path("simple_program.json"), &None);
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
@@ -931,15 +978,15 @@ mod test {
             fp_init: FieldElement::zero(),
             pc_final: FieldElement::zero(),
             ap_final: FieldElement::zero(),
-            program: vec![
-                FieldElement::from(10),
-                FieldElement::from(20),
-                FieldElement::from(30),
-            ],
+            public_memory: HashMap::from([
+                (FieldElement::one(), FieldElement::from(10)),
+                (FieldElement::from(2), FieldElement::from(20)),
+                (FieldElement::from(3), FieldElement::from(30)),
+            ]),
             range_check_max: None,
             range_check_min: None,
             num_steps: 1,
-            range_check_builtin_range: None,
+            memory_segments: MemorySegmentMap::new(),
         };
 
         let a = vec![
@@ -958,7 +1005,7 @@ mod test {
             FieldElement::zero(),
             FieldElement::zero(),
         ];
-        let (ap, vp) = add_program_in_public_input_section(&a, &v, &dummy_public_input);
+        let (ap, vp) = add_pub_memory_in_public_input_section(&a, &v, &dummy_public_input);
         assert_eq!(
             ap,
             vec![
@@ -979,6 +1026,76 @@ mod test {
                 FieldElement::from(10),
                 FieldElement::from(20),
                 FieldElement::from(30)
+            ]
+        );
+    }
+
+    #[test]
+    fn test_build_auxiliary_trace_add_program_with_output_in_public_input_section_works() {
+        let dummy_public_input = PublicInputs {
+            pc_init: FieldElement::zero(),
+            ap_init: FieldElement::zero(),
+            fp_init: FieldElement::zero(),
+            pc_final: FieldElement::zero(),
+            ap_final: FieldElement::zero(),
+            public_memory: HashMap::from([
+                (FieldElement::one(), FieldElement::from(10)),
+                (FieldElement::from(2), FieldElement::from(20)),
+                (FieldElement::from(3), FieldElement::from(30)),
+                (FieldElement::from(20), FieldElement::from(40)),
+                (FieldElement::from(21), FieldElement::from(50)),
+            ]),
+            range_check_max: None,
+            range_check_min: None,
+            num_steps: 1,
+            memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..22)]),
+        };
+
+        let a = vec![
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+        ];
+        let v = vec![
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+        ];
+        let (ap, vp) = add_pub_memory_in_public_input_section(&a, &v, &dummy_public_input);
+        assert_eq!(
+            ap,
+            vec![
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::zero(),
+                FieldElement::one(),
+                FieldElement::from(2),
+                FieldElement::from(3),
+                FieldElement::from(20),
+                FieldElement::from(21)
+            ]
+        );
+        assert_eq!(
+            vp,
+            vec![
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::zero(),
+                FieldElement::from(10),
+                FieldElement::from(20),
+                FieldElement::from(30),
+                FieldElement::from(40),
+                FieldElement::from(50)
             ]
         );
     }
