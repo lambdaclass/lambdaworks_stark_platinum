@@ -73,6 +73,7 @@ struct Round4<F: IsFFTField> {
     fri_layers_merkle_roots: Vec<Commitment>,
     deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,
     query_list: Vec<FriDecommitment<F>>,
+    nonce: u64,
 }
 
 #[cfg(feature = "test_fiat_shamir")]
@@ -363,6 +364,13 @@ where
         &coset_offset,
         domain_size,
     );
+
+    // generate nonce and append it to the transcript @@@TODO@@@
+    // calculate nonce with grinding
+    let grinding_factor = air.context().options.grinding_factor;
+    let nonce = generate_nonce_with_grinding(transcript, grinding_factor);
+    transcript.append(&nonce.to_be_bytes());
+
     let (query_list, iotas) = fri_query_phase(air, domain_size, &fri_layers, transcript);
 
     let fri_layers_merkle_roots: Vec<_> = fri_layers
@@ -378,6 +386,7 @@ where
         fri_layers_merkle_roots,
         deep_poly_openings,
         query_list,
+        nonce,
     }
 }
 
@@ -729,6 +738,8 @@ where
         query_list: round_4_result.query_list,
         // Open(H₁(D_LDE, 𝜐₀), Open(H₂(D_LDE, 𝜐₀), Open(tⱼ(D_LDE), 𝜐₀)
         deep_poly_openings: round_4_result.deep_poly_openings,
+        // nonce obtained from grinding
+        nonce: round_4_result.nonce,
     })
 }
 
