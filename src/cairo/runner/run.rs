@@ -293,10 +293,17 @@ fn create_memory_segment_map(
     memory_segments
 }
 
-pub fn program_path(program_name: &str) -> String {
+pub fn cairo0_program_path(program_name: &str) -> String {
     const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const PROGRAM_BASE_REL_PATH: &str = "/cairo_programs/";
-    let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
+    const CAIRO0_BASE_REL_PATH: &str = "/cairo_programs/cairo0/";
+    let program_base_path = CARGO_DIR.to_string() + CAIRO0_BASE_REL_PATH;
+    program_base_path + program_name
+}
+
+pub fn cairo1_program_path(program_name: &str) -> String {
+    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
+    const CAIRO1_BASE_REL_PATH: &str = "/cairo_programs/cairo1/";
+    let program_base_path = CARGO_DIR.to_string() + CAIRO1_BASE_REL_PATH;
     program_base_path + program_name
 }
 
