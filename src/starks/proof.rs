@@ -1,6 +1,6 @@
 use lambdaworks_crypto::merkle_tree::proof::Proof;
 use lambdaworks_math::{
-    elliptic_curve::short_weierstrass::errors::DeserializationError,
+    errors::DeserializationError,
     field::{element::FieldElement, traits::IsFFTField},
     traits::{ByteConversion, Deserializable, Serializable},
 };

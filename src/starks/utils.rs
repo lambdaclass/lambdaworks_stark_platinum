@@ -1,5 +1,5 @@
 use lambdaworks_crypto::merkle_tree::proof::Proof;
-use lambdaworks_math::elliptic_curve::short_weierstrass::errors::DeserializationError;
+use lambdaworks_math::errors::DeserializationError;
 
 use super::fri::Commitment;
 

@@ -1,5 +1,5 @@
 use lambdaworks_math::{
-    elliptic_curve::short_weierstrass::errors::DeserializationError,
+    errors::DeserializationError,
     field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
     traits::{ByteConversion, Deserializable, Serializable},
