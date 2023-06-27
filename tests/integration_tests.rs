@@ -128,7 +128,6 @@ fn test_prove_quadratic() {
     assert!(verify(&result, &quadratic_air, &()));
 }
 
-#[ignore = "metal"]
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) {
     let (main_trace, cairo_air, mut pub_inputs) =
@@ -157,6 +156,7 @@ fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None);
 }
 
+#[cfg_attr(feature = "metal", ignore)]
 #[test_log::test]
 fn test_prove_cairo_fibonacci_casm() {
     test_prove_cairo1_program(&cairo1_program_path("fibonacci_cairo1.casm"));
@@ -172,7 +172,7 @@ fn test_prove_cairo_lt_comparison() {
     test_prove_cairo_program(&cairo0_program_path("lt_comparison.json"), &None);
 }
 
-#[ignore = "metal"]
+#[cfg_attr(feature = "metal", ignore)]
 #[test_log::test]
 fn test_prove_cairo_compare_lesser_array() {
     test_prove_cairo_program(&cairo0_program_path("compare_lesser_array.json"), &None);
