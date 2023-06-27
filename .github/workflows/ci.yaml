@@ -103,6 +103,9 @@ jobs:
           . cairo0-venv/bin/activate
           make test_metal
 
+      - name: Clean compiled programs
+        run: make clean
+
   test_nvidia:
     name: Test (Ubuntu, NVIDIA GPU)
     runs-on: [self-hosted, cuda]
