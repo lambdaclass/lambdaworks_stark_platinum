@@ -20,7 +20,7 @@ use log::info;
 use crate::starks::debug::validate_trace;
 use crate::starks::transcript::sample_z_ood;
 
-use super::config::{Commitment, BatchedMerkleTree};
+use super::config::{BatchedMerkleTree, Commitment};
 use super::constraints::evaluator::ConstraintEvaluator;
 use super::domain::Domain;
 use super::frame::Frame;
@@ -86,9 +86,7 @@ fn round_0_transcript_initialization() -> DefaultTranscript {
     DefaultTranscript::new()
 }
 
-fn batch_commit<F>(
-    vectors: &[Vec<FieldElement<F>>],
-) -> (BatchedMerkleTree<F>, Commitment)
+fn batch_commit<F>(vectors: &[Vec<FieldElement<F>>]) -> (BatchedMerkleTree<F>, Commitment)
 where
     F: IsFFTField,
     FieldElement<F>: ByteConversion,

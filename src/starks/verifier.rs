@@ -3,9 +3,7 @@ use std::time::Instant;
 
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::{
-    fiat_shamir::transcript::Transcript
-};
+use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use log::error;
 
 #[cfg(feature = "test_fiat_shamir")]
@@ -21,12 +19,13 @@ use lambdaworks_math::{
 };
 
 use super::{
+    config::{BatchedMerkleTreeBackend, Commitment, FriMerkleTreeBackend},
     constraints::evaluator::ConstraintEvaluator,
     domain::Domain,
-    fri::{fri_decommit::FriDecommitment},
+    fri::fri_decommit::FriDecommitment,
     proof::StarkProof,
     traits::AIR,
-    transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize}, config::{Commitment, FriMerkleTreeBackend, BatchedMerkleTreeBackend},
+    transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize},
 };
 
 #[cfg(feature = "test_fiat_shamir")]

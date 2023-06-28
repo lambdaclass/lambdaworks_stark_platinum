@@ -6,9 +6,10 @@ use lambdaworks_math::{
 };
 
 use super::{
+    config::Commitment,
     frame::Frame,
-    fri::{fri_decommit::FriDecommitment},
-    utils::{deserialize_proof, serialize_proof}, config::Commitment,
+    fri::fri_decommit::FriDecommitment,
+    utils::{deserialize_proof, serialize_proof},
 };
 
 #[derive(Debug, Clone)]
@@ -359,9 +360,10 @@ mod test {
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
     use crate::starks::{
+        config::{Commitment, COMMITMENT_SIZE},
         frame::Frame,
-        fri::{fri_decommit::FriDecommitment},
-        proof::{DeepPolynomialOpenings, StarkProof}, config::{Commitment, COMMITMENT_SIZE},
+        fri::fri_decommit::FriDecommitment,
+        proof::{DeepPolynomialOpenings, StarkProof},
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
 

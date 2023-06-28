@@ -1,4 +1,7 @@
-use lambdaworks_crypto::merkle_tree::{backends::types::{Keccak256Tree, BatchKeccak256Tree}, merkle::MerkleTree};
+use lambdaworks_crypto::merkle_tree::{
+    backends::types::{BatchKeccak256Tree, Keccak256Tree},
+    merkle::MerkleTree,
+};
 
 // Merkle Trees configuration
 
@@ -15,4 +18,3 @@ pub type Commitment = [u8; COMMITMENT_SIZE];
 
 pub type BatchedMerkleTreeBackend<F> = BatchKeccak256Tree<F>;
 pub type BatchedMerkleTree<F> = MerkleTree<BatchedMerkleTreeBackend<F>>;
-
