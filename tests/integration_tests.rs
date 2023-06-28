@@ -29,6 +29,8 @@ use lambdaworks_stark::{
     FE,
 };
 
+const GRINDING_FACTOR: u8 = 1;
+
 #[test_log::test]
 fn test_prove_fib() {
     let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
@@ -136,7 +138,7 @@ fn test_prove_quadratic() {
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) {
     let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(file_path, &CairoVersion::V0, output_range, 1).unwrap();
+        generate_prover_args(file_path, &CairoVersion::V0, output_range, GRINDING_FACTOR).unwrap();
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -145,7 +147,7 @@ fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo1_program(file_path: &str) {
     let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(file_path, &CairoVersion::V1, &None, 1).unwrap();
+        generate_prover_args(file_path, &CairoVersion::V1, &None, GRINDING_FACTOR).unwrap();
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -249,7 +251,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
         &cairo0_program_path("simple_program.json"),
         &CairoVersion::V0,
         &None,
-        1,
+        GRINDING_FACTOR,
     )
     .unwrap();
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
@@ -270,7 +272,7 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
         &cairo0_program_path("simple_program.json"),
         &CairoVersion::V0,
         &None,
-        1,
+        GRINDING_FACTOR,
     )
     .unwrap();
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
@@ -292,7 +294,7 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
         &cairo0_program_path("rc_program.json"),
         &CairoVersion::V0,
         &None,
-        1,
+        GRINDING_FACTOR,
     )
     .unwrap();
 
@@ -359,7 +361,7 @@ fn test_verifier_rejects_proof_with_changed_output() {
         &cairo0_program_path("output_program.json"),
         &CairoVersion::V0,
         &None,
-        1,
+        GRINDING_FACTOR,
     )
     .unwrap();
 
