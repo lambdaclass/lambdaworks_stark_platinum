@@ -4,7 +4,6 @@ mod fri_functions;
 
 pub use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 pub use lambdaworks_crypto::merkle_tree::backends::types::Keccak256Tree;
-
 use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
 use lambdaworks_math::field::traits::{IsFFTField, IsField};
 use lambdaworks_math::traits::ByteConversion;
