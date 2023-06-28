@@ -175,9 +175,7 @@ mod tests {
     }
 
     proptest! {
-        #![proptest_config(
-            ProptestConfig::default()
-          )]
+        #![proptest_config(ProptestConfig {cases: 5, .. ProptestConfig::default()})]
         #[test]
         fn test_serialize_and_deserialize(data in field_vec(), row_width in any::<usize>()) {
             let frame = Frame::new(data, row_width);

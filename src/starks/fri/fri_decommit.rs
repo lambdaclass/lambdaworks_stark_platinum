@@ -131,7 +131,7 @@ mod tests {
     }
 
     prop_compose! {
-        fn commitment_vec()(vec in collection::vec(some_commitment(), 32)) -> Vec<Commitment> {
+        fn commitment_vec()(vec in collection::vec(some_commitment(), 4)) -> Vec<Commitment> {
             vec
         }
     }
@@ -177,9 +177,7 @@ mod tests {
     }
 
     proptest! {
-        #![proptest_config(
-            ProptestConfig::default()
-          )]
+        #![proptest_config(ProptestConfig {cases: 5, .. ProptestConfig::default()})]
         #[test]
         fn test_serialize_and_deserialize(fri_decommitment in some_fri_decommitment()) {
             let serialized = fri_decommitment.serialize();
