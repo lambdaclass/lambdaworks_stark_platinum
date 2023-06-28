@@ -3,8 +3,8 @@ pub mod fri_decommit;
 mod fri_functions;
 
 pub use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_crypto::merkle_tree::backends::sha3_256::Sha3_256Tree;
-pub use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
+pub use lambdaworks_crypto::merkle_tree::backends::types::Keccak256Tree;
+use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
 use lambdaworks_math::field::traits::{IsFFTField, IsField};
 use lambdaworks_math::traits::ByteConversion;
 pub use lambdaworks_math::{
@@ -23,7 +23,7 @@ use super::traits::AIR;
 use super::transcript::{transcript_to_field, transcript_to_usize};
 
 pub type Commitment = [u8; 32];
-pub type FriMerkleTree<F> = MerkleTree<Sha3_256Tree<F>>;
+pub type FriMerkleTree<F> = MerkleTree<Keccak256Tree<F>>;
 
 pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     number_layers: usize,

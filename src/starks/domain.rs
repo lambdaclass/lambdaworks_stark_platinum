@@ -1,5 +1,5 @@
 use lambdaworks_math::{
-    fft::roots_of_unity::get_powers_of_primitive_root_coset,
+    fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
     field::{element::FieldElement, traits::IsFFTField},
 };
 
