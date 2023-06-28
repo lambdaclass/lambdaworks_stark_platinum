@@ -326,7 +326,7 @@ fn generate_memory_permutation_argument_column(
     let z = &rap_challenges.z_memory;
     let alpha = &rap_challenges.alpha_memory;
     
-    let mut denom Vec<_> = &addresses_sorted.iter().zip(&values_sorted.iter()).map(|(ap,vp)| z - (ap + alpha * vp)).collect(); 
+    let mut denom: Vec<_> = &addresses_sorted.iter().zip(&values_sorted.iter()).map(|(ap,vp)| z - (ap + alpha * vp)).collect(); 
     FieldElement::inplace_batch_inverse(&mut denom);
 
     let num: Vec<_> = addresses_original
