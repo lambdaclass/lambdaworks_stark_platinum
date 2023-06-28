@@ -519,9 +519,9 @@ fn generate_nonce_with_grinding<T: Transcript>(
     transcript: &mut T,
     grinding_factor: u8,
 ) -> Option<u64> {
-    let transcript_challenge: [u8; 32] = transcript.challenge();
-    (0..u64::MAX).find(|&nonce| {
-        hash_transcript_with_int_and_get_leading_zeros(&transcript_challenge, nonce)
+    let transcript_challenge = transcript.challenge();
+    (0..u64::MAX).find(|&candidate_nonce| {
+        hash_transcript_with_int_and_get_leading_zeros(&transcript_challenge, candidate_nonce)
             >= grinding_factor
     })
 }
