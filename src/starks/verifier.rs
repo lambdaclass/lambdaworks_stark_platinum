@@ -4,7 +4,7 @@ use std::time::Instant;
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::{
-    fiat_shamir::transcript::Transcript, merkle_tree::backends::types::Keccak256Tree
+    fiat_shamir::transcript::Transcript, merkle_tree::backends::types::Keccak256Tree,
 };
 use log::error;
 

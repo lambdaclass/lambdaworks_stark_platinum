@@ -1,7 +1,8 @@
 use lambdaworks_math::{
+    fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
     field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
-    traits::ByteConversion, fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
+    traits::ByteConversion,
 };
 
 #[cfg(debug_assertions)]
