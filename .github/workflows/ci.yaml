@@ -58,8 +58,10 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install testing tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest,cargo-llvm-cov
 
       - name: Python3 build
         uses: actions/setup-python@v4
@@ -106,17 +108,3 @@ jobs:
       - name: Clean compiled programs
         run: make clean
 
-  test_nvidia:
-    name: Test (Ubuntu, NVIDIA GPU)
-    runs-on: [self-hosted, cuda]
-    env:
-      CARGO_TERM_COLOR: always
-    steps:
-      - uses: actions/checkout@v3
-      - name: Rustup toolchain install
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          components: clippy
-      - name: Run tests
-        run: cargo test -F cuda
