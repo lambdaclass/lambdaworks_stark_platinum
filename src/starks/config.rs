@@ -9,6 +9,7 @@ pub type FriMerkleTree<F> = MerkleTree<FriMerkleTreeBackend<F>>;
 
 // If using hashes with 256-bit security, commitment size should be 32
 // If using hashes with 256-bit security, commitment size should be 64
+// TODO: Commitment type should be obtained from MerkleTrees
 pub const COMMITMENT_SIZE: usize = 32;
 pub type Commitment = [u8; COMMITMENT_SIZE];
 
