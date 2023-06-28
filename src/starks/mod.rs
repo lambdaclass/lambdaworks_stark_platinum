@@ -7,6 +7,7 @@ pub mod domain;
 pub mod example;
 pub mod frame;
 pub mod fri;
+pub mod grinding;
 pub mod proof;
 pub mod proof_options;
 pub mod prover;
