@@ -24,6 +24,6 @@ pub fn hash_transcript_with_int_and_get_leading_zeros(
 
     let digest = Keccak256::digest(data);
 
-    let seed_head = u64::from_le_bytes(digest[..8].try_into().unwrap());
+    let seed_head = u64::from_be_bytes(digest[..8].try_into().unwrap());
     seed_head.trailing_zeros() as u8
 }
