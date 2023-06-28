@@ -26,6 +26,7 @@ use super::domain::Domain;
 use super::frame::Frame;
 use super::fri::fri_decommit::FriDecommitment;
 use super::fri::{fri_commit_phase, fri_query_phase};
+use super::grinding::generate_nonce_with_grinding;
 use super::proof::{DeepPolynomialOpenings, StarkProof};
 use super::trace::TraceTable;
 use super::traits::AIR;
@@ -73,6 +74,7 @@ struct Round4<F: IsFFTField> {
     fri_layers_merkle_roots: Vec<Commitment>,
     deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,
     query_list: Vec<FriDecommitment<F>>,
+    nonce: u64,
 }
 
 #[cfg(feature = "test_fiat_shamir")]
@@ -361,6 +363,14 @@ where
         &coset_offset,
         domain_size,
     );
+
+    // grinding: generate nonce and append it to the transcript
+    let grinding_factor = air.context().options.grinding_factor;
+    let transcript_challenge = transcript.challenge();
+    let nonce = generate_nonce_with_grinding(&transcript_challenge, grinding_factor)
+        .expect("nonce not found");
+    transcript.append(&nonce.to_be_bytes());
+
     let (query_list, iotas) = fri_query_phase(air, domain_size, &fri_layers, transcript);
 
     let fri_layers_merkle_roots: Vec<_> = fri_layers
@@ -376,6 +386,7 @@ where
         fri_layers_merkle_roots,
         deep_poly_openings,
         query_list,
+        nonce,
     }
 }
 
@@ -715,16 +726,15 @@ where
         query_list: round_4_result.query_list,
         // Open(H₁(D_LDE, 𝜐₀), Open(H₂(D_LDE, 𝜐₀), Open(tⱼ(D_LDE), 𝜐₀)
         deep_poly_openings: round_4_result.deep_poly_openings,
+        // nonce obtained from grinding
+        nonce: round_4_result.nonce,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        starks::{
-            context::{AirContext, ProofOptions},
-            example::simple_fibonacci,
-        },
+        starks::{context::AirContext, example::simple_fibonacci, proof_options::ProofOptions},
         FE,
     };
 
@@ -743,12 +753,14 @@ mod tests {
         let trace_length = trace.n_rows();
         let coset_offset = 3;
         let blowup_factor: usize = 2;
+        let grinding_factor = 20;
 
         let context = AirContext {
             options: ProofOptions {
                 blowup_factor: blowup_factor as u8,
                 fri_number_of_queries: 1,
                 coset_offset,
+                grinding_factor,
             },
             trace_length,
             trace_columns: trace.n_cols,

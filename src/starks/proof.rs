@@ -42,6 +42,8 @@ pub struct StarkProof<F: IsFFTField> {
     pub query_list: Vec<FriDecommitment<F>>,
     // Open(H₁(D_LDE, 𝜐₀), Open(H₂(D_LDE, 𝜐₀), Open(tⱼ(D_LDE), 𝜐₀)
     pub deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,
+    // nonce obtained from grinding
+    pub nonce: u64,
 }
 
 impl<F> Serializable for DeepPolynomialOpenings<F>
@@ -194,6 +196,9 @@ where
             bytes.extend(opening_bytes);
         }
 
+        // serialize nonce
+        bytes.extend(self.nonce.to_be_bytes());
+
         bytes
     }
 }
@@ -337,6 +342,15 @@ where
             deep_poly_openings.push(opening);
         }
 
+        // deserialize nonce
+        let start_nonce = bytes.len() - std::mem::size_of::<u64>();
+
+        let nonce = u64::from_be_bytes(
+            bytes[start_nonce..]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+
         Ok(StarkProof {
             lde_trace_merkle_roots,
             trace_ood_frame_evaluations,
@@ -347,6 +361,7 @@ where
             fri_last_value,
             query_list,
             deep_poly_openings,
+            nonce,
         })
     }
 }
@@ -482,7 +497,8 @@ mod test {
                 fri_layers_merkle_roots,
                 fri_last_value,
                 query_list,
-                deep_poly_openings
+                deep_poly_openings,
+                nonce: 0
             }
         }
     }

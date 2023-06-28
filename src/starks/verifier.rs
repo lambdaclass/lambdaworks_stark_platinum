@@ -23,6 +23,7 @@ use super::{
     constraints::evaluator::ConstraintEvaluator,
     domain::Domain,
     fri::fri_decommit::FriDecommitment,
+    grinding::hash_transcript_with_int_and_get_leading_zeros,
     proof::StarkProof,
     traits::AIR,
     transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize},
@@ -53,6 +54,7 @@ where
     zetas: Vec<FieldElement<F>>,
     iotas: Vec<usize>,
     rap_challenges: A::RAPChallenges,
+    leading_zeros_count: u8, // number of leading zeros in the grinding
 }
 
 fn step_1_replay_rounds_and_recover_challenges<F, A, T>(
@@ -167,6 +169,14 @@ where
     // <<<< Receive value: pₙ
     transcript.append(&proof.fri_last_value.to_bytes_be());
 
+    // Receive grinding value
+    // 1) Receive challenge from the transcript
+    let transcript_challenge = transcript.challenge();
+    let nonce = proof.nonce;
+    let leading_zeros_count =
+        hash_transcript_with_int_and_get_leading_zeros(&transcript_challenge, nonce);
+    transcript.append(&nonce.to_be_bytes());
+
     // FRI query phase
     // <<<< Send challenges 𝜄ₛ (iota_s)
     let iotas = (0..air.options().fri_number_of_queries)
@@ -183,6 +193,7 @@ where
         zetas,
         iotas,
         rap_challenges,
+        leading_zeros_count,
     }
 }
 
@@ -528,6 +539,13 @@ where
 
     let challenges =
         step_1_replay_rounds_and_recover_challenges(air, proof, &domain, &mut transcript);
+
+    // verify grinding
+    let grinding_factor = air.context().options.grinding_factor;
+    if challenges.leading_zeros_count < grinding_factor {
+        error!("Grinding factor not satisfied");
+        return false;
+    }
 
     #[cfg(feature = "instruments")]
     let elapsed1 = timer1.elapsed();
