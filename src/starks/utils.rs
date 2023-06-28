@@ -1,7 +1,7 @@
 use lambdaworks_crypto::merkle_tree::proof::Proof;
 use lambdaworks_math::errors::DeserializationError;
 
-use super::fri::Commitment;
+use super::config::Commitment;
 
 pub fn serialize_proof(proof: &Proof<Commitment>) -> Vec<u8> {
     let mut bytes = vec![];

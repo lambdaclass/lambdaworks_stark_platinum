@@ -7,8 +7,8 @@ use lambdaworks_math::{
 
 use super::{
     frame::Frame,
-    fri::{fri_decommit::FriDecommitment, Commitment},
-    utils::{deserialize_proof, serialize_proof},
+    fri::{fri_decommit::FriDecommitment},
+    utils::{deserialize_proof, serialize_proof}, config::Commitment,
 };
 
 #[derive(Debug, Clone)]
@@ -360,8 +360,8 @@ mod test {
 
     use crate::starks::{
         frame::Frame,
-        fri::{fri_decommit::FriDecommitment, Commitment},
-        proof::{DeepPolynomialOpenings, StarkProof},
+        fri::{fri_decommit::FriDecommitment},
+        proof::{DeepPolynomialOpenings, StarkProof}, config::{Commitment, COMMITMENT_SIZE},
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
 
@@ -369,7 +369,7 @@ mod test {
 
     prop_compose! {
             fn some_commitment()(high in any::<u128>(), low in any::<u128>()) -> Commitment {
-                let mut bytes = [0u8; 32];
+                let mut bytes = [0u8; COMMITMENT_SIZE];
                 bytes[..16].copy_from_slice(&high.to_be_bytes());
                 bytes[16..].copy_from_slice(&low.to_be_bytes());
                 bytes

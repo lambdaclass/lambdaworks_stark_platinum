@@ -8,7 +8,7 @@ use lambdaworks_math::{
     traits::ByteConversion,
 };
 
-use super::FriMerkleTree;
+use crate::starks::config::FriMerkleTree;
 
 #[derive(Clone)]
 pub struct FriLayer<F>
