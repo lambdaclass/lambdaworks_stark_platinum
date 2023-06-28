@@ -1,4 +1,3 @@
-pub mod commitment;
 pub mod constraints;
 pub mod context;
 #[cfg(debug_assertions)]
@@ -16,3 +15,6 @@ pub mod traits;
 pub mod transcript;
 pub mod utils;
 pub mod verifier;
+
+/// Configurations of the Prover available in compile time
+pub mod config;

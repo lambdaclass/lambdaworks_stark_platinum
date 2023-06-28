@@ -3,9 +3,7 @@ use std::time::Instant;
 
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::{
-    fiat_shamir::transcript::Transcript, merkle_tree::backends::types::Keccak256Tree,
-};
+use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use log::error;
 
 #[cfg(feature = "test_fiat_shamir")]
@@ -21,10 +19,10 @@ use lambdaworks_math::{
 };
 
 use super::{
-    commitment::BatchStarkProverBackend,
+    config::{BatchedMerkleTreeBackend, Commitment, FriMerkleTreeBackend},
     constraints::evaluator::ConstraintEvaluator,
     domain::Domain,
-    fri::{fri_decommit::FriDecommitment, Commitment},
+    fri::fri_decommit::FriDecommitment,
     grinding::hash_transcript_with_int_and_get_leading_zeros,
     proof::StarkProof,
     traits::AIR,
@@ -360,7 +358,7 @@ where
         // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
         result &= deep_poly_opening
             .lde_composition_poly_proof
-            .verify::<BatchStarkProverBackend<F>>(
+            .verify::<BatchedMerkleTreeBackend<F>>(
                 &proof.composition_poly_root,
                 *iota_n,
                 &evaluations,
@@ -379,7 +377,7 @@ where
             .zip(&deep_poly_opening.lde_trace_merkle_proofs)
             .zip(lde_trace_evaluations)
         {
-            result &= merkle_proof.verify::<BatchStarkProverBackend<F>>(
+            result &= merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
                 merkle_root,
                 *iota_n,
                 &evaluation,
@@ -414,7 +412,7 @@ where
     // Verify opening Open(p₀(D₀), 𝜐ₛ)
     if !fri_decommitment
         .first_layer_auth_path
-        .verify::<Keccak256Tree<F>>(
+        .verify::<FriMerkleTreeBackend<F>>(
             &fri_layers_merkle_roots[0],
             iota,
             &fri_decommitment.first_layer_evaluation,
@@ -469,7 +467,7 @@ where
         let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
 
         // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
-        if !auth_path.verify::<Keccak256Tree<F>>(
+        if !auth_path.verify::<FriMerkleTreeBackend<F>>(
             merkle_root,
             layer_evaluation_index_sym,
             evaluation_sym,

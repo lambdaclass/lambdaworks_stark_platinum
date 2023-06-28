@@ -3,7 +3,7 @@ use std::time::Instant;
 
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::MerkleTree};
+use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
@@ -20,12 +20,12 @@ use log::info;
 use crate::starks::debug::validate_trace;
 use crate::starks::transcript::sample_z_ood;
 
-use super::commitment::BatchStarkProverBackend;
+use super::config::{BatchedMerkleTree, Commitment};
 use super::constraints::evaluator::ConstraintEvaluator;
 use super::domain::Domain;
 use super::frame::Frame;
 use super::fri::fri_decommit::FriDecommitment;
-use super::fri::{fri_commit_phase, fri_query_phase, Commitment};
+use super::fri::{fri_commit_phase, fri_query_phase};
 use super::grinding::generate_nonce_with_grinding;
 use super::proof::{DeepPolynomialOpenings, StarkProof};
 use super::trace::TraceTable;
@@ -45,7 +45,7 @@ where
 {
     trace_polys: Vec<Polynomial<FieldElement<F>>>,
     lde_trace: TraceTable<F>,
-    lde_trace_merkle_trees: Vec<MerkleTree<BatchStarkProverBackend<F>>>,
+    lde_trace_merkle_trees: Vec<BatchedMerkleTree<F>>,
     lde_trace_merkle_roots: Vec<Commitment>,
     rap_challenges: A::RAPChallenges,
 }
@@ -57,7 +57,7 @@ where
 {
     composition_poly_even: Polynomial<FieldElement<F>>,
     lde_composition_poly_even_evaluations: Vec<FieldElement<F>>,
-    composition_poly_merkle_tree: MerkleTree<BatchStarkProverBackend<F>>,
+    composition_poly_merkle_tree: BatchedMerkleTree<F>,
     composition_poly_root: Commitment,
     composition_poly_odd: Polynomial<FieldElement<F>>,
     lde_composition_poly_odd_evaluations: Vec<FieldElement<F>>,
@@ -88,14 +88,12 @@ fn round_0_transcript_initialization() -> DefaultTranscript {
     DefaultTranscript::new()
 }
 
-fn batch_commit<F>(
-    vectors: &[Vec<FieldElement<F>>],
-) -> (MerkleTree<BatchStarkProverBackend<F>>, Commitment)
+fn batch_commit<F>(vectors: &[Vec<FieldElement<F>>]) -> (BatchedMerkleTree<F>, Commitment)
 where
     F: IsFFTField,
     FieldElement<F>: ByteConversion,
 {
-    let tree = MerkleTree::<BatchStarkProverBackend<F>>::build(vectors);
+    let tree = BatchedMerkleTree::<F>::build(vectors);
     let commitment = tree.root;
     (tree, commitment)
 }
@@ -127,7 +125,7 @@ fn interpolate_and_commit<T, F>(
 ) -> (
     Vec<Polynomial<FieldElement<F>>>,
     Vec<Vec<FieldElement<F>>>,
-    MerkleTree<BatchStarkProverBackend<F>>,
+    BatchedMerkleTree<F>,
     Commitment,
 )
 where

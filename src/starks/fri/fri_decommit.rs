@@ -5,9 +5,8 @@ use lambdaworks_math::field::element::FieldElement;
 use lambdaworks_math::field::traits::IsField;
 use lambdaworks_math::traits::{ByteConversion, Deserializable, Serializable};
 
+use crate::starks::config::Commitment;
 use crate::starks::utils::{deserialize_proof, serialize_proof};
-
-use super::Commitment;
 
 #[derive(Debug, Clone)]
 pub struct FriDecommitment<F: IsField> {
@@ -116,14 +115,17 @@ mod tests {
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
-    use crate::starks::fri::{fri_decommit::FriDecommitment, Commitment};
     use lambdaworks_math::traits::{Deserializable, Serializable};
+
+    use crate::starks::config::{Commitment, COMMITMENT_SIZE};
+
+    use super::FriDecommitment;
 
     type FE = FieldElement<Stark252PrimeField>;
 
     prop_compose! {
             fn some_commitment()(high in any::<u128>(), low in any::<u128>()) -> Commitment {
-                let mut bytes = [0u8; 32];
+                let mut bytes = [0u8; COMMITMENT_SIZE];
                 bytes[..16].copy_from_slice(&high.to_be_bytes());
                 bytes[16..].copy_from_slice(&low.to_be_bytes());
                 bytes
