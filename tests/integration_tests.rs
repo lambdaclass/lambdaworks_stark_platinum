@@ -65,7 +65,7 @@ fn test_prove_fib17() {
             blowup_factor: 2,
             fri_number_of_queries: 1,
             coset_offset: 3,
-            grinding_factor: 1,
+            grinding_factor: 10,
         },
         trace_length,
         trace_columns: 1,
