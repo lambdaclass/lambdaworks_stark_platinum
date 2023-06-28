@@ -26,7 +26,7 @@ use super::domain::Domain;
 use super::frame::Frame;
 use super::fri::fri_decommit::FriDecommitment;
 use super::fri::{fri_commit_phase, fri_query_phase, Commitment};
-use super::grinding::hash_transcript_with_int_and_get_leading_zeros;
+use super::grinding::generate_nonce_with_grinding;
 use super::proof::{DeepPolynomialOpenings, StarkProof};
 use super::trace::TraceTable;
 use super::traits::AIR;
@@ -366,11 +366,10 @@ where
         domain_size,
     );
 
-    // generate nonce and append it to the transcript
-    // calculate nonce with grinding
+    // grinding: generate nonce and append it to the transcript
     let grinding_factor = air.context().options.grinding_factor;
-    let nonce_found = generate_nonce_with_grinding(transcript, grinding_factor);
-    let nonce = nonce_found.unwrap(); // TODO: handle nonce not found
+    // TODO: handle nonce not found
+    let nonce = generate_nonce_with_grinding(transcript, grinding_factor).unwrap();
     transcript.append(&nonce.to_be_bytes());
 
     let (query_list, iotas) = fri_query_phase(air, domain_size, &fri_layers, transcript);
@@ -505,26 +504,6 @@ where
         });
     }
     ret
-}
-
-/// Performs grinding, generating a new nonce for the proof.
-/// The nonce generated is such that:
-/// Hash(transcript_hash || nonce) has a number of leading zeros
-/// greater or equal than `grinding_factor`.
-///
-/// # Parameters
-///
-/// * `transcript` - the hash of the transcript
-/// * `grinding_factor` - the number of leading zeros needed
-fn generate_nonce_with_grinding<T: Transcript>(
-    transcript: &mut T,
-    grinding_factor: u8,
-) -> Option<u64> {
-    let transcript_challenge = transcript.challenge();
-    (0..u64::MAX).find(|&candidate_nonce| {
-        hash_transcript_with_int_and_get_leading_zeros(&transcript_challenge, candidate_nonce)
-            >= grinding_factor
-    })
 }
 
 // FIXME remove unwrap() calls and return errors
