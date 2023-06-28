@@ -20,14 +20,14 @@ fn cairo_benches(c: &mut Criterion) {
     );
     run_cairo_bench(
         &mut group,
-        "fibonacci/30",
-        &cairo0_program_path("fibonacci_30.json"),
+        "fibonacci/100",
+        &cairo0_program_path("fibonacci_100.json"),
     );
 }
 
 fn cairo0_program_path(program_name: &str) -> String {
     const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const PROGRAM_BASE_REL_PATH: &str = "/cairo_programs/cairo0";
+    const PROGRAM_BASE_REL_PATH: &str = "/cairo_programs/cairo0/";
     let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
     program_base_path + program_name
 }
@@ -52,8 +52,8 @@ fn verifier_benches(c: &mut Criterion) {
     );
     run_verifier_bench(
         &mut group,
-        "fibonacci/30",
-        &cairo0_program_path("fibonacci_30.json"),
+        "fibonacci/100",
+        &cairo0_program_path("fibonacci_100.json"),
     );
 }
 
