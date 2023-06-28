@@ -123,4 +123,3 @@ jobs:
 
       - name: Clean compiled programs
         run: make clean
-        
