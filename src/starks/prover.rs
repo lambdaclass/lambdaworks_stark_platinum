@@ -365,10 +365,11 @@ where
         domain_size,
     );
 
-    // generate nonce and append it to the transcript @@@TODO@@@
+    // generate nonce and append it to the transcript
     // calculate nonce with grinding
     let grinding_factor = air.context().options.grinding_factor;
-    let nonce = generate_nonce_with_grinding(transcript, grinding_factor);
+    let nonce_found = generate_nonce_with_grinding(transcript, grinding_factor);
+    let nonce = nonce_found.unwrap(); // TODO: handle nonce not found
     transcript.append(&nonce.to_be_bytes());
 
     let (query_list, iotas) = fri_query_phase(air, domain_size, &fri_layers, transcript);
@@ -511,10 +512,47 @@ where
 /// greater or equal than `grinding_factor`.
 ///
 /// # Parameters
+///
 /// * `transcript` - the hash of the transcript
-fn generate_nonce_with_grinding<T: Transcript>(transcript: &mut T, grinding_factor: u8) -> u64 {
-    // TODO! implement
-    0
+/// * `grinding_factor` - the number of leading zeros needed
+fn generate_nonce_with_grinding<T: Transcript>(
+    transcript: &mut T,
+    grinding_factor: u8,
+) -> Option<u64> {
+    let transcript_challenge: [u8; 32] = transcript.challenge();
+    (0..u64::MAX).find(|&nonce| {
+        hash_transcript_with_int_and_get_leading_zeros(&transcript_challenge, nonce)
+            >= grinding_factor
+    })
+}
+
+/// Build data with the concatenation of transcript hash and value.
+/// Computes the hash of this element and returns the number of
+/// leading zeros in the resulting value (in the big-endian representation).
+///
+/// # Parameters
+///
+/// * `transcript_challenge` - the hash value obtained from the transcript
+/// * `value` - the value to be concatenated with the transcript hash
+/// (i.e. a candidate nonce).
+///
+/// # Returns
+///
+/// The number of leading zeros in the resulting hash value.
+fn hash_transcript_with_int_and_get_leading_zeros(
+    transcript_challenge: &[u8; 32],
+    value: u64,
+) -> u8 {
+    let mut data = [0; 40];
+    data[..32].copy_from_slice(transcript_challenge);
+    data[32..].copy_from_slice(&value.to_le_bytes());
+
+    // TODO calculate hash
+    //let digest = hash(&data);
+    let digest = [0_u8; 40];
+
+    let seed_head = u64::from_le_bytes(digest[..8].try_into().unwrap());
+    seed_head.trailing_zeros() as u8
 }
 
 // FIXME remove unwrap() calls and return errors
