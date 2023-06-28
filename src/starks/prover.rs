@@ -368,8 +368,9 @@ where
 
     // grinding: generate nonce and append it to the transcript
     let grinding_factor = air.context().options.grinding_factor;
+    let transcript_challenge = transcript.challenge();
     // TODO: handle nonce not found
-    let nonce = generate_nonce_with_grinding(transcript, grinding_factor).unwrap();
+    let nonce = generate_nonce_with_grinding(&transcript_challenge, grinding_factor).unwrap();
     transcript.append(&nonce.to_be_bytes());
 
     let (query_list, iotas) = fri_query_phase(air, domain_size, &fri_layers, transcript);
