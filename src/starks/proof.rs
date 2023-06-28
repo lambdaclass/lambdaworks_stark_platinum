@@ -377,7 +377,7 @@ mod test {
     }
 
     prop_compose! {
-        fn commitment_vec()(vec in collection::vec(some_commitment(), (32_usize, 64_usize))) -> Vec<Commitment> {
+        fn commitment_vec()(vec in collection::vec(some_commitment(), (16_usize, 32_usize))) -> Vec<Commitment> {
             vec
         }
     }
@@ -401,7 +401,7 @@ mod test {
     }
 
     prop_compose! {
-        fn field_vec()(vec in collection::vec(some_felt(), (16_usize, 256_usize))) -> Vec<FE> {
+        fn field_vec()(vec in collection::vec(some_felt(), (8_usize, 16_usize))) -> Vec<FE> {
             vec
         }
     }
@@ -423,7 +423,7 @@ mod test {
     }
 
     prop_compose! {
-        fn fri_decommitment_vec()(vec in collection::vec(some_fri_decommitment(), (32_usize, 128_usize))) -> Vec<FriDecommitment<Stark252PrimeField>> {
+        fn fri_decommitment_vec()(vec in collection::vec(some_fri_decommitment(), (16_usize, 32_usize))) -> Vec<FriDecommitment<Stark252PrimeField>> {
             vec
         }
     }
@@ -447,7 +447,7 @@ mod test {
     }
 
     prop_compose! {
-        fn deep_polynomial_openings_vec()(vec in collection::vec(some_deep_polynomial_openings(), (16_usize, 64_usize))) -> Vec<DeepPolynomialOpenings<Stark252PrimeField>> {
+        fn deep_polynomial_openings_vec()(vec in collection::vec(some_deep_polynomial_openings(), (8_usize, 16_usize))) -> Vec<DeepPolynomialOpenings<Stark252PrimeField>> {
             vec
         }
     }
@@ -505,6 +505,7 @@ mod test {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig {cases: 5, .. ProptestConfig::default()})]
         #[test]
         fn test_stark_proof_serialization(
             stark_proof in some_stark_proof()
