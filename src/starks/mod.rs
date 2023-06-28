@@ -14,5 +14,5 @@ pub mod transcript;
 pub mod utils;
 pub mod verifier;
 
-/// Configurations of the Prover avaible in compile time
+/// Configurations of the Prover available in compile time
 pub mod config;
