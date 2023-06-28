@@ -1,7 +1,5 @@
 use lambdaworks_crypto::merkle_tree::{backends::types::{Keccak256Tree, BatchKeccak256Tree}, merkle::MerkleTree};
 
-
-
 // Merkle Trees configuration
 
 // Security of both hashes should match
