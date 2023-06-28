@@ -1,8 +1,8 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::fft::roots_of_unity::get_powers_of_primitive_root_coset;
 use lambdaworks_math::{
     field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
+    fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
 };
 
 use super::{

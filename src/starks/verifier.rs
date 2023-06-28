@@ -4,7 +4,7 @@ use std::time::Instant;
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::{
-    fiat_shamir::transcript::Transcript, merkle_tree::backends::sha3_256::Sha3_256Tree,
+    fiat_shamir::transcript::Transcript, merkle_tree::backends::types::Keccak256Tree
 };
 use log::error;
 
@@ -403,7 +403,7 @@ where
     // Verify opening Open(p₀(D₀), 𝜐ₛ)
     if !fri_decommitment
         .first_layer_auth_path
-        .verify::<Sha3_256Tree<F>>(
+        .verify::<Keccak256Tree<F>>(
             &fri_layers_merkle_roots[0],
             iota,
             &fri_decommitment.first_layer_evaluation,
@@ -458,7 +458,7 @@ where
         let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
 
         // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
-        if !auth_path.verify::<Sha3_256Tree<F>>(
+        if !auth_path.verify::<Keccak256Tree<F>>(
             merkle_root,
             layer_evaluation_index_sym,
             evaluation_sym,
