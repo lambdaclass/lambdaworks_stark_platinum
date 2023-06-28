@@ -28,7 +28,7 @@ test_metal: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo test -F metal
 
 coverage: $(COMPILED_CAIRO0_PROGRAMS)
-	cargo llvm-cov --lcov --output-path lcov.info
+	cargo llvm-cov nextest --lcov --output-path lcov.info
 
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
