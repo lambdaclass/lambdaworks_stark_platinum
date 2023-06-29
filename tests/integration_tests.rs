@@ -21,7 +21,7 @@ use lambdaworks_stark::{
             fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP},
             quadratic_air, simple_fibonacci,
         },
-        proof_options::ProofOptions,
+        proof::options::ProofOptions,
         prover::prove,
         trace::TraceTable,
         verifier::verify,

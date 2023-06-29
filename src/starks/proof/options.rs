@@ -1,3 +1,5 @@
+use super::errors::InsecureOptionError;
+
 /// The options for the proof
 ///
 /// - `blowup_factor`: the blowup factor for the trace
@@ -10,4 +12,20 @@ pub struct ProofOptions {
     pub fri_number_of_queries: usize,
     pub coset_offset: u64,
     pub grinding_factor: u8,
+}
+
+impl ProofOptions {
+    pub fn new_with_checked_security(
+        blowup_factor: u8,
+        fri_number_of_queries: usize,
+        coset_offset: u64,
+        grinding_factor: u8,
+    ) -> Result<Self, InsecureOptionError> {
+        Ok(ProofOptions {
+            blowup_factor,
+            fri_number_of_queries,
+            coset_offset,
+            grinding_factor,
+        })
+    }
 }

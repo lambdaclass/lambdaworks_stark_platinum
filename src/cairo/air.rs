@@ -10,7 +10,7 @@ use crate::{
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
         context::AirContext,
         frame::Frame,
-        proof_options::ProofOptions,
+        proof::options::ProofOptions,
         trace::TraceTable,
         traits::AIR,
         transcript::transcript_to_field,

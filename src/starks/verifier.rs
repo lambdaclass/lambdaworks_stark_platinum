@@ -24,7 +24,7 @@ use super::{
     domain::Domain,
     fri::fri_decommit::FriDecommitment,
     grinding::hash_transcript_with_int_and_get_leading_zeros,
-    proof::StarkProof,
+    proof::stark::StarkProof,
     traits::AIR,
     transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize},
 };

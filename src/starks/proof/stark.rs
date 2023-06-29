@@ -5,7 +5,7 @@ use lambdaworks_math::{
     traits::{ByteConversion, Deserializable, Serializable},
 };
 
-use super::{
+use crate::starks::{
     config::Commitment,
     frame::Frame,
     fri::fri_decommit::FriDecommitment,
@@ -378,9 +378,10 @@ mod test {
         config::{Commitment, COMMITMENT_SIZE},
         frame::Frame,
         fri::fri_decommit::FriDecommitment,
-        proof::{DeepPolynomialOpenings, StarkProof},
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
+
+    use super::{DeepPolynomialOpenings, StarkProof};
 
     type FE = FieldElement<Stark252PrimeField>;
 

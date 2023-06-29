@@ -27,7 +27,7 @@ use super::frame::Frame;
 use super::fri::fri_decommit::FriDecommitment;
 use super::fri::{fri_commit_phase, fri_query_phase};
 use super::grinding::generate_nonce_with_grinding;
-use super::proof::{DeepPolynomialOpenings, StarkProof};
+use super::proof::stark::{DeepPolynomialOpenings, StarkProof};
 use super::trace::TraceTable;
 use super::traits::AIR;
 use super::transcript::{batch_sample_challenges, transcript_to_field};
@@ -734,7 +734,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        starks::{context::AirContext, example::simple_fibonacci, proof_options::ProofOptions},
+        starks::{context::AirContext, example::simple_fibonacci, proof::options::ProofOptions},
         FE,
     };
 
