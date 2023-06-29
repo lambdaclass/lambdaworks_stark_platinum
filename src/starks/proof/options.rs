@@ -24,12 +24,20 @@ impl ProofOptions {
         grinding_factor: u8,
     ) -> Result<Self, InsecureOptionError> {
         const NUM_SECURITY_BITS: usize = 128;
+        // TODO: Make it work for extended fields
         const EXTENSION_DEGREE: usize = 1;
         // Estimated maximum domain size. 2^40 = 1 TB
         const NUM_BITS_MAX_DOMAIN_SIZE: usize = 40;
+        let num_bits_blowup_factor = blowup_factor.leading_zeros() as usize;
 
         if F::field_bit_size() * EXTENSION_DEGREE <= NUM_SECURITY_BITS + NUM_BITS_MAX_DOMAIN_SIZE {
             return Err(InsecureOptionError::FieldSize);
+        }
+
+        if NUM_SECURITY_BITS
+            < grinding_factor as usize + num_bits_blowup_factor * fri_number_of_queries - 1
+        {
+            return Err(InsecureOptionError::SecurityBits);
         }
 
         Ok(ProofOptions {
@@ -63,5 +71,18 @@ mod tests {
         let options = ProofOptions::new_with_checked_security::<F17>(1, 1, 1, 1);
 
         assert!(matches!(options, Err(InsecureOptionError::FieldSize)));
+    }
+
+    #[test]
+    fn proof_options_are_insecure_for_too_many_fri_queries() {
+        let fri_number_of_queries = 130;
+        let options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
+            1,
+            fri_number_of_queries,
+            1,
+            1,
+        );
+
+        assert!(matches!(options, Err(InsecureOptionError::SecurityBits)));
     }
 }
