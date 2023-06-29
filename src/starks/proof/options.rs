@@ -23,6 +23,37 @@ impl ProofOptions {
     // Estimated maximum domain size. 2^40 = 1 TB
     const NUM_BITS_MAX_DOMAIN_SIZE: usize = 40;
 
+    /// See section 5.10.1 of https://eprint.iacr.org/2021/582.pdf
+    pub fn new_secure_for_80_bits(coset_offset: u64) -> Self {
+        ProofOptions {
+            blowup_factor: 4,
+            fri_number_of_queries: 31,
+            coset_offset,
+            grinding_factor: 20,
+        }
+    }
+
+    /// See section 5.10.1 of https://eprint.iacr.org/2021/582.pdf
+    pub fn new_secure_for_100_bits(coset_offset: u64) -> Self {
+        ProofOptions {
+            blowup_factor: 4,
+            fri_number_of_queries: 41,
+            coset_offset,
+            grinding_factor: 20,
+        }
+    }
+
+    /// See section 5.10.1 of https://eprint.iacr.org/2021/582.pdf
+    pub fn new_secure_for_128_bits(coset_offset: u64) -> Self {
+        ProofOptions {
+            blowup_factor: 4,
+            fri_number_of_queries: 55,
+            coset_offset,
+            grinding_factor: 20,
+        }
+    }
+
+    /// Checks security of proof options given 128 bits of security
     pub fn new_with_checked_security<F: IsPrimeField>(
         blowup_factor: u8,
         fri_number_of_queries: usize,
@@ -31,10 +62,10 @@ impl ProofOptions {
     ) -> Result<Self, InsecureOptionError> {
         Self::check_field_security::<F>()?;
 
-        let num_bits_blowup_factor = blowup_factor.leading_zeros() as usize;
+        let num_bits_blowup_factor = blowup_factor.trailing_zeros() as usize;
 
         if Self::NUM_SECURITY_BITS
-            < grinding_factor as usize + num_bits_blowup_factor * fri_number_of_queries - 1
+            >= grinding_factor as usize + num_bits_blowup_factor * fri_number_of_queries - 1
         {
             return Err(InsecureOptionError::SecurityBits);
         }
@@ -47,6 +78,7 @@ impl ProofOptions {
         })
     }
 
+    /// Checks provable security of proof options given 128 bits of security
     pub fn new_with_checked_provable_security<F: IsPrimeField>(
         blowup_factor: u8,
         fri_number_of_queries: usize,
@@ -93,42 +125,62 @@ mod tests {
     use super::ProofOptions;
 
     #[test]
-    fn stark_prime_field_is_large_enough_to_be_secure() {
-        let options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(1, 1, 1, 1);
-
-        assert!(options.is_ok());
-    }
-
-    #[test]
     fn u64_prime_field_is_not_large_enough_to_be_secure() {
-        let options = ProofOptions::new_with_checked_security::<F17>(1, 1, 1, 1);
+        let ProofOptions {
+            blowup_factor,
+            fri_number_of_queries,
+            coset_offset,
+            grinding_factor,
+        } = ProofOptions::new_secure_for_128_bits(1);
 
-        assert!(matches!(options, Err(InsecureOptionError::FieldSize)));
+        let u64_options = ProofOptions::new_with_checked_security::<F17>(
+            blowup_factor,
+            fri_number_of_queries,
+            coset_offset,
+            grinding_factor,
+        );
+
+        assert!(matches!(u64_options, Err(InsecureOptionError::FieldSize)));
     }
 
     #[test]
-    fn proof_options_are_insecure_for_too_many_fri_queries() {
-        let fri_number_of_queries = 130;
-        let options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
-            1,
+    fn generated_stark_proof_options_for_128_bits_are_secure() {
+        let ProofOptions {
+            blowup_factor,
             fri_number_of_queries,
-            1,
-            1,
+            coset_offset,
+            grinding_factor,
+        } = ProofOptions::new_secure_for_128_bits(1);
+
+        let secure_options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
+            blowup_factor,
+            fri_number_of_queries,
+            coset_offset,
+            grinding_factor,
         );
 
-        assert!(matches!(options, Err(InsecureOptionError::SecurityBits)));
+        assert!(secure_options.is_ok());
     }
 
     #[test]
-    fn proof_options_are_insecure_to_be_provable_for_too_many_fri_queries() {
-        let fri_number_of_queries = 260;
-        let options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
-            1,
+    fn generated_proof_options_for_128_bits_with_one_fri_query_less_are_insecure() {
+        let ProofOptions {
+            blowup_factor,
             fri_number_of_queries,
-            1,
-            1,
+            coset_offset,
+            grinding_factor,
+        } = ProofOptions::new_secure_for_128_bits(1);
+
+        let insecure_options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
+            blowup_factor,
+            fri_number_of_queries - 1,
+            coset_offset,
+            grinding_factor,
         );
 
-        assert!(matches!(options, Err(InsecureOptionError::SecurityBits)));
+        assert!(matches!(
+            insecure_options,
+            Err(InsecureOptionError::SecurityBits)
+        ));
     }
 }
