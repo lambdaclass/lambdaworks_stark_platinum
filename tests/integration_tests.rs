@@ -137,8 +137,14 @@ fn test_prove_quadratic() {
 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) {
-    let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(file_path, &CairoVersion::V0, output_range, GRINDING_FACTOR).unwrap();
+    let program_content = std::fs::read(file_path).unwrap();
+    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(
+        &program_content,
+        &CairoVersion::V0,
+        output_range,
+        GRINDING_FACTOR,
+    )
+    .unwrap();
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -146,8 +152,9 @@ fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) 
 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo1_program(file_path: &str) {
+    let program_content = std::fs::read(file_path).unwrap();
     let (main_trace, cairo_air, mut pub_inputs) =
-        generate_prover_args(file_path, &CairoVersion::V1, &None, GRINDING_FACTOR).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V1, &None, GRINDING_FACTOR).unwrap();
     let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
@@ -247,13 +254,9 @@ fn test_prove_dummy() {
 
 #[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
-    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
-        &cairo0_program_path("simple_program.json"),
-        &CairoVersion::V0,
-        &None,
-        GRINDING_FACTOR,
-    )
-    .unwrap();
+    let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
+    let (main_trace, cairo_air, mut public_input) =
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, GRINDING_FACTOR).unwrap();
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     // We modify the original program and verify using this new "corrupted" version
@@ -268,13 +271,9 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_range_bounds() {
-    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
-        &cairo0_program_path("simple_program.json"),
-        &CairoVersion::V0,
-        &None,
-        GRINDING_FACTOR,
-    )
-    .unwrap();
+    let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
+    let (main_trace, cairo_air, mut public_input) =
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, GRINDING_FACTOR).unwrap();
     let result = prove(&main_trace, &cairo_air, &mut public_input).unwrap();
 
     public_input.range_check_min = Some(public_input.range_check_min.unwrap() + 1);
@@ -290,13 +289,9 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     // In this test we change the range-check value in the trace, so the constraint
     // that asserts that the sum of the rc decomposed values is equal to the
     // range-checked value won't hold, and the verifier will reject the proof.
-    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
-        &cairo0_program_path("rc_program.json"),
-        &CairoVersion::V0,
-        &None,
-        GRINDING_FACTOR,
-    )
-    .unwrap();
+    let program_content = std::fs::read(cairo0_program_path("rc_program.json")).unwrap();
+    let (main_trace, cairo_air, mut public_input) =
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, GRINDING_FACTOR).unwrap();
 
     // The malicious value, we change the previous value to a 35.
     let malicious_rc_value = FE::from(35);
@@ -318,10 +313,14 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 
     // This value is greater than 2^128, and the verifier should reject the proof built with it.
     let overflowing_rc_value = FE::from_hex("0x100000000000000000000000000000001").unwrap();
-
-    let program_path = cairo0_program_path("rc_program.json");
-    let (register_states, mut malicious_memory, program_size, _) =
-        run_program(None, CairoLayout::Small, &program_path, &CairoVersion::V0).unwrap();
+    let program_content = std::fs::read(cairo0_program_path("rc_program.json")).unwrap();
+    let (register_states, mut malicious_memory, program_size, _) = run_program(
+        None,
+        CairoLayout::Small,
+        &program_content,
+        &CairoVersion::V0,
+    )
+    .unwrap();
 
     // The malicious value is inserted in memory here.
     malicious_memory.data.insert(27, overflowing_rc_value);
@@ -357,13 +356,9 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 
 #[test_log::test]
 fn test_verifier_rejects_proof_with_changed_output() {
-    let (main_trace, cairo_air, mut public_input) = generate_prover_args(
-        &cairo0_program_path("output_program.json"),
-        &CairoVersion::V0,
-        &None,
-        GRINDING_FACTOR,
-    )
-    .unwrap();
+    let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
+    let (main_trace, cairo_air, mut public_input) =
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, GRINDING_FACTOR).unwrap();
 
     // The malicious value, we change the previous value to a 100.
     let malicious_output_value = FE::from(100);

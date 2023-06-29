@@ -49,7 +49,7 @@ pub enum CairoVersion {
 ///
 /// `entrypoint_function` - the name of the entrypoint function tu run. If `None` is provided, the default value is `main`.
 /// `layout` - type of layout of Cairo.
-/// `filename` - path to the input file.
+/// `program_content` - content of the input file.
 /// `trace_path` - path where to store the generated trace file.
 /// `memory_path` - path where to store the generated memory file.
 ///
@@ -65,12 +65,11 @@ pub enum CairoVersion {
 pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
-    filename: &str,
+    program_content: &[u8],
     cairo_version: &CairoVersion,
 ) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
-    let program_content = std::fs::read(filename).map_err(Error::IO)?;
 
     let args = [];
 
@@ -87,21 +86,22 @@ pub fn run_program(
                 secure_run: None,
             };
 
-            let (runner, vm) =
-                match cairo_run::cairo_run(&program_content, &cairo_run_config, &mut hint_executor)
-                {
-                    Ok(runner) => runner,
-                    Err(error) => {
-                        eprintln!("{error}");
-                        return Err(Error::Runner(error));
-                    }
-                };
+            let (runner, vm) = match cairo_run::cairo_run(
+                program_content,
+                &cairo_run_config,
+                &mut hint_executor,
+            ) {
+                Ok(runner) => runner,
+                Err(error) => {
+                    eprintln!("{error}");
+                    return Err(Error::Runner(error));
+                }
+            };
 
             (vm, runner)
         }
         CairoVersion::V1 => {
-            let casm_contract: CasmContractClass =
-                serde_json::from_slice(&program_content).unwrap();
+            let casm_contract: CasmContractClass = serde_json::from_slice(program_content).unwrap();
             let program: Program = casm_contract.clone().try_into().unwrap();
             let mut runner = CairoRunner::new(
                 &(casm_contract.clone().try_into().unwrap()),
@@ -241,7 +241,7 @@ pub fn run_program(
 }
 
 pub fn generate_prover_args(
-    file_path: &str,
+    program_content: &[u8],
     cairo_version: &CairoVersion,
     output_range: &Option<Range<u64>>,
     grinding_factor: u8,
@@ -252,7 +252,7 @@ pub fn generate_prover_args(
     };
 
     let (register_states, memory, program_size, range_check_builtin_range) =
-        run_program(None, cairo_layout, file_path, cairo_version)?;
+        run_program(None, cairo_layout, program_content, cairo_version)?;
 
     let proof_options = ProofOptions {
         blowup_factor: 4,
@@ -327,10 +327,12 @@ mod tests {
         let base_dir = env!("CARGO_MANIFEST_DIR");
         let json_filename = base_dir.to_owned() + "/src/cairo/runner/program.json";
 
+        let program_content = std::fs::read(json_filename).unwrap();
+
         let (register_states, memory, program_size, _rg_in_out) = run_program(
             None,
             CairoLayout::AllCairo,
-            &json_filename,
+            &program_content,
             &CairoVersion::V0,
         )
         .unwrap();

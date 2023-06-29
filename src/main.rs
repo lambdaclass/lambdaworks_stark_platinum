@@ -19,8 +19,13 @@ fn main() {
         CairoVersion::V0
     };
 
+    let Ok(program_content) = std::fs::read(file_path) else {
+        println!("ERROR opening {file_path} file");
+        return;
+    };
+
     let Ok((main_trace, cairo_air, mut pub_inputs)) =
-        generate_prover_args(file_path, &cairo_version, &None, grinding_factor) else {
+        generate_prover_args(&program_content, &cairo_version, &None, grinding_factor) else {
             println!("Error generating prover args");
             return;
         };

@@ -679,10 +679,11 @@ mod test {
         ```
         */
 
+        let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
         let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
-            &cairo0_program_path("simple_program.json"),
+            &program_content,
             &CairoVersion::V0,
         )
         .unwrap();
@@ -795,10 +796,11 @@ mod test {
         ```
         */
 
+        let program_content = std::fs::read(cairo0_program_path("call_func.json")).unwrap();
         let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
-            &cairo0_program_path("call_func.json"),
+            &program_content,
             &CairoVersion::V0,
         )
         .unwrap();
