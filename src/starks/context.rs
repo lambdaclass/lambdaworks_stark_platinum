@@ -1,4 +1,4 @@
-use super::proof_options::ProofOptions;
+use super::proof::options::ProofOptions;
 
 #[derive(Clone, Debug)]
 pub struct AirContext {
