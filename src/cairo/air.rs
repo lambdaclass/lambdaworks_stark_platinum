@@ -372,29 +372,29 @@ fn generate_memory_permutation_argument_column(
 ) -> Vec<FE> {
     let z = &rap_challenges.z_memory;
     let alpha = &rap_challenges.alpha_memory;
-    let f = |a, v, ap, vp| (z - (a + alpha * v)) / (z - (ap + alpha * vp));
 
-    let mut permutation_col = Vec::with_capacity(addresses_sorted.len());
-    permutation_col.push(f(
-        &addresses_original[0],
-        &values_original[0],
-        &addresses_sorted[0],
-        &values_sorted[0],
-    ));
+    let mut denom: Vec<_> = addresses_sorted
+        .iter()
+        .zip(values_sorted.iter())
+        .map(|(ap, vp)| z - (ap + alpha * vp))
+        .collect();
+    FieldElement::inplace_batch_inverse(&mut denom);
 
-    for i in 1..addresses_sorted.len() {
-        let last = permutation_col.last().unwrap();
-        permutation_col.push(
-            last * f(
-                &addresses_original[i],
-                &values_original[i],
-                &addresses_sorted[i],
-                &values_sorted[i],
-            ),
-        );
+    let num: Vec<_> = addresses_original
+        .iter()
+        .zip(values_original.iter())
+        .zip(denom.iter())
+        .map(|((a_i, v_i), den_i)| (z - (a_i + alpha * v_i)) * den_i)
+        .collect();
+
+    let mut ret = Vec::with_capacity(num.len());
+    ret.push(num[0].clone());
+
+    for i in 1..num.len() {
+        ret.push(&ret[i - 1] * &num[i]);
     }
 
-    permutation_col
+    ret
 }
 fn generate_range_check_permutation_argument_column(
     offset_column_original: &[FE],
@@ -402,16 +402,24 @@ fn generate_range_check_permutation_argument_column(
     rap_challenges: &CairoRAPChallenges,
 ) -> Vec<FE> {
     let z = &rap_challenges.z_range_check;
-    let f = |a, ap| (z - a) / (z - ap);
 
-    let mut permutation_col = Vec::with_capacity(offset_column_original.len());
-    permutation_col.push(f(&offset_column_original[0], &offset_column_sorted[0]));
+    let mut denom: Vec<_> = offset_column_sorted.iter().map(|x| z - x).collect();
+    FieldElement::inplace_batch_inverse(&mut denom);
 
-    for i in 1..offset_column_sorted.len() {
-        let last = permutation_col.last().unwrap();
-        permutation_col.push(last * f(&offset_column_original[i], &offset_column_sorted[i]));
+    let num: Vec<_> = offset_column_original
+        .iter()
+        .zip(denom.iter())
+        .map(|(num_i, den_i)| (z - num_i) * den_i)
+        .collect();
+
+    let mut ret = Vec::with_capacity(num.len());
+    ret.push(num[0].clone());
+
+    for i in 1..num.len() {
+        ret.push(&ret[i - 1] * &num[i]);
     }
-    permutation_col
+
+    ret
 }
 
 impl AIR for CairoAIR {
