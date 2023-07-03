@@ -679,7 +679,7 @@ mod test {
         // The AIR is re-constructed in the verifier side
         let air = CairoAIR::new(proof_options, proof.trace_length, pub_inputs.clone(), false);
 
-        // The proof is verifyed successfully.
+        // The proof is verified successfully.
         assert!(verify(&proof, &air, &pub_inputs));
     }
 }
