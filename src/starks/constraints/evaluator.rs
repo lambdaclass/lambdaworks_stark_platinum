@@ -13,7 +13,7 @@ use crate::starks::prover::evaluate_polynomial_on_lde_domain;
 use crate::starks::trace::TraceTable;
 use crate::starks::traits::AIR;
 
-use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
+use super::{boundary::{BoundaryConstraints, BoundaryConstraint}, evaluation_table::ConstraintEvaluationTable};
 use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
@@ -89,6 +89,22 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         #[cfg(debug_assertions)]
         let mut boundary_zerofiers = Vec::new();
 
+        let boundary_steps = self.boundary_constraints.steps_for_boundary();
+        
+        /* 
+        let mut boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = boundary_steps
+            .iter()
+            .map(|step|{
+                let point = &domain.trace_primitive_root.pow(step.clone() as u32).clone();
+                let mut evals =domain.lde_roots_of_unity_coset
+                .iter()
+                .map(|v| v.clone() - point)
+                .collect::<Vec<FieldElement<F>>>();
+            FieldElement::inplace_batch_inverse(&mut evals);
+            evals
+            })
+            .collect::<Vec<Vec<FieldElement<F>>>>();
+        */
         let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = (0..n_trace_colums)
             .map(|col| {
                 let zerofier = self
