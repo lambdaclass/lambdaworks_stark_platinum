@@ -441,7 +441,7 @@ let trace_table = TraceTable {
 </span></code></pre></pre>
 <p>In our example, <code>fibonacci_trace</code> is just a helper function we use to generate the fibonacci trace with <code>4</code> rows and <code>[1, 1]</code> as the first two values.</p>
 <h2 id="air-context"><a class="header" href="#air-context">AIR Context</a></h2>
-<p>After specifying our constraints and trace, the only thing left to do is provide a few parameters related to the STARK protocol and our <code>AIR</code>. These are all encapsulated in the <code>AirContext</code> struct, which in our example we instantiate like this:</p>
+<p>After specifying our constraints and trace, the only thing left to do is provide a few parameters related to the STARK protocol and our <code>AIR</code>. These specify things such as the number of columns of the trace and proof configuration, among others. They are all encapsulated in the <code>AirContext</code> struct, which in our example we instantiate like this:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -451,7 +451,6 @@ let trace_table = TraceTable {
         fri_number_of_queries: 1,
         coset_offset: 3,
     },
-    trace_length,
     trace_columns: trace_table.n_cols,
     transition_degrees: vec![1],
     transition_exemptions: vec![2],
@@ -469,7 +468,7 @@ let trace_table = TraceTable {
 <li>The <code>offset</code> used for the LDE coset. This depends on the field being used for the STARK proof.</li>
 </ul>
 </li>
-<li><code>trace_length</code> and <code>trace_columns</code> are the number of rows and columns of the trace, respectively.</li>
+<li><code>trace_columns</code> are the number of columns of the trace, respectively.</li>
 <li><code>transition_degrees</code> holds the degree of each transition constraint.</li>
 <li><code>transition_exemptions</code> is a <code>Vec</code> which tells us, for each column, the number of rows the transition constraints should not apply, starting from the end of the trace. In the example, the transition constraints won't apply on the last two rows of the trace.</li>
 <li><code>transition_offsets</code> holds the indexes that define a frame for our <code>AIR</code>. In our fibonacci case, these are <code>[0, 1, 2]</code> because we need the current row and the two previous one to define our transition constraint.</li>
@@ -480,14 +479,14 @@ let trace_table = TraceTable {
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let result = prove(&amp;trace_table, &amp;fibonacci_air);
+</span>let proof = prove(&amp;trace_table, &amp;fibonacci_air);
 <span class="boring">}
 </span></code></pre></pre>
 <p>Verifying is then done by passing the proof of execution along with the same <code>AIR</code> to the <code>verify</code> function.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>assert!(verify(&amp;result, &amp;fibonacci_air));
+</span>assert!(verify(&amp;proof, &amp;fibonacci_air));
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
@@ -638,6 +637,19 @@ let composition_poly_evaluations = vec![
 <p>The job of providing these samples for both prover and verifier is done by the <code>Transcript</code> struct, which you can think of as a stateful <code>rng</code>; whenever you call <code>challenge()</code> on a transcript you get a random value and the internal state gets mutated, so the next time you call <code>challenge()</code> you get a different one. You can also call <code>append</code> on it to mutate its internal state yourself. This is done a number of times throughout the protocol to keep the prover honest so it can't predict or manipulate the outcome of <code>challenge()</code>.</p>
 <p>Notice that to sample the same values, both prover and verifier need to call <code>challenge</code> and <code>append</code> in the same order (and with the same values in the case of <code>append</code>) and the same number of times.</p>
 <p>The idea explained above is called the Fiat-Shamir heuristic or just <code>Fiat-Shamir</code>, and is more generally used throughout proving systems to remove interaction between prover and verifier. Though the concept is very simple, getting it right so the prover can't cheat is not, but we won't go into that here.</p>
+<h1 id="proof"><a class="header" href="#proof">Proof</a></h1>
+<p>The generated proof has got all the information needed for the verifier to verify it:</p>
+<ul>
+<li>Trace length: The number of rows of the trace table, needed to know the max degree of the polynomials that appear in the system.</li>
+<li>LDE trace commitments.</li>
+<li>DEEP composition polynomial out of domain even and odd evaluations.</li>
+<li>DEEP composition polynomial root.</li>
+<li>FRI layers merkle roots.</li>
+<li>FRI last layer value.</li>
+<li>Query list.</li>
+<li>DEEP composition poly openings.</li>
+<li>Nonce: Proof of work setting used to generate the proof.</li>
+</ul>
 <h1 id="special-considerations"><a class="header" href="#special-considerations">Special considerations</a></h1>
 <h2 id="fft-evaluation-and-interpolation"><a class="header" href="#fft-evaluation-and-interpolation">FFT evaluation and interpolation</a></h2>
 <p>When evaluating or interpolating a polynomial, if the input (be it coefficients or evaluations) size isn't a power of two then the FFT API will extend it with zero padding until this requirement is met. This is because the library currently only uses a radix-2 FFT algorithm.</p>

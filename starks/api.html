@@ -258,7 +258,7 @@ let trace_table = TraceTable {
 </span></code></pre></pre>
 <p>In our example, <code>fibonacci_trace</code> is just a helper function we use to generate the fibonacci trace with <code>4</code> rows and <code>[1, 1]</code> as the first two values.</p>
 <h2 id="air-context"><a class="header" href="#air-context">AIR Context</a></h2>
-<p>After specifying our constraints and trace, the only thing left to do is provide a few parameters related to the STARK protocol and our <code>AIR</code>. These are all encapsulated in the <code>AirContext</code> struct, which in our example we instantiate like this:</p>
+<p>After specifying our constraints and trace, the only thing left to do is provide a few parameters related to the STARK protocol and our <code>AIR</code>. These specify things such as the number of columns of the trace and proof configuration, among others. They are all encapsulated in the <code>AirContext</code> struct, which in our example we instantiate like this:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -268,7 +268,6 @@ let trace_table = TraceTable {
         fri_number_of_queries: 1,
         coset_offset: 3,
     },
-    trace_length,
     trace_columns: trace_table.n_cols,
     transition_degrees: vec![1],
     transition_exemptions: vec![2],
@@ -286,7 +285,7 @@ let trace_table = TraceTable {
 <li>The <code>offset</code> used for the LDE coset. This depends on the field being used for the STARK proof.</li>
 </ul>
 </li>
-<li><code>trace_length</code> and <code>trace_columns</code> are the number of rows and columns of the trace, respectively.</li>
+<li><code>trace_columns</code> are the number of columns of the trace, respectively.</li>
 <li><code>transition_degrees</code> holds the degree of each transition constraint.</li>
 <li><code>transition_exemptions</code> is a <code>Vec</code> which tells us, for each column, the number of rows the transition constraints should not apply, starting from the end of the trace. In the example, the transition constraints won't apply on the last two rows of the trace.</li>
 <li><code>transition_offsets</code> holds the indexes that define a frame for our <code>AIR</code>. In our fibonacci case, these are <code>[0, 1, 2]</code> because we need the current row and the two previous one to define our transition constraint.</li>
@@ -297,14 +296,14 @@ let trace_table = TraceTable {
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let result = prove(&amp;trace_table, &amp;fibonacci_air);
+</span>let proof = prove(&amp;trace_table, &amp;fibonacci_air);
 <span class="boring">}
 </span></code></pre></pre>
 <p>Verifying is then done by passing the proof of execution along with the same <code>AIR</code> to the <code>verify</code> function.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>assert!(verify(&amp;result, &amp;fibonacci_air));
+</span>assert!(verify(&amp;proof, &amp;fibonacci_air));
 <span class="boring">}
 </span></code></pre></pre>
 
