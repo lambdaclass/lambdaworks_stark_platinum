@@ -24,8 +24,8 @@ impl<F: IsFFTField> Domain<F> {
         // Initial definitions
         let blowup_factor = air.options().blowup_factor as usize;
         let coset_offset = FieldElement::<F>::from(air.options().coset_offset);
-        let interpolation_domain_size = air.context().trace_length;
-        let root_order = air.context().trace_length.trailing_zeros();
+        let interpolation_domain_size = air.trace_length();
+        let root_order = air.trace_length().trailing_zeros();
         // * Generate Coset
         let trace_primitive_root = F::get_primitive_root_of_unity(root_order as u64).unwrap();
         let trace_roots_of_unity = get_powers_of_primitive_root_coset(
@@ -35,10 +35,10 @@ impl<F: IsFFTField> Domain<F> {
         )
         .unwrap();
 
-        let lde_root_order = (air.context().trace_length * blowup_factor).trailing_zeros();
+        let lde_root_order = (air.trace_length() * blowup_factor).trailing_zeros();
         let lde_roots_of_unity_coset = get_powers_of_primitive_root_coset(
             lde_root_order as u64,
-            air.context().trace_length * blowup_factor,
+            air.trace_length() * blowup_factor,
             &coset_offset,
         )
         .unwrap();

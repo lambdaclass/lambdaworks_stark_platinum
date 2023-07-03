@@ -213,7 +213,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     let n_trace_cols = air.context().trace_columns;
     // special cases.
-    let trace_length = air.context().trace_length;
+    let trace_length = air.trace_length();
     let composition_poly_degree_bound = air.composition_poly_degree_bound();
     let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
 

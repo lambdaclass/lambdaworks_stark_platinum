@@ -728,6 +728,8 @@ where
         deep_poly_openings: round_4_result.deep_poly_openings,
         // nonce obtained from grinding
         nonce: round_4_result.nonce,
+
+        trace_length: air.trace_length(),
     })
 }
 
@@ -762,7 +764,6 @@ mod tests {
                 coset_offset,
                 grinding_factor,
             },
-            trace_length,
             trace_columns: trace.n_cols,
             transition_degrees: vec![1],
             transition_exemptions: vec![2],
@@ -770,7 +771,7 @@ mod tests {
             num_transition_constraints: 1,
         };
 
-        let domain = Domain::new(&simple_fibonacci::FibonacciAIR::from(context));
+        let domain = Domain::new(&simple_fibonacci::FibonacciAIR::new(context, trace_length));
         assert_eq!(domain.blowup_factor, 2);
         assert_eq!(domain.interpolation_domain_size, trace_length);
         assert_eq!(domain.root_order, trace_length.trailing_zeros());

@@ -15,11 +15,15 @@ use crate::starks::{
 #[derive(Clone)]
 pub struct QuadraticAIR {
     context: AirContext,
+    trace_length: usize,
 }
 
-impl From<AirContext> for QuadraticAIR {
-    fn from(context: AirContext) -> Self {
-        Self { context }
+impl QuadraticAIR {
+    pub fn new(context: AirContext, trace_length: usize) -> Self {
+        Self {
+            context,
+            trace_length,
+        }
     }
 }
 
@@ -69,7 +73,11 @@ impl AIR for QuadraticAIR {
     }
 
     fn composition_poly_degree_bound(&self) -> usize {
-        2 * self.context().trace_length
+        2 * self.trace_length()
+    }
+
+    fn trace_length(&self) -> usize {
+        self.trace_length
     }
 }
 

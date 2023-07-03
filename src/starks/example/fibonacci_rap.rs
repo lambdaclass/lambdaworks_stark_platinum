@@ -21,11 +21,15 @@ use crate::starks::{
 #[derive(Clone)]
 pub struct FibonacciRAP {
     context: AirContext,
+    trace_length: usize,
 }
 
 impl FibonacciRAP {
-    pub fn new(context: AirContext) -> Self {
-        Self { context }
+    pub fn new(context: AirContext, trace_length: usize) -> Self {
+        Self {
+            context,
+            trace_length,
+        }
     }
 }
 
@@ -115,7 +119,11 @@ impl AIR for FibonacciRAP {
     }
 
     fn composition_poly_degree_bound(&self) -> usize {
-        self.context().trace_length
+        self.trace_length()
+    }
+
+    fn trace_length(&self) -> usize {
+        self.trace_length
     }
 }
 

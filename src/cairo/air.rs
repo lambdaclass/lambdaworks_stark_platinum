@@ -224,7 +224,8 @@ impl PublicInputs {
 #[derive(Clone)]
 pub struct CairoAIR {
     pub context: AirContext,
-    pub number_steps: usize,
+    pub trace_length: usize,
+    pub public_inputs: PublicInputs,
     has_rc_builtin: bool,
 }
 
@@ -237,7 +238,8 @@ impl CairoAIR {
     /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
     /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
     #[rustfmt::skip]
-    pub fn new(proof_options: ProofOptions, full_trace_length: usize, number_steps: usize, has_rc_builtin: bool) -> Self {
+    pub fn new(proof_options: ProofOptions, trace_length: usize,  public_inputs: PublicInputs, has_rc_builtin: bool) -> Self {
+
         let mut trace_columns = 34 + 3 + 12 + 3;
         let mut transition_degrees = vec![
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
@@ -272,7 +274,6 @@ impl CairoAIR {
 
         let context = AirContext {
             options: proof_options,
-            trace_length: full_trace_length,
             trace_columns,
             transition_degrees,
             transition_exemptions,
@@ -293,7 +294,8 @@ impl CairoAIR {
 
         Self {
             context,
-            number_steps,
+            public_inputs,
+            trace_length,
             has_rc_builtin,
         }
     }
@@ -557,17 +559,17 @@ impl AIR for CairoAIR {
 
         let final_pc = BoundaryConstraint::new(
             MEM_A_TRACE_OFFSET,
-            self.number_steps - 1,
+            self.public_inputs.num_steps - 1,
             public_input.pc_final.clone(),
         );
         let final_ap = BoundaryConstraint::new(
             MEM_P_TRACE_OFFSET,
-            self.number_steps - 1,
+            self.public_inputs.num_steps - 1,
             public_input.ap_final.clone(),
         );
 
         // Auxiliary constraint: permutation argument final value
-        let final_index = self.context.trace_length - 1;
+        let final_index = self.trace_length - 1;
 
         let builtin_offset = self.get_builtin_offset();
 
@@ -623,7 +625,11 @@ impl AIR for CairoAIR {
     }
 
     fn composition_poly_degree_bound(&self) -> usize {
-        2 * self.context().trace_length
+        2 * self.trace_length
+    }
+
+    fn trace_length(&self) -> usize {
+        self.trace_length
     }
 }
 

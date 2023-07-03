@@ -43,7 +43,6 @@ fn test_prove_fib() {
             coset_offset: 3,
             grinding_factor: 1,
         },
-        trace_length,
         trace_columns: 1,
         transition_degrees: vec![1],
         transition_exemptions: vec![2],
@@ -51,7 +50,7 @@ fn test_prove_fib() {
         num_transition_constraints: 1,
     };
 
-    let fibonacci_air = simple_fibonacci::FibonacciAIR::from(context);
+    let fibonacci_air = simple_fibonacci::FibonacciAIR::new(context, trace_length);
 
     let result = prove(&trace, &fibonacci_air, &mut ()).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
@@ -69,7 +68,6 @@ fn test_prove_fib17() {
             coset_offset: 3,
             grinding_factor: 10,
         },
-        trace_length,
         trace_columns: 1,
         transition_degrees: vec![1],
         transition_exemptions: vec![2],
@@ -77,7 +75,7 @@ fn test_prove_fib17() {
         num_transition_constraints: 1,
     };
 
-    let fibonacci_air = fibonacci_f17::Fibonacci17AIR::from(context);
+    let fibonacci_air = fibonacci_f17::Fibonacci17AIR::new(context, trace_length);
 
     let result = prove(&trace, &fibonacci_air, &mut ()).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
@@ -95,7 +93,6 @@ fn test_prove_fib_2_cols() {
             coset_offset: 3,
             grinding_factor: 1,
         },
-        trace_length,
         transition_degrees: vec![1, 1],
         transition_exemptions: vec![1, 1],
         transition_offsets: vec![0, 1],
@@ -103,7 +100,7 @@ fn test_prove_fib_2_cols() {
         trace_columns: 2,
     };
 
-    let fibonacci_air = fibonacci_2_columns::Fibonacci2ColsAIR::from(context);
+    let fibonacci_air = fibonacci_2_columns::Fibonacci2ColsAIR::new(context, trace_length);
 
     let result = prove(&trace, &fibonacci_air, &mut ()).unwrap();
     assert!(verify(&result, &fibonacci_air, &()));
@@ -121,7 +118,6 @@ fn test_prove_quadratic() {
             coset_offset: 3,
             grinding_factor: 1,
         },
-        trace_length,
         trace_columns: 1,
         transition_degrees: vec![2],
         transition_exemptions: vec![1],
@@ -129,7 +125,7 @@ fn test_prove_quadratic() {
         num_transition_constraints: 1,
     };
 
-    let quadratic_air = quadratic_air::QuadraticAIR::from(context);
+    let quadratic_air = quadratic_air::QuadraticAIR::new(context, trace_length);
 
     let result = prove(&trace, &quadratic_air, &mut ()).unwrap();
     assert!(verify(&result, &quadratic_air, &()));
@@ -213,14 +209,13 @@ fn test_prove_rap_fib() {
             grinding_factor: 1,
         },
         trace_columns: 3,
-        trace_length: trace_cols[0].len(),
         transition_degrees: vec![1, 2],
         transition_offsets: vec![0, 1, 2],
         transition_exemptions: vec![exemptions, 1],
         num_transition_constraints: 2,
     };
 
-    let fibonacci_rap = FibonacciRAP::new(context);
+    let fibonacci_rap = FibonacciRAP::new(context, trace_cols[0].len());
 
     let result = prove(&trace, &fibonacci_rap, &mut ()).unwrap();
     assert!(verify(&result, &fibonacci_rap, &()));
@@ -238,7 +233,6 @@ fn test_prove_dummy() {
             coset_offset: 3,
             grinding_factor: 1,
         },
-        trace_length,
         trace_columns: 2,
         transition_degrees: vec![2, 1],
         transition_exemptions: vec![0, 2],
@@ -246,7 +240,7 @@ fn test_prove_dummy() {
         num_transition_constraints: 2,
     };
 
-    let dummy_air = dummy_air::DummyAIR::from(context);
+    let dummy_air = dummy_air::DummyAIR::new(context, trace_length);
 
     let result = prove(&trace, &dummy_air, &mut ()).unwrap();
     assert!(verify(&result, &dummy_air, &()));
@@ -346,7 +340,7 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
     let cairo_air = CairoAIR::new(
         proof_options,
         malicious_trace.n_rows(),
-        register_states.steps(),
+        pub_inputs.clone(),
         true,
     );
 
