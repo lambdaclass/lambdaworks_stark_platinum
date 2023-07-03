@@ -140,23 +140,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let context = self.air.context();
         let max_transition_degree= context
         .transition_degrees.iter().max().unwrap().clone();
-        /*
-        let degree_adjustments: Vec<Vec<FieldElement<F>>> = context
-            .transition_degrees()
-            .iter()
-            .map(|transition_degree| {
-                domain
-                    .lde_roots_of_unity_coset
-                    .iter()
-                    .map(|d| {
-                        let degree_adjustment = composition_poly_degree_bound
-                            - (trace_length * (transition_degree - 1));
-                        d.pow(degree_adjustment)
-                    })
-                    .collect()
-            })
-            .collect();
-        */
+        
         let degree_adjustments: Vec<Vec<FieldElement<F>>> = (1..=max_transition_degree)
             .map(|transition_degree| {
                 domain
