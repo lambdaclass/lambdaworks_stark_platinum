@@ -410,14 +410,11 @@ where
     let two_inv = &FieldElement::from(2).inv();
 
     // Verify opening Open(p₀(D₀), 𝜐ₛ)
-    if !fri_decommitment
-        .first_layer_auth_path
-        .verify::<FriMerkleTreeBackend<F>>(
-            &fri_layers_merkle_roots[0],
-            iota,
-            &fri_decommitment.layers_evaluations[0],
-        )
-    {
+    if !fri_decommitment.layers_auth_paths[0].verify::<FriMerkleTreeBackend<F>>(
+        &fri_layers_merkle_roots[0],
+        iota,
+        &fri_decommitment.layers_evaluations[0],
+    ) {
         return false;
     }
 

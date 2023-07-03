@@ -12,7 +12,7 @@ use crate::starks::utils::{deserialize_proof, serialize_proof};
 pub struct FriDecommitment<F: IsField> {
     pub layers_auth_paths_sym: Vec<Proof<Commitment>>,
     pub layers_evaluations_sym: Vec<FieldElement<F>>,
-    pub first_layer_auth_path: Proof<Commitment>,
+    pub layers_auth_paths: Vec<Proof<Commitment>>,
     pub layers_evaluations: Vec<FieldElement<F>>,
 }
 
@@ -37,7 +37,10 @@ where
         for evaluation in &self.layers_evaluations {
             bytes.extend(evaluation.to_bytes_be());
         }
-        bytes.extend(serialize_proof(&self.first_layer_auth_path));
+        bytes.extend(self.layers_auth_paths.len().to_be_bytes());
+        for proof in &self.layers_auth_paths {
+            bytes.extend(serialize_proof(proof));
+        }
         bytes
     }
 }
@@ -98,7 +101,7 @@ where
         );
         bytes = &bytes[8..];
 
-        let mut layer_evaluations = vec![];
+        let mut layers_evaluations = vec![];
         for _ in 0..layer_evaluations_len {
             let evaluation = FieldElement::<F>::from_bytes_be(
                 bytes[..felt_len]
@@ -106,16 +109,28 @@ where
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
-            layer_evaluations.push(evaluation);
+            layers_evaluations.push(evaluation);
         }
 
-        let (first_layer_auth_path, _) = deserialize_proof(bytes)?;
+        let mut layers_auth_paths = vec![];
+        let layers_auth_paths_len = usize::from_be_bytes(
+            bytes[..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+
+        for _ in 0..layers_auth_paths_len {
+            let proof;
+            (proof, bytes) = deserialize_proof(bytes)?;
+            layers_auth_paths.push(proof);
+        }
 
         Ok(Self {
             layers_auth_paths_sym,
             layers_evaluations_sym,
-            layers_evaluations: layer_evaluations,
-            first_layer_auth_path,
+            layers_evaluations,
+            layers_auth_paths,
         })
     }
 }
@@ -180,13 +195,13 @@ mod tests {
             layers_auth_paths_sym in proof_vec(),
             layers_evaluations_sym in field_vec(),
             layers_evaluations in field_vec(),
-            first_layer_auth_path in some_proof()
+            layers_auth_paths in proof_vec()
         ) -> FriDecommitment<Stark252PrimeField> {
             FriDecommitment{
                 layers_auth_paths_sym,
                 layers_evaluations_sym,
                 layers_evaluations,
-                first_layer_auth_path
+                layers_auth_paths
             }
         }
     }
@@ -210,8 +225,9 @@ mod tests {
                 prop_assert_eq!(a, b);
             }
 
-            prop_assert_eq!(fri_decommitment.first_layer_auth_path.merkle_path, deserialized.first_layer_auth_path.merkle_path);
-
+            for (a, b) in fri_decommitment.layers_auth_paths.iter().zip(deserialized.layers_auth_paths.iter()) {
+                prop_assert_eq!(&a.merkle_path, &b.merkle_path);
+            }
         }
     }
 }
