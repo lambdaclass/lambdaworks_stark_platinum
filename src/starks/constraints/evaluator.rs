@@ -66,7 +66,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         #[cfg(debug_assertions)]
         let mut boundary_polys = Vec::new();
 
-        let boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = zip(domains, values)
+        let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = zip(domains, values)
             .zip(self.trace_polys)
             .map(|((xs, ys), trace_poly)| {
                 let boundary_poly = trace_poly
@@ -104,6 +104,26 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             evals
             })
             .collect::<Vec<Vec<FieldElement<F>>>>();
+        */
+        /*   
+        let boundary_poly_evals = (0..n_trace_colums)
+        .map(|col| {
+            boundary_constraints
+            .steps(col)
+            .iter()
+            .map(|step| {
+                let i= boundary_steps.iter().position(|&x| x == step.clone());
+                let boundary_polys_evaluations[col] = boundary_polys_evaluations[col].iter()
+                    .zip(boundary_zerofiers_inverse_evaluations[i].iter())
+                    .map(|n, d| n*d)
+                    .collect::<Vec<FieldElement<F>>>()
+                boundary_polys_evaluations[col]
+            })
+            / Here we could map the values to add the random alpha and beta values
+            .collect<Vec<FieldElement<F>>>() 
+        })
+        /Here we can accumulate all the values and obtain the summation!
+        .collect<Vec<FieldElement<F>>>();
         */
         let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = (0..n_trace_colums)
             .map(|col| {
