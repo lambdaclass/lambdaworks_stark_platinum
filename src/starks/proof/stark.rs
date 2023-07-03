@@ -392,10 +392,19 @@ mod test {
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
-    use crate::starks::{
-        config::{Commitment, COMMITMENT_SIZE},
-        frame::Frame,
-        fri::fri_decommit::FriDecommitment,
+    use crate::{
+        cairo::{
+            air::CairoAIR,
+            runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
+        },
+        starks::{
+            config::{Commitment, COMMITMENT_SIZE},
+            frame::Frame,
+            fri::fri_decommit::FriDecommitment,
+            proof::options::ProofOptions,
+            prover::prove,
+            verifier::verify,
+        },
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
 
@@ -637,5 +646,36 @@ mod test {
                 prop_assert_eq!(&a.lde_trace_evaluations, &b.lde_trace_evaluations);
             }
         }
+    }
+
+    #[test]
+    fn deserialize_and_verify() {
+        let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
+        let (main_trace, cairo_air, mut pub_inputs) =
+            generate_prover_args(&program_content, &CairoVersion::V0, &None, 1).unwrap();
+
+        let proof = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
+
+        let proof_bytes = proof.serialize();
+
+        drop(main_trace);
+        drop(cairo_air);
+        drop(proof);
+
+        // At this point, the verifier only knows about the serialized proof, the proof options
+        // and the public inputs.
+        let proof = StarkProof::<Stark252PrimeField>::deserialize(&proof_bytes).unwrap();
+
+        // The same proof configuration as used in the `generate_prover_args` function.
+        let proof_options = ProofOptions {
+            blowup_factor: 4,
+            fri_number_of_queries: 3,
+            coset_offset: 3,
+            grinding_factor: 1,
+        };
+
+        let air = CairoAIR::new(proof_options, proof.trace_length, pub_inputs.clone(), false);
+
+        assert!(verify(&proof, &air, &pub_inputs));
     }
 }
