@@ -2,6 +2,8 @@ use lambdaworks_math::{
     field::{element::FieldElement, traits::IsField},
     polynomial::Polynomial,
 };
+use itertools::Itertools;
+
 
 #[derive(Debug)]
 /// Represents a boundary constraint that must hold in an execution
@@ -59,6 +61,14 @@ impl<F: IsField> BoundaryConstraints<F> {
             .collect()
     }
 
+    pub fn steps_for_boundary(&self) -> Vec<usize> {
+        self.constraints
+        .iter()
+        .unique_by(|elem| elem.step)
+        .map(|v| v.step)
+        .collect()
+    }
+
     /// Given the primitive root of some domain, returns the domain values corresponding
     /// to the steps where the boundary conditions hold. This is useful when interpolating
     /// the boundary conditions, since we must know the x values
@@ -114,6 +124,7 @@ impl<F: IsField> BoundaryConstraints<F> {
 
         zerofier
     }
+
 }
 
 #[cfg(test)]
