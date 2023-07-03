@@ -42,11 +42,11 @@ pub trait AIR: Clone {
     ) -> BoundaryConstraints<Self::Field>;
 
     fn transition_exemptions(&self) -> Vec<Polynomial<FieldElement<Self::Field>>> {
-        let trace_length = self.context().trace_length;
+        let trace_length = self.trace_length();
         let roots_of_unity_order = trace_length.trailing_zeros();
         let roots_of_unity = get_powers_of_primitive_root_coset(
             roots_of_unity_order as u64,
-            self.context().trace_length,
+            self.trace_length(),
             &FieldElement::<Self::Field>::one(),
         )
         .unwrap();
@@ -72,6 +72,8 @@ pub trait AIR: Clone {
             .collect()
     }
     fn context(&self) -> &AirContext;
+
+    fn trace_length(&self) -> usize;
 
     fn options(&self) -> &ProofOptions {
         &self.context().options

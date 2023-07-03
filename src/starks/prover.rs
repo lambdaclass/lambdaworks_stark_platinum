@@ -728,6 +728,8 @@ where
         deep_poly_openings: round_4_result.deep_poly_openings,
         // nonce obtained from grinding
         nonce: round_4_result.nonce,
+
+        trace_length: air.trace_length(),
     })
 }
 
@@ -762,7 +764,7 @@ mod tests {
                 coset_offset,
                 grinding_factor,
             },
-            trace_length,
+            // trace_length,
             trace_columns: trace.n_cols,
             transition_degrees: vec![1],
             transition_exemptions: vec![2],

@@ -44,6 +44,8 @@ pub struct StarkProof<F: IsFFTField> {
     pub deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,
     // nonce obtained from grinding
     pub nonce: u64,
+    // Length of the execution trace
+    pub trace_length: usize,
 }
 
 impl<F> Serializable for DeepPolynomialOpenings<F>
