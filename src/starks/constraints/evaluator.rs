@@ -136,11 +136,9 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             })
             .collect();
 
-       
         let context = self.air.context();
-        let max_transition_degree= context
-        .transition_degrees.iter().max().unwrap().clone();
-        
+        let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
+
         let degree_adjustments: Vec<Vec<FieldElement<F>>> = (1..=max_transition_degree)
             .map(|transition_degree| {
                 domain
@@ -206,7 +204,9 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             let degree_adjustments: Vec<_> = context
                 .transition_degrees
                 .iter()
-                .map(|transition_adjustments| degree_adjustments[transition_adjustments.clone() -1][i].clone())
+                .map(|&transition_adjustments| {
+                    degree_adjustments[transition_adjustments - 1][i].clone()
+                })
                 .collect();
 
             let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
