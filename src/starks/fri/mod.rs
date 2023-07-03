@@ -102,27 +102,30 @@ where
                 // <<<< Receive challenge 𝜄ₛ (iota_s)
                 let iota_s = transcript_to_usize(transcript) % domain_size;
 
-                let first_layer_evaluation = first_layer.evaluation[iota_s].clone();
                 let first_layer_auth_path =
                     first_layer.merkle_tree.get_proof_by_pos(iota_s).unwrap();
 
                 let mut layers_auth_paths_sym = vec![];
                 let mut layers_evaluations_sym = vec![];
+                let mut layers_evaluations = vec![];
 
                 for layer in fri_layers {
                     // symmetric element
+                    let index = iota_s % layer.domain_size;
                     let index_sym = (iota_s + layer.domain_size / 2) % layer.domain_size;
                     let evaluation_sym = layer.evaluation[index_sym].clone();
                     let auth_path_sym = layer.merkle_tree.get_proof_by_pos(index_sym).unwrap();
+                    let evaluation = layer.evaluation[index].clone();
                     layers_auth_paths_sym.push(auth_path_sym);
                     layers_evaluations_sym.push(evaluation_sym);
+                    layers_evaluations.push(evaluation);
                 }
                 iotas.push(iota_s);
 
                 FriDecommitment {
                     layers_auth_paths_sym,
                     layers_evaluations_sym,
-                    first_layer_evaluation,
+                    layers_evaluations,
                     first_layer_auth_path,
                 }
             })

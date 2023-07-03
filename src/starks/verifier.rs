@@ -389,7 +389,7 @@ where
         let deep_poly_evaluation =
             reconstruct_deep_composition_poly_evaluation(proof, domain, challenges, *iota_n, i);
 
-        let deep_poly_claimed_evaluation = &proof.query_list[i].first_layer_evaluation;
+        let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
         result &= deep_poly_claimed_evaluation == &deep_poly_evaluation;
     }
 
@@ -415,7 +415,7 @@ where
         .verify::<FriMerkleTreeBackend<F>>(
             &fri_layers_merkle_roots[0],
             iota,
-            &fri_decommitment.first_layer_evaluation,
+            &fri_decommitment.layers_evaluations[0],
         )
     {
         return false;
@@ -432,7 +432,7 @@ where
 
     FieldElement::inplace_batch_inverse(&mut evaluation_point_vec);
 
-    let mut v = fri_decommitment.first_layer_evaluation.clone();
+    let mut v = fri_decommitment.layers_evaluations[0].clone();
     // For each fri layer merkle proof check:
     // That each merkle path verifies
 

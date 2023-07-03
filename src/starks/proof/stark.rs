@@ -428,13 +428,13 @@ mod test {
         fn some_fri_decommitment()(
             layers_auth_paths_sym in proof_vec(),
             layers_evaluations_sym in field_vec(),
-            first_layer_evaluation in some_felt(),
+            layers_evaluations in field_vec(),
             first_layer_auth_path in some_proof()
         ) -> FriDecommitment<Stark252PrimeField> {
             FriDecommitment{
                 layers_auth_paths_sym,
                 layers_evaluations_sym,
-                first_layer_evaluation,
+                layers_evaluations,
                 first_layer_auth_path
             }
         }
@@ -576,7 +576,7 @@ mod test {
                     prop_assert_eq!(&x.merkle_path, &y.merkle_path);
                 }
                 prop_assert_eq!(&a.layers_evaluations_sym, &b.layers_evaluations_sym);
-                prop_assert_eq!(&a.first_layer_evaluation, &b.first_layer_evaluation);
+                prop_assert_eq!(&a.layers_evaluations, &b.layers_evaluations);
                 prop_assert_eq!(
                     &a.first_layer_auth_path.merkle_path,
                     &b.first_layer_auth_path.merkle_path
