@@ -406,7 +406,7 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
 where
     FieldElement<F>: ByteConversion,
 {
-    let two = &FieldElement::from(2);
+    let two_inv = &FieldElement::from(2).inv();
 
     let evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
 
@@ -419,6 +419,7 @@ where
 
     FieldElement::inplace_batch_inverse(&mut evaluation_point_vec);
 
+    let mut v = fri_decommitment.layers_evaluations[0].clone();
     // For each fri layer merkle proof check:
     // That each merkle path verifies
 
@@ -478,13 +479,13 @@ where
 
         let beta = &zetas[k];
         // v is the calculated element for the co linearity check
-        let v = (evaluation + evaluation_sym)
-            + beta * (evaluation - evaluation_sym) * evaluation_point_inv;
+        v = (&v + evaluation_sym) * two_inv
+            + beta * (&v - evaluation_sym) * two_inv * evaluation_point_inv;
 
         // Check that next value is the given by the prover
         if k < fri_decommitment.layers_evaluations.len() - 1 {
             let next_layer_evaluation = &fri_decommitment.layers_evaluations[k + 1];
-            if v != next_layer_evaluation * two {
+            if v != *next_layer_evaluation {
                 return false;
             }
         }
