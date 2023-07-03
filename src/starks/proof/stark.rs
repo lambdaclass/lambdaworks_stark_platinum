@@ -654,10 +654,12 @@ mod test {
         let (main_trace, cairo_air, mut pub_inputs) =
             generate_prover_args(&program_content, &CairoVersion::V0, &None, 1).unwrap();
 
+        // The proof is generated and serialized.
         let proof = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
-
         let proof_bytes = proof.serialize();
 
+        // The trace, AIR and original proof are dropped to show that they are decoupled from
+        // the verifying process.
         drop(main_trace);
         drop(cairo_air);
         drop(proof);
@@ -674,8 +676,10 @@ mod test {
             grinding_factor: 1,
         };
 
+        // The AIR is re-constructed in the verifier side
         let air = CairoAIR::new(proof_options, proof.trace_length, pub_inputs.clone(), false);
 
+        // The proof is verifyed successfully.
         assert!(verify(&proof, &air, &pub_inputs));
     }
 }

@@ -222,6 +222,19 @@ Notice that to sample the same values, both prover and verifier need to call `ch
 
 The idea explained above is called the Fiat-Shamir heuristic or just `Fiat-Shamir`, and is more generally used throughout proving systems to remove interaction between prover and verifier. Though the concept is very simple, getting it right so the prover can't cheat is not, but we won't go into that here.
 
+# Proof
+
+The generated proof has got all the information needed for the verifier to verify it:
+- Trace length: The number of rows of the trace table, needed to know the max degree of the polynomials that appear in the system.
+- LDE trace commitments.
+- DEEP composition polynomial out of domain even and odd evaluations.
+- DEEP composition polynomial root.
+- FRI layers merkle roots.
+- FRI last layer value.
+- Query list.
+- DEEP composition poly openings.
+- Nonce: Proof of work setting used to generate the proof.
+
 # Special considerations
 
 ## FFT evaluation and interpolation
