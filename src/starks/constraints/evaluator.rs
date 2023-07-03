@@ -119,7 +119,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let mut transition_evaluations = Vec::new();
 
         let transition_exemptions = self.air.transition_exemptions();
-        let trace_length = self.air.context().trace_length;
+        let trace_length = self.air.trace_length();
         let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
         let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
 

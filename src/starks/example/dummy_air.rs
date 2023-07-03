@@ -19,7 +19,7 @@ pub struct DummyAIR {
 }
 
 impl DummyAIR {
-    fn new(context: AirContext, trace_length: usize) -> Self {
+    pub fn new(context: AirContext, trace_length: usize) -> Self {
         Self {
             context,
             trace_length,

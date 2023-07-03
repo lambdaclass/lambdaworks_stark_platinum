@@ -15,11 +15,15 @@ use crate::starks::{
 #[derive(Clone)]
 pub struct FibonacciAIR {
     context: AirContext,
+    trace_length: usize,
 }
 
-impl From<AirContext> for FibonacciAIR {
-    fn from(context: AirContext) -> Self {
-        Self { context }
+impl FibonacciAIR {
+    pub fn new(context: AirContext, trace_length: usize) -> Self {
+        Self {
+            context,
+            trace_length,
+        }
     }
 }
 
@@ -29,7 +33,7 @@ impl AIR for FibonacciAIR {
     type PublicInput = ();
 
     fn composition_poly_degree_bound(&self) -> usize {
-        self.context().trace_length
+        self.trace_length()
     }
 
     fn build_auxiliary_trace(
@@ -71,6 +75,10 @@ impl AIR for FibonacciAIR {
 
     fn context(&self) -> &AirContext {
         &self.context
+    }
+
+    fn trace_length(&self) -> usize {
+        self.trace_length
     }
 }
 

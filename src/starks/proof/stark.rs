@@ -12,6 +12,8 @@ use crate::starks::{
     utils::{deserialize_proof, serialize_proof},
 };
 
+use std::mem;
+
 #[derive(Debug, Clone)]
 pub struct DeepPolynomialOpenings<F: IsFFTField> {
     pub lde_composition_poly_proof: Proof<Commitment>,
@@ -23,6 +25,8 @@ pub struct DeepPolynomialOpenings<F: IsFFTField> {
 
 #[derive(Debug)]
 pub struct StarkProof<F: IsFFTField> {
+    // Length of the execution trace
+    pub trace_length: usize,
     // Commitments of the trace columns
     // [tⱼ]
     pub lde_trace_merkle_roots: Vec<Commitment>,
@@ -44,8 +48,6 @@ pub struct StarkProof<F: IsFFTField> {
     pub deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,
     // nonce obtained from grinding
     pub nonce: u64,
-    // Length of the execution trace
-    pub trace_length: usize,
 }
 
 impl<F> Serializable for DeepPolynomialOpenings<F>
@@ -157,6 +159,10 @@ where
 {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = vec![];
+
+        // Serialize trace length
+        bytes.extend(self.trace_length.to_be_bytes());
+
         bytes.extend(self.lde_trace_merkle_roots.len().to_be_bytes());
         for commitment in &self.lde_trace_merkle_roots {
             bytes.extend(commitment);
@@ -215,6 +221,15 @@ where
         Self: Sized,
     {
         let mut bytes = bytes;
+        let trace_length_buffer_size = mem::size_of::<usize>();
+        let trace_length = usize::from_be_bytes(
+            bytes[..trace_length_buffer_size]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+
+        bytes = &bytes[8..];
+
         let lde_trace_merkle_roots_len = usize::from_be_bytes(
             bytes[..8]
                 .try_into()
@@ -354,6 +369,7 @@ where
         );
 
         Ok(StarkProof {
+            trace_length,
             lde_trace_merkle_roots,
             trace_ood_frame_evaluations,
             composition_poly_root,
@@ -479,7 +495,14 @@ mod test {
     }
 
     prop_compose! {
+        fn some_usize()(len in any::<usize>()) -> usize {
+            len
+        }
+    }
+
+    prop_compose! {
         fn some_stark_proof()(
+            trace_length in some_usize(),
             lde_trace_merkle_roots in commitment_vec(),
             trace_ood_frame_evaluations in some_frame(),
             composition_poly_root in some_commitment(),
@@ -492,6 +515,7 @@ mod test {
 
     ) -> StarkProof<Stark252PrimeField> {
             StarkProof {
+                trace_length,
                 lde_trace_merkle_roots,
                 trace_ood_frame_evaluations,
                 composition_poly_root,

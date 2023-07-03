@@ -272,7 +272,7 @@ pub fn generate_prover_args(
     let cairo_air = CairoAIR::new(
         proof_options,
         main_trace.n_rows(),
-        register_states.steps(),
+        pub_inputs.clone(),
         has_range_check_builtin,
     );
 
