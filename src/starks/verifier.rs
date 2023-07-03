@@ -408,15 +408,6 @@ where
 {
     let two_inv = &FieldElement::from(2).inv();
 
-    // Verify opening Open(p₀(D₀), 𝜐ₛ)
-    if !fri_decommitment.layers_auth_paths[0].verify::<FriMerkleTreeBackend<F>>(
-        &fri_layers_merkle_roots[0],
-        iota,
-        &fri_decommitment.layers_evaluations[0],
-    ) {
-        return false;
-    }
-
     let evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
 
     let mut evaluation_point_vec: Vec<FieldElement<F>> =
@@ -442,12 +433,24 @@ where
 
     // For each (merkle_root, merkle_auth_path) / fold
     // With the auth path containining the element that the path proves it's existence
-    for (k, (merkle_root, (auth_path, evaluation_sym), evaluation_point_inv)) in multizip((
+    for (
+        k,
+        (
+            merkle_root,
+            (auth_path, evaluation),
+            (auth_path_sym, evaluation_sym),
+            evaluation_point_inv,
+        ),
+    ) in multizip((
         fri_layers_merkle_roots,
+        fri_decommitment
+            .layers_auth_paths
+            .iter()
+            .zip(&fri_decommitment.layers_evaluations),
         fri_decommitment
             .layers_auth_paths_sym
             .iter()
-            .zip(fri_decommitment.layers_evaluations_sym.iter()),
+            .zip(&fri_decommitment.layers_evaluations_sym),
         evaluation_point_vec,
     ))
     .enumerate()
@@ -461,11 +464,16 @@ where
         let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
 
         // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
-        if !auth_path.verify::<FriMerkleTreeBackend<F>>(
+        if !auth_path_sym.verify::<FriMerkleTreeBackend<F>>(
             merkle_root,
             layer_evaluation_index_sym,
             evaluation_sym,
         ) {
+            return false;
+        }
+
+        // Verify opening Open(pₖ(Dₖ), 𝜐ₛ)
+        if !auth_path.verify::<FriMerkleTreeBackend<F>>(merkle_root, iota, evaluation) {
             return false;
         }
 
