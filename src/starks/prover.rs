@@ -764,7 +764,6 @@ mod tests {
                 coset_offset,
                 grinding_factor,
             },
-            // trace_length,
             trace_columns: trace.n_cols,
             transition_degrees: vec![1],
             transition_exemptions: vec![2],
