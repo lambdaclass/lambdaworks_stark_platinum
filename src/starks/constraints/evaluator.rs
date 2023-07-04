@@ -13,7 +13,7 @@ use crate::starks::prover::evaluate_polynomial_on_lde_domain;
 use crate::starks::trace::TraceTable;
 use crate::starks::traits::AIR;
 
-use super::{boundary::{BoundaryConstraints, BoundaryConstraint}, evaluation_table::ConstraintEvaluationTable};
+use super::{boundary::{BoundaryConstraints}, evaluation_table::ConstraintEvaluationTable};
 use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
@@ -66,7 +66,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         #[cfg(debug_assertions)]
         let mut boundary_polys = Vec::new();
 
-        let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = zip(domains, values)
+        let boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = zip(domains, values)
             .zip(self.trace_polys)
             .map(|((xs, ys), trace_poly)| {
                 let boundary_poly = trace_poly
@@ -87,12 +87,12 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             .collect();
 
         #[cfg(debug_assertions)]
-        let mut boundary_zerofiers = Vec::new();
+        let boundary_zerofiers = Vec::new();
 
         let boundary_steps = self.boundary_constraints.steps_for_boundary();
         
-        /* 
-        let mut boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = boundary_steps
+         
+        let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = boundary_steps
             .iter()
             .map(|step|{
                 let point = &domain.trace_primitive_root.pow(step.clone() as u32).clone();
@@ -104,27 +104,46 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             evals
             })
             .collect::<Vec<Vec<FieldElement<F>>>>();
-        */
-        /*   
-        let boundary_poly_evals = (0..n_trace_colums)
+
+        let trace_length = self.air.trace_length();
+        let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
+        let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
+        let d_adjustment_power = domain.lde_roots_of_unity_coset
+                                    .iter()
+                                    .map(|d| d.pow(boundary_term_degree_adjustment))
+                                    .collect::<Vec<FieldElement<F>>>();  
+        // check these iterators
+        let boundary_evaluation = (0..n_trace_colums)
         .map(|col| {
             boundary_constraints
             .steps(col)
             .iter()
             .map(|step| {
                 let i= boundary_steps.iter().position(|&x| x == step.clone());
-                let boundary_polys_evaluations[col] = boundary_polys_evaluations[col].iter()
-                    .zip(boundary_zerofiers_inverse_evaluations[i].iter())
-                    .map(|n, d| n*d)
-                    .collect::<Vec<FieldElement<F>>>()
-                boundary_polys_evaluations[col]
+                if let Some(x) = i {
+                        boundary_polys_evaluations[col]
+                            .iter()
+                            .zip(boundary_zerofiers_inverse_evaluations[x].iter())
+                            .map(|(n, d)| n*d)
+                            .collect::<Vec<FieldElement<F>>>()
+                        } 
+                        else {
+                            todo!()
+                        }         //boundary_polys_evaluations
             })
-            / Here we could map the values to add the random alpha and beta values
-            .collect<Vec<FieldElement<F>>>() 
-        })
-        /Here we can accumulate all the values and obtain the summation!
-        .collect<Vec<FieldElement<F>>>();
-        */
+            .zip(boundary_polys_evaluations[col].iter())
+            .zip(d_adjustment_power.iter())
+            .map(|((_c,x),d)| {
+                let (boundary_alpha, boundary_beta) =
+                alpha_and_beta_boundary_coefficients[col].clone();
+                x*(boundary_alpha*d+boundary_beta) 
+            }).fold(FieldElement::<F>::zero(), |acc, sum| acc + sum)
+            
+        }).collect::<Vec<FieldElement<F>>>();
+                
+            // Here we could map the values to add the random alpha and beta values
+        //Here we can accumulate all the values and obtain the summation!
+        /* 
         let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = (0..n_trace_colums)
             .map(|col| {
                 let zerofier = self
@@ -145,7 +164,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 evals
             })
             .collect();
-
+        */
         #[cfg(debug_assertions)]
         check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
 
@@ -155,9 +174,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let mut transition_evaluations = Vec::new();
 
         let transition_exemptions = self.air.transition_exemptions();
-        let trace_length = self.air.trace_length();
-        let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
-        let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
 
         let transition_exemptions_evaluations: Vec<_> = transition_exemptions
             .iter()
@@ -219,7 +235,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .collect();
 
         // Iterate over trace and domain and compute transitions
-        for (i, d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
+        for (i, _d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
             let frame = Frame::read_from_trace(
                 lde_trace,
                 i,
@@ -248,7 +264,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 &degree_adjustments,
                 alpha_and_beta_transition_coefficients,
             );
-
+            /* 
             let d_adjustment_power = d.pow(boundary_term_degree_adjustment);
             let boundary_evaluation = zip(
                 &boundary_polys_evaluations,
@@ -266,8 +282,8 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 },
             )
             .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
-
-            evaluations_sum += boundary_evaluation;
+            */
+            evaluations_sum += boundary_evaluation[i].clone();
 
             evaluation_table.evaluations_acc.push(evaluations_sum);
         }
