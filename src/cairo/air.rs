@@ -24,7 +24,7 @@ use crate::{
     FE,
 };
 
-use super::{cairo_layout::CairoLayout, cairo_mem::CairoMemory, register_states::RegisterStates};
+use super::{cairo_mem::CairoMemory, register_states::RegisterStates};
 
 /// Main constraint identifiers
 const INST: usize = 16;
@@ -177,7 +177,6 @@ pub struct PublicInputs {
     pub range_check_min: Option<u16>,
     // maximum range check value
     pub range_check_max: Option<u16>,
-    pub layout: CairoLayout,
     // Range-check builtin address range
     pub memory_segments: MemorySegmentMap,
     pub public_memory: HashMap<FE, FE>,
@@ -214,14 +213,6 @@ impl PublicInputs {
         };
         let last_step = &register_states.rows[register_states.steps() - 1];
 
-        // Hacky solution to get out of the way, this should be read from the public inputs
-        // file.
-        let layout = if memory_segments.is_empty() {
-            CairoLayout::Plain
-        } else {
-            CairoLayout::AllCairo
-        };
-
         PublicInputs {
             pc_init: FE::from(register_states.rows[0].pc),
             ap_init: FE::from(register_states.rows[0].ap),
@@ -233,7 +224,6 @@ impl PublicInputs {
             memory_segments: memory_segments.clone(),
             public_memory,
             num_steps: register_states.steps(),
-            layout,
         }
     }
 }
@@ -459,11 +449,12 @@ pub struct CairoAIR {
     pub context: AirContext,
     pub trace_length: usize,
     pub pub_inputs: PublicInputs,
+    has_rc_builtin: bool,
 }
 
 impl CairoAIR {
     fn get_builtin_offset(&self) -> usize {
-        if self.pub_inputs.layout != CairoLayout::Plain {
+        if self.has_rc_builtin {
             0
         } else {
             BUILTIN_OFFSET
@@ -628,7 +619,8 @@ impl AIR for CairoAIR {
 
         // This is a hacky solution for the moment and must be changed once we start implementing 
         // layouts functionality.
-        if pub_inputs.layout != CairoLayout::Plain {
+        let has_rc_builtin = !pub_inputs.memory_segments.is_empty();
+        if has_rc_builtin {
             trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
             transition_degrees.push(1); // Range check builtin constraint
             transition_exemptions.push(0); // range-check builtin exemption
@@ -659,6 +651,7 @@ impl AIR for CairoAIR {
             context,
             pub_inputs: pub_inputs.clone(),
             trace_length,
+            has_rc_builtin,
         }
     }
 
@@ -764,7 +757,7 @@ impl AIR for CairoAIR {
         permutation_argument(&mut constraints, frame, rap_challenges, builtin_offset);
         permutation_argument_range_check(&mut constraints, frame, rap_challenges, builtin_offset);
 
-        if self.pub_inputs.layout != CairoLayout::Plain {
+        if self.has_rc_builtin {
             range_check_builtin(&mut constraints, frame);
         }
 
@@ -1258,7 +1251,6 @@ mod test {
             range_check_min: None,
             num_steps: 1,
             memory_segments: MemorySegmentMap::new(),
-            layout: CairoLayout::Plain,
         };
 
         let a = vec![
@@ -1321,7 +1313,6 @@ mod test {
             range_check_min: None,
             num_steps: 1,
             memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..22)]),
-            layout: CairoLayout::Plain,
         };
 
         let a = vec![
