@@ -19,7 +19,7 @@ pub trait AIR: Clone {
     fn new(
         trace_length: usize,
         pub_inputs: &Self::PublicInputs,
-        proof_options: ProofOptions,
+        proof_options: &ProofOptions,
     ) -> Self;
 
     fn build_auxiliary_trace(

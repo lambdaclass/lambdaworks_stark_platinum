@@ -5,7 +5,7 @@ use crate::starks::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
     context::AirContext,
     frame::Frame,
-    proof::options::ProofOptions,
+    proof::{self, options::ProofOptions},
     trace::TraceTable,
     traits::AIR,
 };
@@ -39,10 +39,10 @@ where
     fn new(
         trace_length: usize,
         pub_inputs: &Self::PublicInputs,
-        proof_options: ProofOptions,
+        proof_options: &ProofOptions,
     ) -> Self {
         let context = AirContext {
-            proof_options,
+            proof_options: proof_options.clone(),
             trace_columns: 1,
             transition_degrees: vec![2],
             transition_exemptions: vec![1],

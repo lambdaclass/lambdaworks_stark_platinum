@@ -507,7 +507,7 @@ where
 pub fn prove<F, A>(
     main_trace: &TraceTable<F>,
     pub_inputs: &A::PublicInputs,
-    proof_options: ProofOptions,
+    proof_options: &ProofOptions,
 ) -> Result<StarkProof<F>, ProvingError>
 where
     F: IsFFTField,
@@ -771,8 +771,8 @@ mod tests {
 
         let domain = Domain::new(&simple_fibonacci::FibonacciAIR::new(
             trace_length,
-            pub_inputs,
-            proof_options,
+            &pub_inputs,
+            &proof_options,
         ));
         assert_eq!(domain.blowup_factor, 2);
         assert_eq!(domain.interpolation_domain_size, trace_length);

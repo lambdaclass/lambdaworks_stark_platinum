@@ -1,5 +1,5 @@
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
-use lambdaworks_stark::cairo::air::CairoAIR;
+use lambdaworks_stark::cairo::air::{generate_cairo_proof, verify_cairo_proof, CairoAIR};
 use lambdaworks_stark::cairo::runner::run::{generate_prover_args, CairoVersion};
 use lambdaworks_stark::starks::proof::options::ProofOptions;
 use lambdaworks_stark::starks::{prover::prove, verifier::verify};
@@ -44,19 +44,19 @@ fn main() {
 
     let timer = Instant::now();
     println!("Making proof ...");
-    let proof =
-        prove::<Stark252PrimeField, CairoAIR>(&main_trace, &pub_inputs, proof_options).unwrap();
+    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
+
     println!("Time spent in proving: {:?} \n", timer.elapsed());
 
     let timer = Instant::now();
 
-    // println!("Verifying ...");
-    // let proof_verified = verify(&proof, &cairo_air, &pub_inputs);
-    // println!("Time spent in verifying: {:?} \n", timer.elapsed());
+    println!("Verifying ...");
+    let proof_verified = verify_cairo_proof(&proof, &pub_inputs, &proof_options);
+    println!("Time spent in verifying: {:?} \n", timer.elapsed());
 
-    // if proof_verified {
-    //     println!("Verification succeded");
-    // } else {
-    //     println!("Verification failed");
-    // }
+    if proof_verified {
+        println!("Verification succeded");
+    } else {
+        println!("Verification failed");
+    }
 }

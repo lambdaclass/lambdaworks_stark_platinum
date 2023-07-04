@@ -25,7 +25,7 @@ use super::{
     domain::Domain,
     fri::fri_decommit::FriDecommitment,
     grinding::hash_transcript_with_int_and_get_leading_zeros,
-    proof::stark::StarkProof,
+    proof::{options::ProofOptions, stark::StarkProof},
     traits::AIR,
     transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize},
 };
@@ -531,7 +531,11 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     trace_terms + h_1_term * &challenges.gamma_even + h_2_term * &challenges.gamma_odd
 }
 
-pub fn verify<F, A>(proof: &StarkProof<F>, air: &A, public_input: &A::PublicInputs) -> bool
+pub fn verify<F, A>(
+    proof: &StarkProof<F>,
+    pub_input: &A::PublicInputs,
+    proof_options: &ProofOptions,
+) -> bool
 where
     F: IsFFTField,
     A: AIR<Field = F>,
@@ -543,10 +547,11 @@ where
     let timer1 = Instant::now();
 
     let mut transcript = step_1_transcript_initialization();
-    let domain = Domain::new(air);
+    let air = A::new(proof.trace_length, pub_input, proof_options);
+    let domain = Domain::new(&air);
 
     let challenges =
-        step_1_replay_rounds_and_recover_challenges(air, proof, &domain, &mut transcript);
+        step_1_replay_rounds_and_recover_challenges(&air, proof, &domain, &mut transcript);
 
     // verify grinding
     let grinding_factor = air.context().proof_options.grinding_factor;
@@ -565,7 +570,7 @@ where
     #[cfg(feature = "instruments")]
     let timer2 = Instant::now();
 
-    if !step_2_verify_claimed_composition_polynomial(air, proof, &domain, &challenges) {
+    if !step_2_verify_claimed_composition_polynomial(&air, proof, &domain, &challenges) {
         error!("Composition Polynomial verification failed");
         return false;
     }
@@ -596,7 +601,7 @@ where
     let timer4 = Instant::now();
 
     #[allow(clippy::let_and_return)]
-    if !step_4_verify_deep_composition_polynomial(air, proof, &domain, &challenges) {
+    if !step_4_verify_deep_composition_polynomial(&air, proof, &domain, &challenges) {
         error!("DEEP Composition Polynomial verification failed");
         return false;
     }

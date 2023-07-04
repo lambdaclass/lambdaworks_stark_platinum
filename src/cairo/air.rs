@@ -10,10 +10,12 @@ use crate::{
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
         context::AirContext,
         frame::Frame,
-        proof::options::ProofOptions,
+        proof::{options::ProofOptions, stark::StarkProof},
+        prover::{prove, ProvingError},
         trace::TraceTable,
         traits::AIR,
         transcript::transcript_to_field,
+        verifier::verify,
     },
     FE,
 };
@@ -241,8 +243,10 @@ pub struct CairoAIR {
 impl CairoAIR {
     fn get_builtin_offset(&self) -> usize {
         if self.pub_inputs.layout == CairoLayout::Plain {
+            println!("ACAAA");
             0
         } else {
+            println!("O ACAAA?");
             BUILTIN_OFFSET
         }
     }
@@ -376,7 +380,7 @@ impl AIR for CairoAIR {
     /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
     /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
     #[rustfmt::skip]
-    fn new( trace_length: usize, pub_inputs: &Self::PublicInputs, proof_options: ProofOptions) -> Self {
+    fn new( trace_length: usize, pub_inputs: &Self::PublicInputs, proof_options: &ProofOptions) -> Self {
 
         let mut trace_columns = 34 + 3 + 12 + 3;
         let mut transition_degrees = vec![
@@ -413,7 +417,7 @@ impl AIR for CairoAIR {
         }
 
         let context = AirContext {
-            proof_options,
+            proof_options: proof_options.clone(),
             trace_columns,
             transition_degrees,
             transition_exemptions,
@@ -940,6 +944,22 @@ fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
         - &curr[RC_VALUE]
 }
 
+pub fn generate_cairo_proof(
+    trace: &TraceTable<Stark252PrimeField>,
+    pub_input: &PublicInputs,
+    proof_options: &ProofOptions,
+) -> Result<StarkProof<Stark252PrimeField>, ProvingError> {
+    prove::<Stark252PrimeField, CairoAIR>(trace, pub_input, proof_options)
+}
+
+pub fn verify_cairo_proof(
+    proof: &StarkProof<Stark252PrimeField>,
+    pub_input: &PublicInputs,
+    proof_options: &ProofOptions,
+) -> bool {
+    verify::<Stark252PrimeField, CairoAIR>(proof, pub_input, proof_options)
+}
+
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
@@ -987,7 +1007,7 @@ mod test {
             coset_offset: 3,
             grinding_factor: 1,
         };
-        let cairo_air = CairoAIR::new(main_trace.n_rows(), &public_input, proof_options);
+        let cairo_air = CairoAIR::new(main_trace.n_rows(), &public_input, &proof_options);
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
 
         let aux_trace = cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges);

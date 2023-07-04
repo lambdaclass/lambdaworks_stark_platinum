@@ -43,10 +43,10 @@ where
     fn new(
         trace_length: usize,
         pub_inputs: &Self::PublicInputs,
-        proof_options: ProofOptions,
+        proof_options: &ProofOptions,
     ) -> Self {
         let context = AirContext {
-            proof_options,
+            proof_options: proof_options.clone(),
             trace_columns: 1,
             transition_degrees: vec![1],
             transition_exemptions: vec![2],

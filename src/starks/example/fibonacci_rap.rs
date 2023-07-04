@@ -49,12 +49,12 @@ where
     fn new(
         trace_length: usize,
         pub_inputs: &Self::PublicInputs,
-        proof_options: ProofOptions,
+        proof_options: &ProofOptions,
     ) -> Self {
         let exemptions = 3 + trace_length - pub_inputs.steps - 1;
 
         let context = AirContext {
-            proof_options,
+            proof_options: proof_options.clone(),
             trace_columns: 3,
             transition_degrees: vec![1, 2],
             transition_offsets: vec![0, 1, 2],

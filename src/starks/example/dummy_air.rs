@@ -27,10 +27,10 @@ impl AIR for DummyAIR {
     fn new(
         trace_length: usize,
         _pub_inputs: &Self::PublicInputs,
-        proof_options: ProofOptions,
+        proof_options: &ProofOptions,
     ) -> Self {
         let context = AirContext {
-            proof_options,
+            proof_options: proof_options.clone(),
             trace_columns: 2,
             transition_degrees: vec![2, 1],
             transition_exemptions: vec![0, 2],
