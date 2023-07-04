@@ -35,7 +35,12 @@ instruments = []                   # This enables timing prints in prover and ve
 metal = ["lambdaworks-math/metal"]
 
 [[bench]]
-name = "criterion_starks"
+name = "criterion_prover"
+harness = false
+metal = ["lambdaworks-math/metal"]
+
+[[bench]]
+name = "criterion_verifier"
 harness = false
 metal = ["lambdaworks-math/metal"]
 
