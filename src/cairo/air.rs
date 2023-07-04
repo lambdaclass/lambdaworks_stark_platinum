@@ -242,11 +242,9 @@ pub struct CairoAIR {
 
 impl CairoAIR {
     fn get_builtin_offset(&self) -> usize {
-        if self.pub_inputs.layout == CairoLayout::Plain {
-            println!("ACAAA");
+        if self.pub_inputs.layout != CairoLayout::Plain {
             0
         } else {
-            println!("O ACAAA?");
             BUILTIN_OFFSET
         }
     }
@@ -415,6 +413,8 @@ impl AIR for CairoAIR {
             transition_exemptions.push(0); // range-check builtin exemption
             num_transition_constraints += 1; // range-check builtin value decomposition constraint
         }
+
+        dbg!(&pub_inputs.layout);
 
         let context = AirContext {
             proof_options: proof_options.clone(),
