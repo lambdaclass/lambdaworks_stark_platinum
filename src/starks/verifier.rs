@@ -180,8 +180,9 @@ where
 
     // FRI query phase
     // <<<< Send challenges 𝜄ₛ (iota_s)
+    let iota_max = 2_usize.pow(domain.lde_root_order);
     let iotas = (0..air.options().fri_number_of_queries)
-        .map(|_| transcript_to_usize(transcript) % (2_usize.pow(domain.lde_root_order)))
+        .map(|_| transcript_to_usize(transcript) % iota_max)
         .collect();
 
     Challenges {
@@ -252,13 +253,12 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     FieldElement::inplace_batch_inverse(&mut boundary_c_i_evaluations_den);
 
+    let boundary_degree_z = challenges.z.pow(boundary_term_degree_adjustment);
     let boundary_quotient_ood_evaluation: FieldElement<F> = boundary_c_i_evaluations_num
         .iter()
         .zip(&boundary_c_i_evaluations_den)
         .zip(&challenges.boundary_coeffs)
-        .map(|((num, den), (alpha, beta))| {
-            num * den * (alpha * challenges.z.pow(boundary_term_degree_adjustment) + beta)
-        })
+        .map(|((num, den), (alpha, beta))| num * den * (alpha * &boundary_degree_z + beta))
         .fold(FieldElement::<F>::zero(), |acc, x| acc + x);
 
     let transition_ood_frame_evaluations = air.compute_transition(
@@ -510,8 +510,8 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     let z_squared = &(&challenges.z * &challenges.z);
     let den = (upsilon_0 - z_squared).inv();
     let mut divisors = (0..proof.trace_ood_frame_evaluations.num_rows())
-                .map(|row_idx| (upsilon_0 - &challenges.z * primitive_root.pow(row_idx as u64)))
-                .collect::<Vec<FieldElement<F>>>();
+        .map(|row_idx| (upsilon_0 - &challenges.z * primitive_root.pow(row_idx as u64)))
+        .collect::<Vec<FieldElement<F>>>();
     FieldElement::inplace_batch_inverse(&mut divisors);
     for (col_idx, coeff_row) in
         (0..proof.trace_ood_frame_evaluations.num_columns()).zip(&challenges.trace_term_coeffs)
@@ -526,13 +526,12 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
         }
     }
 
-    
     let h_1_upsilon_0 = &proof.deep_poly_openings[i].lde_composition_poly_even_evaluation;
     let h_1_zsquared = &proof.composition_poly_even_ood_evaluation;
     let h_2_upsilon_0 = &proof.deep_poly_openings[i].lde_composition_poly_odd_evaluation;
     let h_2_zsquared = &proof.composition_poly_odd_ood_evaluation;
-    
-    let h_1_term = (h_1_upsilon_0 - h_1_zsquared) * &den ;
+
+    let h_1_term = (h_1_upsilon_0 - h_1_zsquared) * &den;
     let h_2_term = (h_2_upsilon_0 - h_2_zsquared) * &den;
 
     trace_terms + h_1_term * &challenges.gamma_even + h_2_term * &challenges.gamma_odd
