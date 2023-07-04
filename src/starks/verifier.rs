@@ -503,12 +503,12 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     i: usize,
 ) -> FieldElement<F> {
     let primitive_root = &F::get_primitive_root_of_unity(domain.root_order as u64).unwrap();
-    // It's better to take this out of the function and perform batch inversion
+
     let upsilon_0 = &domain.lde_roots_of_unity_coset[iota_n];
 
     let mut trace_terms = FieldElement::zero();
     let z_squared = &(&challenges.z * &challenges.z);
-    let den = (upsilon_0 - z_squared).inv();
+    let denom_inv = (upsilon_0 - z_squared).inv();
     let mut divisors = (0..proof.trace_ood_frame_evaluations.num_rows())
         .map(|row_idx| (upsilon_0 - &challenges.z * primitive_root.pow(row_idx as u64)))
         .collect::<Vec<FieldElement<F>>>();
@@ -531,8 +531,8 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     let h_2_upsilon_0 = &proof.deep_poly_openings[i].lde_composition_poly_odd_evaluation;
     let h_2_zsquared = &proof.composition_poly_odd_ood_evaluation;
 
-    let h_1_term = (h_1_upsilon_0 - h_1_zsquared) * &den;
-    let h_2_term = (h_2_upsilon_0 - h_2_zsquared) * &den;
+    let h_1_term = (h_1_upsilon_0 - h_1_zsquared) * &denom_inv;
+    let h_2_term = (h_2_upsilon_0 - h_2_zsquared) * &denom_inv;
 
     trace_terms + h_1_term * &challenges.gamma_even + h_2_term * &challenges.gamma_odd
 }
