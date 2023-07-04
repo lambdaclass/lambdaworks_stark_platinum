@@ -8,7 +8,6 @@ use lambdaworks_math::{
 #[cfg(debug_assertions)]
 use crate::starks::debug::check_boundary_polys_divisibility;
 use crate::starks::frame::Frame;
-use crate::starks::prover::evaluate_polynomial_on_lde_domain;
 use crate::starks::trace::TraceTable;
 use crate::starks::traits::AIR;
 use crate::starks::{domain::Domain, prover::evaluate_polynomial_on_lde_domain_with_twiddles};

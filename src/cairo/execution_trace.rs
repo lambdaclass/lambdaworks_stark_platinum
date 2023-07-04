@@ -210,7 +210,7 @@ fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
 
             while hole_addr.representative() < addr.representative() {
                 if hole_addr.representative() > (codelen as u64).into() {
-                    memory_holes.push(hole_addr.clone());
+                    memory_holes.push(hole_addr);
                 }
                 hole_addr += FE::one();
             }
@@ -246,7 +246,7 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
         // columns.
         addr_cols.iter().for_each(|a_col| {
             if let Some(hole) = memory_holes_iter.next() {
-                padding_row[*a_col] = hole.clone();
+                padding_row[*a_col] = *hole;
             }
         });
 
@@ -303,7 +303,7 @@ pub fn build_cairo_execution_trace(
     let instructions: Vec<FE> = raw_trace
         .rows
         .iter()
-        .map(|t| memory.get(&t.pc).unwrap().clone())
+        .map(|t| *memory.get(&t.pc).unwrap())
         .collect();
 
     // t0, t1 and mul derived values are constructed. For details refer to
@@ -311,7 +311,7 @@ pub fn build_cairo_execution_trace(
     let t0: Vec<FE> = trace_repr_flags
         .iter()
         .zip(&dsts)
-        .map(|(repr_flags, dst)| repr_flags[9].clone() * dst)
+        .map(|(repr_flags, dst)| repr_flags[9] * dst)
         .collect();
     let t1: Vec<FE> = t0.iter().zip(&res).map(|(t, r)| t * r).collect();
     let mul: Vec<FE> = op0s.iter().zip(&op1s).map(|(op0, op1)| op0 * op1).collect();
@@ -372,8 +372,7 @@ fn add_rc_builtin_columns(
         trace_cols.push(column.to_vec())
     });
 
-    let mut rc_values_dereferenced: Vec<FE> =
-        range_checked_values.iter().map(|&x| x.clone()).collect();
+    let mut rc_values_dereferenced: Vec<FE> = range_checked_values.iter().map(|&&x| x).collect();
     rc_values_dereferenced.resize(trace_cols[0].len(), FE::zero());
 
     trace_cols.push(rc_values_dereferenced);
@@ -417,7 +416,7 @@ fn compute_res(flags: &[CairoInstructionFlags], op0s: &[FE], op1s: &[FE], dsts: 
                             // values later on.
                             // See section 9.5 of the Cairo whitepaper, page 53.
                             if dst == &FE::zero() {
-                                dst.clone()
+                                *dst
                             } else {
                                 dst.inv()
                             }
@@ -428,7 +427,7 @@ fn compute_res(flags: &[CairoInstructionFlags], op0s: &[FE], op1s: &[FE], dsts: 
                     }
                 }
                 PcUpdate::Regular | PcUpdate::Jump | PcUpdate::JumpRel => match f.res_logic {
-                    ResLogic::Op1 => op1.clone(),
+                    ResLogic::Op1 => *op1,
                     ResLogic::Add => op0 + op1,
                     ResLogic::Mul => op0 * op1,
                     ResLogic::Unconstrained => {
@@ -464,11 +463,11 @@ fn compute_dst(
         .map(|((f, o), t)| match f.dst_reg {
             DstReg::AP => {
                 let addr = t.ap.checked_add_signed(o.off_dst.into()).unwrap();
-                (FE::from(addr), memory.get(&addr).unwrap().clone())
+                (FE::from(addr), memory.get(&addr).unwrap())
             }
             DstReg::FP => {
                 let addr = t.fp.checked_add_signed(o.off_dst.into()).unwrap();
-                (FE::from(addr), memory.get(&addr).unwrap().clone())
+                (FE::from(addr), memory.get(&addr).unwrap())
             }
         })
         .unzip()
@@ -498,11 +497,11 @@ fn compute_op0(
         .map(|((f, o), t)| match f.op0_reg {
             Op0Reg::AP => {
                 let addr = t.ap.checked_add_signed(o.off_op0.into()).unwrap();
-                (FE::from(addr), memory.get(&addr).unwrap().clone())
+                (FE::from(addr), memory.get(&addr).unwrap())
             }
             Op0Reg::FP => {
                 let addr = t.fp.checked_add_signed(o.off_op0.into()).unwrap();
-                (FE::from(addr), memory.get(&addr).unwrap().clone())
+                (FE::from(addr), memory.get(&addr).unwrap())
             }
         })
         .unzip()
@@ -547,22 +546,22 @@ fn compute_op1(
                 let addr = aux_get_last_nim_of_field_element(op0)
                     .checked_add_signed(offset.off_op1.into())
                     .unwrap();
-                (FE::from(addr), memory.get(&addr).unwrap().clone())
+                (FE::from(addr), memory.get(&addr).unwrap())
             }
             Op1Src::Imm => {
                 let pc = trace_state.pc;
                 let addr = pc.checked_add_signed(offset.off_op1.into()).unwrap();
-                (FE::from(addr), memory.get(&addr).unwrap().clone())
+                (FE::from(addr), memory.get(&addr).unwrap())
             }
             Op1Src::AP => {
                 let ap = trace_state.ap;
                 let addr = ap.checked_add_signed(offset.off_op1.into()).unwrap();
-                (FE::from(addr), memory.get(&addr).unwrap().clone())
+                (FE::from(addr), memory.get(&addr).unwrap())
             }
             Op1Src::FP => {
                 let fp = trace_state.fp;
                 let addr = fp.checked_add_signed(offset.off_op1.into()).unwrap();
-                (FE::from(addr), memory.get(&addr).unwrap().clone())
+                (FE::from(addr), memory.get(&addr).unwrap())
             }
         })
         .unzip()
@@ -587,7 +586,7 @@ fn update_values(
             op0s[i] = (register_states.rows[i].pc + instruction_size).into();
             dst[i] = register_states.rows[i].fp.into();
         } else if f.opcode == CairoOpcode::AssertEq {
-            res[i] = dst[i].clone();
+            res[i] = dst[i];
         }
     }
 }
@@ -601,7 +600,7 @@ fn rows_to_cols<const N: usize>(rows: &[[FE; N]]) -> Vec<Vec<FE>> {
     for col_idx in 0..n_cols {
         let mut col = Vec::new();
         for row in rows {
-            col.push(row[col_idx].clone());
+            col.push(row[col_idx]);
         }
         cols.push(col);
     }

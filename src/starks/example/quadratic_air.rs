@@ -51,7 +51,7 @@ impl AIR for QuadraticAIR {
         let first_row = frame.get_row(0);
         let second_row = frame.get_row(1);
 
-        vec![&second_row[0] - &first_row[0] * &first_row[0]]
+        vec![second_row[0] - first_row[0] * first_row[0]]
     }
 
     fn number_auxiliary_rap_columns(&self) -> usize {

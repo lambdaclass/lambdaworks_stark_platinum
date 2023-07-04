@@ -54,8 +54,8 @@ impl AIR for Fibonacci2ColsAIR {
         // constraints of Fibonacci sequence (2 terms per step):
         // s_{0, i+1} = s_{0, i} + s_{1, i}
         // s_{1, i+1} = s_{1, i} + s_{0, i+1}
-        let first_transition = &second_row[0] - &first_row[0] - &first_row[1];
-        let second_transition = &second_row[1] - &first_row[1] - &second_row[0];
+        let first_transition = second_row[0] - first_row[0] - first_row[1];
+        let second_transition = second_row[1] - first_row[1] - second_row[0];
 
         vec![first_transition, second_transition]
     }
