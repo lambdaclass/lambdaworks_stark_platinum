@@ -1,10 +1,9 @@
 use super::vec_writer::VecWriter;
-use crate::cairo::air::{CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs};
+use crate::cairo::air::{MemorySegment, MemorySegmentMap, PublicInputs};
 use crate::cairo::cairo_layout::CairoLayout;
 use crate::cairo::cairo_mem::CairoMemory;
 use crate::cairo::execution_trace::build_main_trace;
 use crate::cairo::register_states::RegisterStates;
-use crate::starks::proof::options::ProofOptions;
 use crate::starks::trace::TraceTable;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};

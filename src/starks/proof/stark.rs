@@ -394,7 +394,7 @@ mod test {
 
     use crate::{
         cairo::{
-            air::{generate_cairo_proof, verify_cairo_proof, CairoAIR},
+            air::{generate_cairo_proof, verify_cairo_proof},
             runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
         },
         starks::{
@@ -402,9 +402,6 @@ mod test {
             frame::Frame,
             fri::fri_decommit::FriDecommitment,
             proof::options::ProofOptions,
-            prover::prove,
-            traits::AIR,
-            verifier::verify,
         },
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};

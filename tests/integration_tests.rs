@@ -134,7 +134,7 @@ fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) 
         blowup_factor: 4,
         fri_number_of_queries: 3,
         coset_offset: 3,
-        grinding_factor: GRINDING_FACTOR,
+        grinding_factor: 1,
     };
 
     let program_content = std::fs::read(file_path).unwrap();
@@ -313,8 +313,7 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     malicious_trace_columns[n_cols - 1] = last_column;
 
     let malicious_trace = TraceTable::new_from_cols(&malicious_trace_columns);
-    let proof =
-        generate_cairo_proof(&malicious_trace, &pub_inputs, &proof_options.clone()).unwrap();
+    let proof = generate_cairo_proof(&malicious_trace, &pub_inputs, &proof_options).unwrap();
     assert!(!verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }
 

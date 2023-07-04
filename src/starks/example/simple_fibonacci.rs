@@ -1,8 +1,5 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::field::{
-    element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-    traits::IsFFTField,
-};
+use lambdaworks_math::field::{element::FieldElement, traits::IsFFTField};
 
 use crate::starks::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},

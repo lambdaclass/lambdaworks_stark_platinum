@@ -8,7 +8,7 @@ use crate::starks::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
     context::AirContext,
     frame::Frame,
-    proof::{self, options::ProofOptions},
+    proof::options::ProofOptions,
     trace::TraceTable,
     traits::AIR,
 };
