@@ -64,7 +64,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = boundary_steps
             .iter()
             .map(|step| {
-                let point = &domain.trace_primitive_root.pow(step.clone() as u32).clone();
+                let point = &domain.trace_primitive_root.pow(*step as u64);
                 let mut evals = domain
                     .lde_roots_of_unity_coset
                     .iter()
