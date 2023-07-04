@@ -151,7 +151,7 @@ pub const MEM_A_TRACE_OFFSET: usize = 19;
 // index.
 const BUILTIN_OFFSET: usize = 9;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum MemorySegment {
     RangeCheck,
     Output,
@@ -160,7 +160,7 @@ pub enum MemorySegment {
 pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
 
 // TODO: For memory constraints and builtins, the commented fields may be useful.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PublicInputs {
     pub pc_init: FE,
     pub ap_init: FE,
@@ -262,7 +262,7 @@ impl Serializable for PublicInputs {
             memory_segment_bytes.extend(range.start.to_be_bytes());
             memory_segment_bytes.extend(range.end.to_be_bytes());
         }
-        let memory_segment_length = memory_segment_bytes.len();
+        let memory_segment_length = self.memory_segments.len();
         bytes.extend(memory_segment_length.to_be_bytes());
         bytes.extend(memory_segment_bytes);
 
@@ -271,7 +271,7 @@ impl Serializable for PublicInputs {
             public_memory_bytes.extend(address.to_bytes_be());
             public_memory_bytes.extend(value.to_bytes_be());
         }
-        let public_memory_length = public_memory_bytes.len();
+        let public_memory_length = self.public_memory.len();
         bytes.extend(public_memory_length.to_be_bytes());
         bytes.extend(public_memory_bytes);
 
@@ -1155,6 +1155,7 @@ mod test {
         cairo::runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
         starks::{debug::validate_trace, domain::Domain},
     };
+    use proptest::{prelude::*, prop_compose, proptest};
 
     use super::*;
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -1414,5 +1415,61 @@ mod test {
                 FieldElement::one(),
             ]
         );
+    }
+
+    prop_compose! {
+        fn some_felt()(base in any::<u64>(), exponent in any::<u128>()) -> FE {
+            FE::from(base).pow(exponent)
+        }
+    }
+
+    prop_compose! {
+        fn some_public_inputs()(
+            pc_init in some_felt(),
+            ap_init in some_felt(),
+            fp_init in some_felt(),
+            pc_final in some_felt(),
+            ap_final in some_felt(),
+            public_memory in proptest::collection::hash_map(any::<u64>(), any::<u64>(), (8_usize, 16_usize)),
+            range_check_max in proptest::option::of(any::<u16>()),
+            range_check_min in proptest::option::of(any::<u16>()),
+            num_steps in any::<usize>(),
+        ) -> PublicInputs {
+            let public_memory = public_memory.iter().map(|(k, v)| (FE::from(*k), FE::from(*v))).collect();
+            let memory_segments = [(MemorySegment::Output, 10u64..16u64), (MemorySegment::RangeCheck, 20u64..71u64)];
+            PublicInputs {
+                pc_init,
+                ap_init,
+                fp_init,
+                pc_final,
+                ap_final,
+                public_memory,
+                range_check_max,
+                range_check_min,
+                num_steps,
+                memory_segments: MemorySegmentMap::from(memory_segments),
+            }
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig {cases: 5, .. ProptestConfig::default()})]
+        #[test]
+        fn test_public_inputs_serialization(
+            public_inputs in some_public_inputs(),
+        ){
+            let serialized = public_inputs.serialize();
+            let deserialized = PublicInputs::deserialize(&serialized).unwrap();
+            prop_assert_eq!(public_inputs.pc_init, deserialized.pc_init);
+            prop_assert_eq!(public_inputs.ap_init, deserialized.ap_init);
+            prop_assert_eq!(public_inputs.fp_init, deserialized.fp_init);
+            prop_assert_eq!(public_inputs.pc_final, deserialized.pc_final);
+            prop_assert_eq!(public_inputs.ap_final, deserialized.ap_final);
+            prop_assert_eq!(public_inputs.public_memory, deserialized.public_memory);
+            prop_assert_eq!(public_inputs.range_check_max, deserialized.range_check_max);
+            prop_assert_eq!(public_inputs.range_check_min, deserialized.range_check_min);
+            prop_assert_eq!(public_inputs.num_steps, deserialized.num_steps);
+            prop_assert_eq!(public_inputs.memory_segments, deserialized.memory_segments);
+        }
     }
 }
