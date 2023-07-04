@@ -133,5 +133,10 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+
+      - name: Add CUDA binaries to PATH
+        run: |
+          echo /usr/local/cuda/bin >> $GITHUB_PATH
+
       - name: Run tests
         run: cargo test -F cuda
