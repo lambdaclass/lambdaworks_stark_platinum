@@ -1,9 +1,8 @@
+use itertools::Itertools;
 use lambdaworks_math::{
     field::{element::FieldElement, traits::IsField},
     polynomial::Polynomial,
 };
-use itertools::Itertools;
-
 
 #[derive(Debug)]
 /// Represents a boundary constraint that must hold in an execution
@@ -63,18 +62,18 @@ impl<F: IsField> BoundaryConstraints<F> {
 
     pub fn steps_for_boundary(&self) -> Vec<usize> {
         self.constraints
-        .iter()
-        .unique_by(|elem| elem.step)
-        .map(|v| v.step)
-        .collect()
+            .iter()
+            .unique_by(|elem| elem.step)
+            .map(|v| v.step)
+            .collect()
     }
 
     pub fn cols_for_boundary(&self) -> Vec<usize> {
         self.constraints
-        .iter()
-        .unique_by(|elem| elem.col)
-        .map(|v| v.col)
-        .collect()
+            .iter()
+            .unique_by(|elem| elem.col)
+            .map(|v| v.col)
+            .collect()
     }
 
     /// Given the primitive root of some domain, returns the domain values corresponding
@@ -132,7 +131,6 @@ impl<F: IsField> BoundaryConstraints<F> {
 
         zerofier
     }
-
 }
 
 #[cfg(test)]
