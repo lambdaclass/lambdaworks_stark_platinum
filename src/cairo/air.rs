@@ -414,8 +414,6 @@ impl AIR for CairoAIR {
             num_transition_constraints += 1; // range-check builtin value decomposition constraint
         }
 
-        dbg!(&pub_inputs.layout);
-
         let context = AirContext {
             proof_options: proof_options.clone(),
             trace_columns,
