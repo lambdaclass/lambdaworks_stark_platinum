@@ -109,26 +109,44 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .unwrap()
             })
             .collect();
-        let boundary_evaluation = vec!(FieldElement::<F>::zero();boundary_polys_evaluations[0].len());
+        let mut boundary_evaluation = vec!(FieldElement::<F>::zero();boundary_polys_evaluations[0].len());
+        
         for col in 0..n_trace_colums {
             let (alpha, beta) = &alpha_and_beta_boundary_coefficients[col];
+            // for each element e in columns 
+            // e = e*alpha + beta 
             boundary_polys_evaluations[col] = boundary_polys_evaluations[col].iter()
                                                     .zip(d_adjustment_power.iter())
                                                     .map(|(v,d)| v*(alpha*d +beta) )
                                                     .collect::<Vec<FieldElement<F>>>();
-            let mut acc =boundary_polys_evaluations[col].clone();
-            for step in boundary_constraints.steps(col).iter() {
-                {let i = boundary_constraints.steps_for_boundary()
+            
+            // Multiply each column for their correspondent zerofiers
+            let mut acc = boundary_polys_evaluations[col].clone();
+            // Step contains the indexes for the boundary constraints
+            // Of the respective column we are interested in
+            for column_step in boundary_constraints.steps(col).iter() {
+
+                let step_index = boundary_constraints.steps_for_boundary()
                     .iter()
-                    .position(|x| *x == *step )
+                    .position(|x| *x == *column_step )
                     .expect("Should be here");
-                acc.iter()
-                .zip(boundary_zerofiers_inverse_evaluations[i].iter())
-                .map(|(b,inv)| b*inv).collect::<Vec<FieldElement<F>>>();
-                }                                
+
+
+                // (,) ((,),)
+                // acc
+                acc = 
+                    acc.into_iter()
+                    .zip(
+                        &boundary_zerofiers_inverse_evaluations[step_index]
+                    )
+                    .map(|(b,inv)| b*inv)
+                    .collect::<Vec<FieldElement<F>>>();
+                
+
+                                                
             }
-            let boundary_evaluation = boundary_polys_evaluations[col].iter()
-                            .zip(boundary_polys_evaluations[col].iter())
+            boundary_evaluation = boundary_evaluation.into_iter()
+                            .zip(&acc)
                             .map(|(u,v)| u + v).collect::<Vec<FieldElement<F>>>();
         }
 
@@ -235,25 +253,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 &degree_adjustments,
                 alpha_and_beta_transition_coefficients,
             );
-            /* 
-            let d_adjustment_power = d.pow(boundary_term_degree_adjustment);
-            let boundary_evaluation = zip(
-                &boundary_polys_evaluations,
-                &boundary_zerofiers_inverse_evaluations,
-            )
-            .enumerate()
-            .map(
-                |(index, (boundary_poly_evaluation, zerofier_inverse_evaluation))| {
-                    let (boundary_alpha, boundary_beta) =
-                        alpha_and_beta_boundary_coefficients[index].clone();
-
-                    &boundary_poly_evaluation[i]
-                        * &zerofier_inverse_evaluation[i]
-                        * (&boundary_alpha * &d_adjustment_power + &boundary_beta)
-                },
-            )
-            .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
-            */
+            
             evaluations_sum += boundary_evaluation[i].clone();
 
             evaluation_table.evaluations_acc.push(evaluations_sum);
