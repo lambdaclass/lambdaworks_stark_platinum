@@ -1436,7 +1436,7 @@ mod test {
             num_steps in any::<usize>(),
         ) -> PublicInputs {
             let public_memory = public_memory.iter().map(|(k, v)| (FE::from(*k), FE::from(*v))).collect();
-            let memory_segments = [(MemorySegment::Output, 10u64..16u64), (MemorySegment::RangeCheck, 20u64..71u64)];
+            let memory_segments = MemorySegmentMap::from([(MemorySegment::Output, 10u64..16u64), (MemorySegment::RangeCheck, 20u64..71u64)]);
             PublicInputs {
                 pc_init,
                 ap_init,
@@ -1447,7 +1447,7 @@ mod test {
                 range_check_max,
                 range_check_min,
                 num_steps,
-                memory_segments: MemorySegmentMap::from(memory_segments),
+                memory_segments,
             }
         }
     }
