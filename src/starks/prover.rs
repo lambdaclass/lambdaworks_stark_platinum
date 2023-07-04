@@ -117,6 +117,28 @@ where
     }
 }
 
+pub fn evaluate_polynomial_on_lde_domain_with_twiddles<F>(
+    p: &Polynomial<FieldElement<F>>,
+    blowup_factor: usize,
+    domain_size: usize,
+    offset: &FieldElement<F>,
+    twiddles: &[FieldElement<F>],
+) -> Result<Vec<FieldElement<F>>, FFTError>
+where
+    F: IsFFTField,
+    Polynomial<FieldElement<F>>: FFTPoly<F>,
+{
+    // Evaluate those polynomials t_j on the large domain D_LDE.
+    let evaluations = p
+        .evaluate_offset_fft_with_twiddles(blowup_factor, Some(domain_size), offset, twiddles)
+        .unwrap();
+    let step = evaluations.len() / (domain_size * blowup_factor);
+    match step {
+        1 => Ok(evaluations),
+        _ => Ok(evaluations.into_iter().step_by(step).collect()),
+    }
+}
+
 #[allow(clippy::type_complexity)]
 fn interpolate_and_commit<T, F>(
     trace: &TraceTable<F>,
@@ -139,11 +161,12 @@ where
     let lde_trace_evaluations = trace_polys
         .iter()
         .map(|poly| {
-            evaluate_polynomial_on_lde_domain(
+            evaluate_polynomial_on_lde_domain_with_twiddles(
                 poly,
                 domain.blowup_factor,
                 domain.interpolation_domain_size,
                 &domain.coset_offset,
+                &domain.twiddles,
             )
         })
         .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
@@ -742,9 +765,11 @@ mod tests {
 
     use super::*;
     use lambdaworks_math::{
+        fft::cpu::roots_of_unity::get_powers_of_primitive_root,
         field::{
-            element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-            traits::IsFFTField,
+            element::FieldElement,
+            fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+            traits::{IsFFTField, RootsConfig},
         },
         polynomial::Polynomial,
     };
@@ -842,6 +867,35 @@ mod tests {
         .unwrap();
         for (i, eval) in evaluations.iter().enumerate() {
             assert_eq!(*eval, poly.evaluate(&(&offset * &primitive_root.pow(i))));
+        }
+    }
+
+    #[test]
+    fn test_evaluate_polynomial_with_and_without_twiddles() {
+        let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
+        let trace_polys = trace.compute_trace_polys();
+        let coset_offset = FE::from(3);
+        let blowup_factor: usize = 2;
+        let domain_size = 8;
+        let lde_size = domain_size * blowup_factor;
+        let lde_root_order = lde_size.trailing_zeros().into();
+        let twiddles =
+            get_powers_of_primitive_root(lde_root_order, lde_size / 2, RootsConfig::BitReverse)
+                .unwrap();
+
+        for poly in trace_polys.iter() {
+            let lde_evaluation =
+                evaluate_polynomial_on_lde_domain(poly, blowup_factor, domain_size, &coset_offset)
+                    .unwrap();
+            let lde_evaluation_twiddles = evaluate_polynomial_on_lde_domain_with_twiddles(
+                poly,
+                blowup_factor,
+                domain_size,
+                &coset_offset,
+                &twiddles,
+            )
+            .unwrap();
+            assert_eq!(lde_evaluation, lde_evaluation_twiddles);
         }
     }
 }

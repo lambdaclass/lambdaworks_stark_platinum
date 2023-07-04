@@ -348,7 +348,7 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
     assert!(!verify(&proof, &cairo_air, &pub_inputs));
 }
 
-#[test_log::test]
+#[test]
 fn test_verifier_rejects_proof_with_changed_output() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
     let (main_trace, cairo_air, mut public_input) =

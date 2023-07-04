@@ -1,6 +1,9 @@
 use lambdaworks_math::{
-    fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
-    field::{element::FieldElement, traits::IsFFTField},
+    fft::cpu::roots_of_unity::{get_powers_of_primitive_root, get_powers_of_primitive_root_coset},
+    field::{
+        element::FieldElement,
+        traits::{IsFFTField, RootsConfig},
+    },
 };
 
 use super::traits::AIR;
@@ -14,6 +17,7 @@ pub struct Domain<F: IsFFTField> {
     pub(crate) coset_offset: FieldElement<F>,
     pub(crate) blowup_factor: usize,
     pub(crate) interpolation_domain_size: usize,
+    pub(crate) twiddles: Vec<FieldElement<F>>,
 }
 
 impl<F: IsFFTField> Domain<F> {
@@ -35,11 +39,15 @@ impl<F: IsFFTField> Domain<F> {
         )
         .unwrap();
 
-        let lde_root_order = (air.trace_length() * blowup_factor).trailing_zeros();
-        let lde_roots_of_unity_coset = get_powers_of_primitive_root_coset(
+        let lde_size = air.trace_length() * blowup_factor;
+        let lde_root_order = lde_size.trailing_zeros();
+        let lde_roots_of_unity_coset =
+            get_powers_of_primitive_root_coset(lde_root_order as u64, lde_size, &coset_offset)
+                .unwrap();
+        let twiddles = get_powers_of_primitive_root(
             lde_root_order as u64,
-            air.trace_length() * blowup_factor,
-            &coset_offset,
+            lde_size / 2,
+            RootsConfig::BitReverse,
         )
         .unwrap();
 
@@ -52,6 +60,7 @@ impl<F: IsFFTField> Domain<F> {
             blowup_factor,
             coset_offset,
             interpolation_domain_size,
+            twiddles,
         }
     }
 }

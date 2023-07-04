@@ -7,11 +7,11 @@ use lambdaworks_math::{
 
 #[cfg(debug_assertions)]
 use crate::starks::debug::check_boundary_polys_divisibility;
-use crate::starks::domain::Domain;
 use crate::starks::frame::Frame;
 use crate::starks::prover::evaluate_polynomial_on_lde_domain;
 use crate::starks::trace::TraceTable;
 use crate::starks::traits::AIR;
+use crate::starks::{domain::Domain, prover::evaluate_polynomial_on_lde_domain_with_twiddles};
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
 use std::iter::zip;
@@ -54,7 +54,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         // The + 1 is for the boundary constraints column
         let mut evaluation_table = ConstraintEvaluationTable::new(
             self.air.context().num_transition_constraints() + 1,
-            &domain.lde_roots_of_unity_coset,
+            &domain.twiddles,
         );
         let n_trace_colums = self.trace_polys.len();
         let boundary_constraints = &self.boundary_constraints;
@@ -76,11 +76,12 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 #[cfg(debug_assertions)]
                 boundary_polys.push(boundary_poly.clone());
 
-                evaluate_polynomial_on_lde_domain(
+                evaluate_polynomial_on_lde_domain_with_twiddles(
                     &boundary_poly,
                     domain.blowup_factor,
                     domain.interpolation_domain_size,
                     &domain.coset_offset,
+                    &domain.twiddles,
                 )
                 .unwrap()
             })
@@ -98,11 +99,12 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 #[cfg(debug_assertions)]
                 boundary_zerofiers.push(zerofier.clone());
 
-                let mut evals = evaluate_polynomial_on_lde_domain(
+                let mut evals = evaluate_polynomial_on_lde_domain_with_twiddles(
                     &zerofier,
                     domain.blowup_factor,
                     domain.interpolation_domain_size,
                     &domain.coset_offset,
+                    &domain.twiddles,
                 )
                 .unwrap();
                 FieldElement::inplace_batch_inverse(&mut evals);
@@ -126,11 +128,12 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let transition_exemptions_evaluations: Vec<_> = transition_exemptions
             .iter()
             .map(|exemption| {
-                evaluate_polynomial_on_lde_domain(
+                evaluate_polynomial_on_lde_domain_with_twiddles(
                     exemption,
                     domain.blowup_factor,
                     domain.interpolation_domain_size,
                     &domain.coset_offset,
+                    &domain.twiddles,
                 )
                 .unwrap()
             })
