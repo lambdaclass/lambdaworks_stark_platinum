@@ -27,6 +27,7 @@ use super::frame::Frame;
 use super::fri::fri_decommit::FriDecommitment;
 use super::fri::{fri_commit_phase, fri_query_phase};
 use super::grinding::generate_nonce_with_grinding;
+use super::proof::options::ProofOptions;
 use super::proof::stark::{DeepPolynomialOpenings, StarkProof};
 use super::trace::TraceTable;
 use super::traits::AIR;
@@ -168,7 +169,6 @@ fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T
     air: &A,
     main_trace: &TraceTable<F>,
     domain: &Domain<F>,
-    public_input: &mut A::PublicInput,
     transcript: &mut T,
 ) -> Result<Round1<F, A>, ProvingError>
 where
@@ -179,7 +179,7 @@ where
 
     let rap_challenges = air.build_rap_challenges(transcript);
 
-    let aux_trace = air.build_auxiliary_trace(main_trace, &rap_challenges, public_input);
+    let aux_trace = air.build_auxiliary_trace(main_trace, &rap_challenges, air.pub_input());
 
     let mut lde_trace_merkle_trees = vec![main_merkle_tree];
     let mut lde_trace_merkle_roots = vec![main_merkle_root];
@@ -208,7 +208,7 @@ fn round_2_compute_composition_polynomial<F, A>(
     air: &A,
     domain: &Domain<F>,
     round_1_result: &Round1<F, A>,
-    public_input: &A::PublicInput,
+    public_input: &A::PublicInputs,
     transition_coeffs: &[(FieldElement<F>, FieldElement<F>)],
     boundary_coeffs: &[(FieldElement<F>, FieldElement<F>)],
 ) -> Round2<F>
@@ -508,8 +508,8 @@ where
 // FIXME remove unwrap() calls and return errors
 pub fn prove<F, A>(
     main_trace: &TraceTable<F>,
-    air: &A,
-    public_input: &mut A::PublicInput,
+    pub_inputs: &mut A::PublicInputs,
+    proof_options: ProofOptions,
 ) -> Result<StarkProof<F>, ProvingError>
 where
     F: IsFFTField,
@@ -522,7 +522,8 @@ where
     #[cfg(feature = "instruments")]
     let timer0 = Instant::now();
 
-    let domain = Domain::new(air);
+    let air = A::new(main_trace.n_rows(), pub_inputs, proof_options);
+    let domain = Domain::new(&air);
     let mut transcript = round_0_transcript_initialization();
 
     #[cfg(feature = "instruments")]
@@ -540,19 +541,19 @@ where
     let timer1 = Instant::now();
 
     let round_1_result = round_1_randomized_air_with_preprocessing::<F, A, _>(
-        air,
+        &air,
         main_trace,
         &domain,
-        public_input,
+        pub_inputs,
         &mut transcript,
     )?;
 
     #[cfg(debug_assertions)]
     validate_trace(
-        air,
+        &air,
         &round_1_result.trace_polys,
         &domain,
-        public_input,
+        pub_inputs,
         &round_1_result.rap_challenges,
     );
 

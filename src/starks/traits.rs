@@ -14,13 +14,19 @@ use super::{
 pub trait AIR: Clone {
     type Field: IsFFTField;
     type RAPChallenges;
-    type PublicInput;
+    type PublicInputs;
+
+    fn new(
+        trace_length: usize,
+        pub_inputs: &Self::PublicInputs,
+        proof_options: ProofOptions,
+    ) -> Self;
 
     fn build_auxiliary_trace(
         &self,
         main_trace: &TraceTable<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInput,
+        public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field>;
 
     fn build_rap_challenges<T: Transcript>(&self, transcript: &mut T) -> Self::RAPChallenges;
@@ -38,7 +44,7 @@ pub trait AIR: Clone {
     fn boundary_constraints(
         &self,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInput,
+        public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field>;
 
     fn transition_exemptions(&self) -> Vec<Polynomial<FieldElement<Self::Field>>> {
@@ -76,7 +82,7 @@ pub trait AIR: Clone {
     fn trace_length(&self) -> usize;
 
     fn options(&self) -> &ProofOptions {
-        &self.context().options
+        &self.context().proof_options
     }
 
     fn blowup_factor(&self) -> u8 {
@@ -86,4 +92,6 @@ pub trait AIR: Clone {
     fn num_transition_constraints(&self) -> usize {
         self.context().num_transition_constraints
     }
+
+    fn pub_inputs(&self) -> Self::PublicInputs;
 }

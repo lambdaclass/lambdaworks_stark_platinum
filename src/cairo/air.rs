@@ -18,7 +18,7 @@ use crate::{
     FE,
 };
 
-use super::{cairo_mem::CairoMemory, register_states::RegisterStates};
+use super::{cairo_layout::CairoLayout, cairo_mem::CairoMemory, register_states::RegisterStates};
 
 /// Main constraint identifiers
 const INST: usize = 16;
@@ -171,6 +171,7 @@ pub struct PublicInputs {
     pub range_check_min: Option<u16>,
     // maximum range check value
     pub range_check_max: Option<u16>,
+    pub layout: CairoLayout,
     // Range-check builtin address range
     pub memory_segments: MemorySegmentMap,
     pub public_memory: HashMap<FE, FE>,
@@ -207,6 +208,14 @@ impl PublicInputs {
         };
         let last_step = &register_states.rows[register_states.steps() - 1];
 
+        // Hacky solution to get out of the way, this should be read from the public inputs
+        // file.
+        let layout = if memory_segments.is_empty() {
+            CairoLayout::Plain
+        } else {
+            CairoLayout::AllCairo
+        };
+
         PublicInputs {
             pc_init: FE::from(register_states.rows[0].pc),
             ap_init: FE::from(register_states.rows[0].ap),
@@ -218,6 +227,7 @@ impl PublicInputs {
             memory_segments: memory_segments.clone(),
             public_memory,
             num_steps: register_states.steps(),
+            layout,
         }
     }
 }
@@ -226,7 +236,6 @@ pub struct CairoAIR {
     pub context: AirContext,
     pub trace_length: usize,
     pub public_inputs: PublicInputs,
-    has_rc_builtin: bool,
 }
 
 impl CairoAIR {
@@ -237,68 +246,67 @@ impl CairoAIR {
     /// * `full_trace_length` - Trace length padded to 2^n
     /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
     /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
-    #[rustfmt::skip]
-    pub fn new(proof_options: ProofOptions, trace_length: usize,  public_inputs: PublicInputs, has_rc_builtin: bool) -> Self {
+    // #[rustfmt::skip]
+    // pub fn new(proof_options: ProofOptions, trace_length: usize,  public_inputs: PublicInputs, has_rc_builtin: bool) -> Self {
 
-        let mut trace_columns = 34 + 3 + 12 + 3;
-        let mut transition_degrees = vec![
-            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
-            1, // Flag 15
-            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
-            2, 2, 2, 2, // Increasing memory auxiliary constraints.
-            2, 2, 2, 2, // Consistent memory auxiliary constraints.
-            2, 2, 2, 2, // Permutation auxiliary constraints.
-            2, 2, 2, // range-check increasing constraints.
-            2, 2, 2, // range-check permutation argument constraints.
-        ];
-        let mut transition_exemptions = vec![
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
-            0, // inst (1)
-            0, 0, 0, // operand consraints (3)
-            1, 1, 1, 1, 0, 0, // register constraints (6)
-            0, 0, 0, 0, 0, // opcode constraints (5)
-            0, 0, 0, 1, // memory continuous (4)
-            0, 0, 0, 1, // memory value consistency (4)
-            0, 0, 0, 1, // memory permutation argument (4)
-            0, 0, 1, // range check continuous (3)
-            0, 0, 0, // range check permutation argument (3)
-        ];
-        let mut num_transition_constraints = 49;
+    //     let mut trace_columns = 34 + 3 + 12 + 3;
+    //     let mut transition_degrees = vec![
+    //         2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
+    //         1, // Flag 15
+    //         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
+    //         2, 2, 2, 2, // Increasing memory auxiliary constraints.
+    //         2, 2, 2, 2, // Consistent memory auxiliary constraints.
+    //         2, 2, 2, 2, // Permutation auxiliary constraints.
+    //         2, 2, 2, // range-check increasing constraints.
+    //         2, 2, 2, // range-check permutation argument constraints.
+    //     ];
+    //     let mut transition_exemptions = vec![
+    //         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
+    //         0, // inst (1)
+    //         0, 0, 0, // operand consraints (3)
+    //         1, 1, 1, 1, 0, 0, // register constraints (6)
+    //         0, 0, 0, 0, 0, // opcode constraints (5)
+    //         0, 0, 0, 1, // memory continuous (4)
+    //         0, 0, 0, 1, // memory value consistency (4)
+    //         0, 0, 0, 1, // memory permutation argument (4)
+    //         0, 0, 1, // range check continuous (3)
+    //         0, 0, 0, // range check permutation argument (3)
+    //     ];
+    //     let mut num_transition_constraints = 49;
 
-        if has_rc_builtin {
-            trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
-            transition_degrees.push(1); // Range check builtin constraint
-            transition_exemptions.push(0); // range-check builtin exemption
-            num_transition_constraints += 1; // range-check builtin value decomposition constraint
-        }
+    //     if has_rc_builtin {
+    //         trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
+    //         transition_degrees.push(1); // Range check builtin constraint
+    //         transition_exemptions.push(0); // range-check builtin exemption
+    //         num_transition_constraints += 1; // range-check builtin value decomposition constraint
+    //     }
 
-        let context = AirContext {
-            options: proof_options,
-            trace_columns,
-            transition_degrees,
-            transition_exemptions,
-            transition_offsets: vec![0, 1],
-            num_transition_constraints,
-        };
+    //     let context = AirContext {
+    //         proof_options,
+    //         trace_columns,
+    //         transition_degrees,
+    //         transition_exemptions,
+    //         transition_offsets: vec![0, 1],
+    //         num_transition_constraints,
+    //     };
 
-        // The number of the transition constraints and the lengths of transition degrees
-        // and transition exemptions should be the same always.
-        debug_assert_eq!(
-            context.transition_degrees.len(),
-            context.num_transition_constraints
-        );
-        debug_assert_eq!(
-            context.transition_exemptions.len(),
-            context.num_transition_constraints
-        );
+    //     // The number of the transition constraints and the lengths of transition degrees
+    //     // and transition exemptions should be the same always.
+    //     debug_assert_eq!(
+    //         context.transition_degrees.len(),
+    //         context.num_transition_constraints
+    //     );
+    //     debug_assert_eq!(
+    //         context.transition_exemptions.len(),
+    //         context.num_transition_constraints
+    //     );
 
-        Self {
-            context,
-            public_inputs,
-            trace_length,
-            has_rc_builtin,
-        }
-    }
+    //     Self {
+    //         context,
+    //         public_inputs,
+    //         trace_length,
+    //     }
+    // }
 
     fn get_builtin_offset(&self) -> usize {
         if self.has_rc_builtin {
@@ -427,13 +435,84 @@ fn generate_range_check_permutation_argument_column(
 impl AIR for CairoAIR {
     type Field = Stark252PrimeField;
     type RAPChallenges = CairoRAPChallenges;
-    type PublicInput = PublicInputs;
+    type PublicInputs = PublicInputs;
+
+    /// Creates a new CairoAIR from proof_options
+    ///
+    /// # Arguments
+    ///
+    /// * `full_trace_length` - Trace length padded to 2^n
+    /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
+    /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
+    #[rustfmt::skip]
+    fn new(proof_options: ProofOptions, trace_length: usize,  public_inputs: PublicInputs) -> Self {
+
+        let mut trace_columns = 34 + 3 + 12 + 3;
+        let mut transition_degrees = vec![
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
+            1, // Flag 15
+            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
+            2, 2, 2, 2, // Increasing memory auxiliary constraints.
+            2, 2, 2, 2, // Consistent memory auxiliary constraints.
+            2, 2, 2, 2, // Permutation auxiliary constraints.
+            2, 2, 2, // range-check increasing constraints.
+            2, 2, 2, // range-check permutation argument constraints.
+        ];
+        let mut transition_exemptions = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
+            0, // inst (1)
+            0, 0, 0, // operand consraints (3)
+            1, 1, 1, 1, 0, 0, // register constraints (6)
+            0, 0, 0, 0, 0, // opcode constraints (5)
+            0, 0, 0, 1, // memory continuous (4)
+            0, 0, 0, 1, // memory value consistency (4)
+            0, 0, 0, 1, // memory permutation argument (4)
+            0, 0, 1, // range check continuous (3)
+            0, 0, 0, // range check permutation argument (3)
+        ];
+        let mut num_transition_constraints = 49;
+
+        // This is a hacky solution for the moment and must be changed once we start implementing 
+        // layouts functionality.
+        if public_inputs.layout != CairoLayout::Plain {
+            trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
+            transition_degrees.push(1); // Range check builtin constraint
+            transition_exemptions.push(0); // range-check builtin exemption
+            num_transition_constraints += 1; // range-check builtin value decomposition constraint
+        }
+
+        let context = AirContext {
+            proof_options,
+            trace_columns,
+            transition_degrees,
+            transition_exemptions,
+            transition_offsets: vec![0, 1],
+            num_transition_constraints,
+        };
+
+        // The number of the transition constraints and the lengths of transition degrees
+        // and transition exemptions should be the same always.
+        debug_assert_eq!(
+            context.transition_degrees.len(),
+            context.num_transition_constraints
+        );
+        debug_assert_eq!(
+            context.transition_exemptions.len(),
+            context.num_transition_constraints
+        );
+
+        Self {
+            context,
+            public_inputs,
+            trace_length,
+        }
+    }
 
     fn build_auxiliary_trace(
         &self,
         main_trace: &TraceTable<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInput,
+        public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field> {
         let addresses_original = main_trace
             .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
@@ -550,7 +629,7 @@ impl AIR for CairoAIR {
     fn boundary_constraints(
         &self,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInput,
+        public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field> {
         let initial_pc =
             BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, public_input.pc_init.clone());
@@ -1003,6 +1082,7 @@ mod test {
             range_check_min: None,
             num_steps: 1,
             memory_segments: MemorySegmentMap::new(),
+            layout: CairoLayout::Plain,
         };
 
         let a = vec![
@@ -1065,6 +1145,7 @@ mod test {
             range_check_min: None,
             num_steps: 1,
             memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..22)]),
+            layout: CairoLayout::Plain,
         };
 
         let a = vec![

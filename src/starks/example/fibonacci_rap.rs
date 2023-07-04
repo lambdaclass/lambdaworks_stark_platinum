@@ -42,7 +42,7 @@ impl AIR for FibonacciRAP {
         &self,
         main_trace: &TraceTable<Self::Field>,
         gamma: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
+        _public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field> {
         let main_segment_cols = main_trace.cols();
         let not_perm = &main_segment_cols[0];
@@ -102,7 +102,7 @@ impl AIR for FibonacciRAP {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
+        _public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field> {
         // Main boundary constraints
         let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::one());

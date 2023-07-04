@@ -36,7 +36,7 @@ impl AIR for QuadraticAIR {
         &self,
         _main_trace: &TraceTable<Self::Field>,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
+        _public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field> {
         TraceTable::empty()
     }
@@ -61,7 +61,7 @@ impl AIR for QuadraticAIR {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
+        _public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field> {
         let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::from(3));
 
