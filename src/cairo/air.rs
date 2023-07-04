@@ -1,8 +1,12 @@
 use std::{collections::HashMap, ops::Range};
 
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::field::{
-    element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+use lambdaworks_math::{
+    errors::DeserializationError,
+    field::{
+        element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+    },
+    traits::{ByteConversion, Deserializable, Serializable},
 };
 
 use crate::{
@@ -221,6 +225,223 @@ impl PublicInputs {
         }
     }
 }
+
+impl Serializable for PublicInputs {
+    fn serialize(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        let pc_init_bytes = self.pc_init.to_bytes_be();
+        let felt_length = pc_init_bytes.len();
+        bytes.extend(felt_length.to_be_bytes());
+        bytes.extend(pc_init_bytes);
+        bytes.extend(self.ap_init.to_bytes_be());
+        bytes.extend(self.fp_init.to_bytes_be());
+        bytes.extend(self.pc_final.to_bytes_be());
+        bytes.extend(self.ap_final.to_bytes_be());
+
+        if let Some(range_check_min) = self.range_check_min {
+            bytes.extend(1u8.to_be_bytes());
+            bytes.extend(range_check_min.to_be_bytes());
+        } else {
+            bytes.extend(0u8.to_be_bytes());
+        }
+
+        if let Some(range_check_max) = self.range_check_max {
+            bytes.extend(1u8.to_be_bytes());
+            bytes.extend(range_check_max.to_be_bytes());
+        } else {
+            bytes.extend(0u8.to_be_bytes());
+        }
+
+        let mut memory_segment_bytes = vec![];
+        for (segment, range) in self.memory_segments.iter() {
+            let segment_type = match segment {
+                MemorySegment::RangeCheck => 0u8,
+                MemorySegment::Output => 1u8,
+            };
+            memory_segment_bytes.extend(segment_type.to_be_bytes());
+            memory_segment_bytes.extend(range.start.to_be_bytes());
+            memory_segment_bytes.extend(range.end.to_be_bytes());
+        }
+        let memory_segment_length = memory_segment_bytes.len();
+        bytes.extend(memory_segment_length.to_be_bytes());
+        bytes.extend(memory_segment_bytes);
+
+        let mut public_memory_bytes = vec![];
+        for (address, value) in self.public_memory.iter() {
+            public_memory_bytes.extend(address.to_bytes_be());
+            public_memory_bytes.extend(value.to_bytes_be());
+        }
+        let public_memory_length = public_memory_bytes.len();
+        bytes.extend(public_memory_length.to_be_bytes());
+        bytes.extend(public_memory_bytes);
+
+        bytes.extend(self.num_steps.to_be_bytes());
+
+        bytes
+    }
+}
+
+impl Deserializable for PublicInputs {
+    fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError>
+    where
+        Self: Sized,
+    {
+        let mut bytes = bytes;
+        let felt_len = usize::from_be_bytes(
+            bytes[0..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+        let pc_init = FE::from_bytes_be(
+            bytes[0..felt_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[felt_len..];
+        let ap_init = FE::from_bytes_be(
+            bytes[0..felt_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[felt_len..];
+        let fp_init = FE::from_bytes_be(
+            bytes[0..felt_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[felt_len..];
+        let pc_final = FE::from_bytes_be(
+            bytes[0..felt_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[felt_len..];
+        let ap_final = FE::from_bytes_be(
+            bytes[0..felt_len]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        )?;
+        bytes = &bytes[felt_len..];
+
+        if bytes.is_empty() {
+            return Err(DeserializationError::InvalidAmountOfBytes);
+        }
+        let range_check_min = match bytes[0] {
+            0 => {
+                bytes = &bytes[1..];
+                None
+            }
+            1 => {
+                bytes = &bytes[1..];
+                let range_check_min = u16::from_be_bytes(
+                    bytes[..2]
+                        .try_into()
+                        .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+                );
+                bytes = &bytes[2..];
+                Some(range_check_min)
+            }
+            _ => return Err(DeserializationError::FieldFromBytesError),
+        };
+
+        if bytes.is_empty() {
+            return Err(DeserializationError::InvalidAmountOfBytes);
+        }
+        let range_check_max = match bytes[0] {
+            0 => {
+                bytes = &bytes[1..];
+                None
+            }
+            1 => {
+                bytes = &bytes[1..];
+                let range_check_max = u16::from_be_bytes(
+                    bytes[..2]
+                        .try_into()
+                        .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+                );
+                bytes = &bytes[2..];
+                Some(range_check_max)
+            }
+            _ => return Err(DeserializationError::FieldFromBytesError),
+        };
+
+        let mut memory_segments = MemorySegmentMap::new();
+        let memory_segment_length = usize::from_be_bytes(
+            bytes[0..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+        for _ in 0..memory_segment_length {
+            if bytes.is_empty() {
+                return Err(DeserializationError::InvalidAmountOfBytes);
+            }
+            let segment_type = match bytes[0] {
+                0 => MemorySegment::RangeCheck,
+                1 => MemorySegment::Output,
+                _ => return Err(DeserializationError::FieldFromBytesError),
+            };
+            bytes = &bytes[1..];
+            let start = u64::from_be_bytes(
+                bytes[0..8]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            );
+            bytes = &bytes[8..];
+            let end = u64::from_be_bytes(
+                bytes[0..8]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            );
+            bytes = &bytes[8..];
+            memory_segments.insert(segment_type, start..end);
+        }
+
+        let mut public_memory = HashMap::new();
+        let public_memory_length = usize::from_be_bytes(
+            bytes[0..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+        for _ in 0..public_memory_length {
+            let address = FE::from_bytes_be(
+                bytes[0..felt_len]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            )?;
+            bytes = &bytes[felt_len..];
+            let value = FE::from_bytes_be(
+                bytes[0..felt_len]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            )?;
+            bytes = &bytes[felt_len..];
+            public_memory.insert(address, value);
+        }
+
+        let num_steps = usize::from_be_bytes(
+            bytes[0..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+
+        Ok(Self {
+            pc_init,
+            ap_init,
+            fp_init,
+            pc_final,
+            ap_final,
+            range_check_min,
+            range_check_max,
+            memory_segments,
+            public_memory,
+            num_steps,
+        })
+    }
+}
+
 #[derive(Clone)]
 pub struct CairoAIR {
     pub context: AirContext,
