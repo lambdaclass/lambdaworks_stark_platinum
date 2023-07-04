@@ -235,7 +235,7 @@ impl PublicInputs {
 pub struct CairoAIR {
     pub context: AirContext,
     pub trace_length: usize,
-    pub public_inputs: PublicInputs,
+    pub pub_inputs: PublicInputs,
 }
 
 impl CairoAIR {
@@ -309,7 +309,7 @@ impl CairoAIR {
     // }
 
     fn get_builtin_offset(&self) -> usize {
-        if self.has_rc_builtin {
+        if self.pub_inputs.layout == CairoLayout::Plain {
             0
         } else {
             BUILTIN_OFFSET
@@ -445,7 +445,7 @@ impl AIR for CairoAIR {
     /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
     /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
     #[rustfmt::skip]
-    fn new(proof_options: ProofOptions, trace_length: usize,  public_inputs: PublicInputs) -> Self {
+    fn new( trace_length: usize, pub_inputs: Self::PublicInputs, proof_options: ProofOptions) -> Self {
 
         let mut trace_columns = 34 + 3 + 12 + 3;
         let mut transition_degrees = vec![
@@ -474,7 +474,7 @@ impl AIR for CairoAIR {
 
         // This is a hacky solution for the moment and must be changed once we start implementing 
         // layouts functionality.
-        if public_inputs.layout != CairoLayout::Plain {
+        if pub_inputs.layout != CairoLayout::Plain {
             trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
             transition_degrees.push(1); // Range check builtin constraint
             transition_exemptions.push(0); // range-check builtin exemption
@@ -503,7 +503,7 @@ impl AIR for CairoAIR {
 
         Self {
             context,
-            public_inputs,
+            pub_inputs: pub_inputs.clone(),
             trace_length,
         }
     }
@@ -512,7 +512,6 @@ impl AIR for CairoAIR {
         &self,
         main_trace: &TraceTable<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field> {
         let addresses_original = main_trace
             .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
@@ -524,7 +523,7 @@ impl AIR for CairoAIR {
         let (addresses, values) = add_pub_memory_in_public_input_section(
             &addresses_original,
             &values_original,
-            public_input,
+            &self.pub_inputs,
         );
         let (addresses, values) = sort_columns_by_memory_address(addresses, values);
 
@@ -611,7 +610,7 @@ impl AIR for CairoAIR {
         permutation_argument(&mut constraints, frame, rap_challenges, builtin_offset);
         permutation_argument_range_check(&mut constraints, frame, rap_challenges, builtin_offset);
 
-        if self.has_rc_builtin {
+        if self.pub_inputs.layout != CairoLayout::Plain {
             range_check_builtin(&mut constraints, frame);
         }
 
@@ -629,22 +628,22 @@ impl AIR for CairoAIR {
     fn boundary_constraints(
         &self,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInputs,
+        // public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field> {
         let initial_pc =
-            BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, public_input.pc_init.clone());
+            BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, self.pub_inputs.pc_init.clone());
         let initial_ap =
-            BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, public_input.ap_init.clone());
+            BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, self.pub_inputs.ap_init.clone());
 
         let final_pc = BoundaryConstraint::new(
             MEM_A_TRACE_OFFSET,
-            self.public_inputs.num_steps - 1,
-            public_input.pc_final.clone(),
+            self.pub_inputs.num_steps - 1,
+            self.pub_inputs.pc_final.clone(),
         );
         let final_ap = BoundaryConstraint::new(
             MEM_P_TRACE_OFFSET,
-            self.public_inputs.num_steps - 1,
-            public_input.ap_final.clone(),
+            self.pub_inputs.num_steps - 1,
+            self.pub_inputs.ap_final.clone(),
         );
 
         // Auxiliary constraint: permutation argument final value
@@ -653,13 +652,13 @@ impl AIR for CairoAIR {
         let builtin_offset = self.get_builtin_offset();
 
         let mut cumulative_product = FieldElement::one();
-        for (address, value) in &public_input.public_memory {
+        for (address, value) in self.pub_inputs.public_memory.iter() {
             cumulative_product = cumulative_product
                 * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value));
         }
         let permutation_final = rap_challenges
             .z_memory
-            .pow(public_input.public_memory.len())
+            .pow(self.pub_inputs.public_memory.len())
             / cumulative_product;
         let permutation_final_constraint = BoundaryConstraint::new(
             PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
@@ -677,12 +676,12 @@ impl AIR for CairoAIR {
         let range_check_min = BoundaryConstraint::new(
             RANGE_CHECK_COL_1 - builtin_offset,
             0,
-            FieldElement::from(public_input.range_check_min.unwrap() as u64),
+            FieldElement::from(self.pub_inputs.range_check_min.unwrap() as u64),
         );
         let range_check_max = BoundaryConstraint::new(
             RANGE_CHECK_COL_3 - builtin_offset,
             final_index,
-            FieldElement::from(public_input.range_check_max.unwrap() as u64),
+            FieldElement::from(self.pub_inputs.range_check_max.unwrap() as u64),
         );
 
         let constraints = vec![
@@ -709,6 +708,10 @@ impl AIR for CairoAIR {
 
     fn trace_length(&self) -> usize {
         self.trace_length
+    }
+
+    fn pub_inputs(&self) -> &Self::PublicInputs {
+        &self.pub_inputs
     }
 }
 
@@ -1042,14 +1045,21 @@ mod test {
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
-        let (main_trace, cairo_air, public_input) =
+        let (main_trace, public_input) =
             generate_prover_args(&program_content, &CairoVersion::V0, &None, 1).unwrap();
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
+
+        let proof_options = ProofOptions {
+            blowup_factor: 4,
+            fri_number_of_queries: 3,
+            coset_offset: 3,
+            grinding_factor: 1,
+        };
+        let cairo_air = CairoAIR::new(main_trace.n_rows(), public_input, proof_options);
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
 
-        let aux_trace =
-            cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges, &public_input);
+        let aux_trace = cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges);
         let aux_polys = aux_trace.compute_trace_polys();
 
         trace_polys.extend_from_slice(&aux_polys);
@@ -1060,7 +1070,7 @@ mod test {
             &cairo_air,
             &trace_polys,
             &domain,
-            &public_input,
+            // &public_input,
             &rap_challenges
         ));
     }

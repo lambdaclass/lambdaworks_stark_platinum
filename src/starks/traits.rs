@@ -18,7 +18,7 @@ pub trait AIR: Clone {
 
     fn new(
         trace_length: usize,
-        pub_inputs: &Self::PublicInputs,
+        pub_inputs: Self::PublicInputs,
         proof_options: ProofOptions,
     ) -> Self;
 
@@ -26,7 +26,6 @@ pub trait AIR: Clone {
         &self,
         main_trace: &TraceTable<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field>;
 
     fn build_rap_challenges<T: Transcript>(&self, transcript: &mut T) -> Self::RAPChallenges;
@@ -44,7 +43,6 @@ pub trait AIR: Clone {
     fn boundary_constraints(
         &self,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field>;
 
     fn transition_exemptions(&self) -> Vec<Polynomial<FieldElement<Self::Field>>> {
@@ -93,5 +91,5 @@ pub trait AIR: Clone {
         self.context().num_transition_constraints
     }
 
-    fn pub_inputs(&self) -> Self::PublicInputs;
+    fn pub_inputs(&self) -> &Self::PublicInputs;
 }

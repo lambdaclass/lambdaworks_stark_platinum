@@ -133,15 +133,23 @@ fn test_prove_quadratic() {
 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) {
+    let proof_options = ProofOptions {
+        blowup_factor: 4,
+        fri_number_of_queries: 3,
+        coset_offset: 3,
+        grinding_factor,
+    };
+
     let program_content = std::fs::read(file_path).unwrap();
-    let (main_trace, cairo_air, mut pub_inputs) = generate_prover_args(
+    let (main_trace, pub_inputs) = generate_prover_args(
         &program_content,
         &CairoVersion::V0,
         output_range,
         GRINDING_FACTOR,
     )
     .unwrap();
-    let result = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
+
+    let proof = prove(&main_trace, &pub_inputs, proof_options).unwrap();
 
     assert!(verify(&result, &cairo_air, &pub_inputs));
 }

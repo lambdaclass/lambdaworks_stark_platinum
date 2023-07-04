@@ -245,7 +245,7 @@ pub fn generate_prover_args(
     cairo_version: &CairoVersion,
     output_range: &Option<Range<u64>>,
     grinding_factor: u8,
-) -> Result<(TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs), Error> {
+) -> Result<(TraceTable<Stark252PrimeField>, PublicInputs), Error> {
     let cairo_layout = match cairo_version {
         CairoVersion::V0 => CairoLayout::Small,
         CairoVersion::V1 => CairoLayout::Plain,
@@ -268,15 +268,7 @@ pub fn generate_prover_args(
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
-    let has_range_check_builtin = memory_segments.get(&MemorySegment::RangeCheck).is_some();
-    let cairo_air = CairoAIR::new(
-        proof_options,
-        main_trace.n_rows(),
-        pub_inputs.clone(),
-        has_range_check_builtin,
-    );
-
-    Ok((main_trace, cairo_air, pub_inputs))
+    Ok((main_trace, pub_inputs))
 }
 
 fn create_memory_segment_map(

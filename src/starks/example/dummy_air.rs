@@ -8,6 +8,7 @@ use crate::starks::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
     context::AirContext,
     frame::Frame,
+    proof::{self, options::ProofOptions},
     trace::TraceTable,
     traits::AIR,
 };
@@ -30,13 +31,32 @@ impl DummyAIR {
 impl AIR for DummyAIR {
     type Field = Stark252PrimeField;
     type RAPChallenges = ();
-    type PublicInput = ();
+    type PublicInputs = ();
+
+    fn new(
+        trace_length: usize,
+        _pub_inputs: Self::PublicInputs,
+        proof_options: ProofOptions,
+    ) -> Self {
+        let context = AirContext {
+            proof_options,
+            trace_columns: 2,
+            transition_degrees: vec![2, 1],
+            transition_exemptions: vec![0, 2],
+            transition_offsets: vec![0, 1, 2],
+            num_transition_constraints: 2,
+        };
+
+        Self {
+            context,
+            trace_length,
+        }
+    }
 
     fn build_auxiliary_trace(
         &self,
         _main_trace: &TraceTable<Self::Field>,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field> {
         TraceTable::empty()
     }
@@ -61,7 +81,6 @@ impl AIR for DummyAIR {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field> {
         let a0 = BoundaryConstraint::new(1, 0, FieldElement::<Self::Field>::one());
         let a1 = BoundaryConstraint::new(1, 1, FieldElement::<Self::Field>::one());
@@ -83,6 +102,10 @@ impl AIR for DummyAIR {
 
     fn trace_length(&self) -> usize {
         self.trace_length
+    }
+
+    fn pub_inputs(&self) -> &Self::PublicInputs {
+        &()
     }
 }
 

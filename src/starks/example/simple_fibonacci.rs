@@ -23,23 +23,26 @@ where
     pub_inputs: FibonacciPublicInputs<F>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FibonacciPublicInputs<F>
 where
     F: IsFFTField,
 {
-    a0: FieldElement<F>,
-    a1: FieldElement<F>,
+    pub a0: FieldElement<F>,
+    pub a1: FieldElement<F>,
 }
 
-impl AIR for FibonacciAIR<Stark252PrimeField> {
-    type Field = Stark252PrimeField;
+impl<F> AIR for FibonacciAIR<F>
+where
+    F: IsFFTField,
+{
+    type Field = F;
     type RAPChallenges = ();
     type PublicInputs = FibonacciPublicInputs<Self::Field>;
 
     fn new(
         trace_length: usize,
-        pub_inputs: &Self::PublicInputs,
+        pub_inputs: Self::PublicInputs,
         proof_options: ProofOptions,
     ) -> Self {
         let context = AirContext {
@@ -66,7 +69,6 @@ impl AIR for FibonacciAIR<Stark252PrimeField> {
         &self,
         _main_trace: &TraceTable<Self::Field>,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field> {
         TraceTable::empty()
     }
@@ -87,10 +89,9 @@ impl AIR for FibonacciAIR<Stark252PrimeField> {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        pub_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field> {
-        let a0 = BoundaryConstraint::new_simple(0, pub_input.a0);
-        let a1 = BoundaryConstraint::new_simple(1, pub_input.a1);
+        let a0 = BoundaryConstraint::new_simple(0, self.pub_inputs.a0.clone());
+        let a1 = BoundaryConstraint::new_simple(1, self.pub_inputs.a1.clone());
 
         BoundaryConstraints::from_constraints(vec![a0, a1])
     }
@@ -107,8 +108,8 @@ impl AIR for FibonacciAIR<Stark252PrimeField> {
         self.trace_length
     }
 
-    fn pub_inputs(&self) -> Self::PublicInputs {
-        self.pub_inputs
+    fn pub_inputs(&self) -> &Self::PublicInputs {
+        &self.pub_inputs
     }
 }
 

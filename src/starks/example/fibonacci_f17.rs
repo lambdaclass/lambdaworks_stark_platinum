@@ -1,82 +1,84 @@
-use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::field::{element::FieldElement, fields::u64_prime_field::F17};
+// use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+// use lambdaworks_math::field::{element::FieldElement, fields::u64_prime_field::F17};
 
-use crate::starks::{
-    constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
-    context::AirContext,
-    frame::Frame,
-    trace::TraceTable,
-    traits::AIR,
-};
+// use crate::starks::{
+//     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
+//     context::AirContext,
+//     frame::Frame,
+//     trace::TraceTable,
+//     traits::AIR,
+// };
 
-#[derive(Clone)]
-pub struct Fibonacci17AIR {
-    context: AirContext,
-    trace_length: usize,
-}
+// use super::simple_fibonacci::FibonacciPublicInputs;
 
-impl Fibonacci17AIR {
-    pub fn new(context: AirContext, trace_length: usize) -> Self {
-        Self {
-            context,
-            trace_length,
-        }
-    }
-}
+// #[derive(Clone)]
+// pub struct Fibonacci17AIR {
+//     context: AirContext,
+//     trace_length: usize,
+// }
 
-impl AIR for Fibonacci17AIR {
-    type Field = F17;
-    type RAPChallenges = ();
-    type PublicInput = ();
+// impl Fibonacci17AIR {
+//     pub fn new(context: AirContext, trace_length: usize) -> Self {
+//         Self {
+//             context,
+//             trace_length,
+//         }
+//     }
+// }
 
-    fn build_auxiliary_trace(
-        &self,
-        _main_trace: &TraceTable<Self::Field>,
-        _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInputs,
-    ) -> TraceTable<Self::Field> {
-        TraceTable::empty()
-    }
+// impl AIR for Fibonacci17AIR {
+//     type Field = F17;
+//     type RAPChallenges = ();
+//     type PublicInputs = FibonacciPublicInputs<F>;
 
-    fn build_rap_challenges<T: Transcript>(&self, _transcript: &mut T) -> Self::RAPChallenges {}
+//     fn build_auxiliary_trace(
+//         &self,
+//         _main_trace: &TraceTable<Self::Field>,
+//         _rap_challenges: &Self::RAPChallenges,
+//         _public_input: &Self::PublicInputs,
+//     ) -> TraceTable<Self::Field> {
+//         TraceTable::empty()
+//     }
 
-    fn compute_transition(
-        &self,
-        frame: &Frame<Self::Field>,
-        _rap_challenges: &Self::RAPChallenges,
-    ) -> Vec<FieldElement<Self::Field>> {
-        let first_row = frame.get_row(0);
-        let second_row = frame.get_row(1);
-        let third_row = frame.get_row(2);
+//     fn build_rap_challenges<T: Transcript>(&self, _transcript: &mut T) -> Self::RAPChallenges {}
 
-        vec![third_row[0] - second_row[0] - first_row[0]]
-    }
+//     fn compute_transition(
+//         &self,
+//         frame: &Frame<Self::Field>,
+//         _rap_challenges: &Self::RAPChallenges,
+//     ) -> Vec<FieldElement<Self::Field>> {
+//         let first_row = frame.get_row(0);
+//         let second_row = frame.get_row(1);
+//         let third_row = frame.get_row(2);
 
-    fn boundary_constraints(
-        &self,
-        _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInputs,
-    ) -> BoundaryConstraints<Self::Field> {
-        let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::one());
-        let a1 = BoundaryConstraint::new_simple(1, FieldElement::<Self::Field>::one());
-        let result = BoundaryConstraint::new_simple(3, FieldElement::<Self::Field>::from(3));
+//         vec![third_row[0] - second_row[0] - first_row[0]]
+//     }
 
-        BoundaryConstraints::from_constraints(vec![a0, a1, result])
-    }
+//     fn boundary_constraints(
+//         &self,
+//         _rap_challenges: &Self::RAPChallenges,
+//         _public_input: &Self::PublicInputs,
+//     ) -> BoundaryConstraints<Self::Field> {
+//         let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::one());
+//         let a1 = BoundaryConstraint::new_simple(1, FieldElement::<Self::Field>::one());
+//         let result = BoundaryConstraint::new_simple(3, FieldElement::<Self::Field>::from(3));
 
-    fn number_auxiliary_rap_columns(&self) -> usize {
-        0
-    }
+//         BoundaryConstraints::from_constraints(vec![a0, a1, result])
+//     }
 
-    fn context(&self) -> &AirContext {
-        &self.context
-    }
+//     fn number_auxiliary_rap_columns(&self) -> usize {
+//         0
+//     }
 
-    fn composition_poly_degree_bound(&self) -> usize {
-        self.trace_length()
-    }
+//     fn context(&self) -> &AirContext {
+//         &self.context
+//     }
 
-    fn trace_length(&self) -> usize {
-        self.trace_length
-    }
-}
+//     fn composition_poly_degree_bound(&self) -> usize {
+//         self.trace_length()
+//     }
+
+//     fn trace_length(&self) -> usize {
+//         self.trace_length
+//     }
+// }

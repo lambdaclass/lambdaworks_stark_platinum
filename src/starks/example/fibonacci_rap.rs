@@ -2,47 +2,77 @@ use std::ops::Div;
 
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::{
-    field::{
-        element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-        traits::IsFFTField,
-    },
+    field::{element::FieldElement, traits::IsFFTField},
     helpers::resize_to_next_power_of_two,
+    traits::ByteConversion,
 };
 
 use crate::starks::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
     context::AirContext,
     frame::Frame,
+    proof::options::ProofOptions,
     trace::TraceTable,
     traits::AIR,
     transcript::transcript_to_field,
 };
 
 #[derive(Clone)]
-pub struct FibonacciRAP {
+pub struct FibonacciRAP<F>
+where
+    F: IsFFTField,
+{
     context: AirContext,
     trace_length: usize,
+    pub_inputs: FibonacciRAPPublicInputs<F>,
 }
 
-impl FibonacciRAP {
-    pub fn new(context: AirContext, trace_length: usize) -> Self {
+#[derive(Clone, Debug)]
+pub struct FibonacciRAPPublicInputs<F>
+where
+    F: IsFFTField,
+{
+    pub steps: usize,
+    pub a0: FieldElement<F>,
+    pub a1: FieldElement<F>,
+}
+
+impl<F> AIR for FibonacciRAP<F>
+where
+    F: IsFFTField,
+    FieldElement<F>: ByteConversion,
+{
+    type Field = F;
+    type RAPChallenges = FieldElement<Self::Field>;
+    type PublicInputs = FibonacciRAPPublicInputs<Self::Field>;
+
+    fn new(
+        trace_length: usize,
+        pub_inputs: Self::PublicInputs,
+        proof_options: ProofOptions,
+    ) -> Self {
+        let exemptions = 3 + trace_length - pub_inputs.steps - 1;
+
+        let context = AirContext {
+            proof_options,
+            trace_columns: 3,
+            transition_degrees: vec![1, 2],
+            transition_offsets: vec![0, 1, 2],
+            transition_exemptions: vec![exemptions, 1],
+            num_transition_constraints: 2,
+        };
+
         Self {
             context,
             trace_length,
+            pub_inputs,
         }
     }
-}
-
-impl AIR for FibonacciRAP {
-    type Field = Stark252PrimeField;
-    type RAPChallenges = FieldElement<Self::Field>;
-    type PublicInput = ();
 
     fn build_auxiliary_trace(
         &self,
         main_trace: &TraceTable<Self::Field>,
         gamma: &Self::RAPChallenges,
-        _public_input: &Self::PublicInputs,
     ) -> TraceTable<Self::Field> {
         let main_segment_cols = main_trace.cols();
         let not_perm = &main_segment_cols[0];
@@ -102,7 +132,6 @@ impl AIR for FibonacciRAP {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field> {
         // Main boundary constraints
         let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::one());
@@ -124,6 +153,10 @@ impl AIR for FibonacciRAP {
 
     fn trace_length(&self) -> usize {
         self.trace_length
+    }
+
+    fn pub_inputs(&self) -> &Self::PublicInputs {
+        &self.pub_inputs
     }
 }
 

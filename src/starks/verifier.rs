@@ -202,7 +202,6 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     air: &A,
     proof: &StarkProof<F>,
     domain: &Domain<F>,
-    public_input: &A::PublicInput,
     challenges: &Challenges<F, A>,
 ) -> bool {
     // BEGIN TRACE <-> Composition poly consistency evaluation check
@@ -210,7 +209,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let composition_poly_even_ood_evaluation = &proof.composition_poly_even_ood_evaluation;
     let composition_poly_odd_ood_evaluation = &proof.composition_poly_odd_ood_evaluation;
 
-    let boundary_constraints = air.boundary_constraints(&challenges.rap_challenges, public_input);
+    let boundary_constraints = air.boundary_constraints(&challenges.rap_challenges);
 
     let n_trace_cols = air.context().trace_columns;
     // special cases.
@@ -532,7 +531,7 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     trace_terms + h_1_term * &challenges.gamma_even + h_2_term * &challenges.gamma_odd
 }
 
-pub fn verify<F, A>(proof: &StarkProof<F>, air: &A, public_input: &A::PublicInput) -> bool
+pub fn verify<F, A>(proof: &StarkProof<F>, air: &A, public_input: &A::PublicInputs) -> bool
 where
     F: IsFFTField,
     A: AIR<Field = F>,
@@ -550,7 +549,7 @@ where
         step_1_replay_rounds_and_recover_challenges(air, proof, &domain, &mut transcript);
 
     // verify grinding
-    let grinding_factor = air.context().options.grinding_factor;
+    let grinding_factor = air.context().proof_options.grinding_factor;
     if challenges.leading_zeros_count < grinding_factor {
         error!("Grinding factor not satisfied");
         return false;
@@ -566,8 +565,7 @@ where
     #[cfg(feature = "instruments")]
     let timer2 = Instant::now();
 
-    if !step_2_verify_claimed_composition_polynomial(air, proof, &domain, public_input, &challenges)
-    {
+    if !step_2_verify_claimed_composition_polynomial(air, proof, &domain, &challenges) {
         error!("Composition Polynomial verification failed");
         return false;
     }

@@ -179,7 +179,7 @@ where
 
     let rap_challenges = air.build_rap_challenges(transcript);
 
-    let aux_trace = air.build_auxiliary_trace(main_trace, &rap_challenges, air.pub_input());
+    let aux_trace = air.build_auxiliary_trace(main_trace, &rap_challenges);
 
     let mut lde_trace_merkle_trees = vec![main_merkle_tree];
     let mut lde_trace_merkle_roots = vec![main_merkle_root];
@@ -208,7 +208,6 @@ fn round_2_compute_composition_polynomial<F, A>(
     air: &A,
     domain: &Domain<F>,
     round_1_result: &Round1<F, A>,
-    public_input: &A::PublicInputs,
     transition_coeffs: &[(FieldElement<F>, FieldElement<F>)],
     boundary_coeffs: &[(FieldElement<F>, FieldElement<F>)],
 ) -> Round2<F>
@@ -222,7 +221,6 @@ where
         air,
         &round_1_result.trace_polys,
         &domain.trace_primitive_root,
-        public_input,
         &round_1_result.rap_challenges,
     );
 
@@ -327,7 +325,7 @@ fn round_4_compute_and_run_fri_on_the_deep_composition_polynomial<
 where
     FieldElement<F>: ByteConversion,
 {
-    let coset_offset_u64 = air.context().options.coset_offset;
+    let coset_offset_u64 = air.context().proof_options.coset_offset;
     let coset_offset = FieldElement::<F>::from(coset_offset_u64);
 
     // <<<< Receive challenges: 𝛾, 𝛾'
@@ -365,7 +363,7 @@ where
     );
 
     // grinding: generate nonce and append it to the transcript
-    let grinding_factor = air.context().options.grinding_factor;
+    let grinding_factor = air.context().proof_options.grinding_factor;
     let transcript_challenge = transcript.challenge();
     let nonce = generate_nonce_with_grinding(&transcript_challenge, grinding_factor)
         .expect("nonce not found");
@@ -508,7 +506,7 @@ where
 // FIXME remove unwrap() calls and return errors
 pub fn prove<F, A>(
     main_trace: &TraceTable<F>,
-    pub_inputs: &mut A::PublicInputs,
+    pub_inputs: A::PublicInputs,
     proof_options: ProofOptions,
 ) -> Result<StarkProof<F>, ProvingError>
 where
@@ -544,7 +542,6 @@ where
         &air,
         main_trace,
         &domain,
-        pub_inputs,
         &mut transcript,
     )?;
 
@@ -553,7 +550,6 @@ where
         &air,
         &round_1_result.trace_polys,
         &domain,
-        pub_inputs,
         &round_1_result.rap_challenges,
     );
 
@@ -594,10 +590,9 @@ where
         .collect();
 
     let round_2_result = round_2_compute_composition_polynomial(
-        air,
+        &air,
         &domain,
         &round_1_result,
-        public_input,
         &transition_coeffs,
         &boundary_coeffs,
     );
@@ -627,7 +622,7 @@ where
     );
 
     let round_3_result = round_3_evaluate_polynomials_in_out_of_domain_element(
-        air,
+        &air,
         &domain,
         &round_1_result,
         &round_2_result,
@@ -672,7 +667,7 @@ where
     // protocol on its own. Therefore we pass it the transcript
     // to simulate the interactions with the verifier.
     let round_4_result = round_4_compute_and_run_fri_on_the_deep_composition_polynomial(
-        air,
+        &air,
         &domain,
         &round_1_result,
         &round_2_result,
@@ -739,7 +734,10 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        starks::{context::AirContext, example::simple_fibonacci, proof::options::ProofOptions},
+        starks::{
+            example::simple_fibonacci::{self, FibonacciPublicInputs},
+            proof::options::ProofOptions,
+        },
         FE,
     };
 
@@ -754,27 +752,28 @@ mod tests {
 
     #[test]
     fn test_domain_constructor() {
+        let pub_inputs = FibonacciPublicInputs {
+            a0: FE::one(),
+            a1: FE::one(),
+        };
         let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
         let trace_length = trace.n_rows();
         let coset_offset = 3;
         let blowup_factor: usize = 2;
         let grinding_factor = 20;
 
-        let context = AirContext {
-            options: ProofOptions {
-                blowup_factor: blowup_factor as u8,
-                fri_number_of_queries: 1,
-                coset_offset,
-                grinding_factor,
-            },
-            trace_columns: trace.n_cols,
-            transition_degrees: vec![1],
-            transition_exemptions: vec![2],
-            transition_offsets: vec![0, 1, 2],
-            num_transition_constraints: 1,
+        let proof_options = ProofOptions {
+            blowup_factor: blowup_factor as u8,
+            fri_number_of_queries: 1,
+            coset_offset,
+            grinding_factor,
         };
 
-        let domain = Domain::new(&simple_fibonacci::FibonacciAIR::new(context, trace_length));
+        let domain = Domain::new(&simple_fibonacci::FibonacciAIR::new(
+            trace_length,
+            pub_inputs,
+            proof_options,
+        ));
         assert_eq!(domain.blowup_factor, 2);
         assert_eq!(domain.interpolation_domain_size, trace_length);
         assert_eq!(domain.root_order, trace_length.trailing_zeros());
