@@ -656,12 +656,7 @@ mod test {
         let (main_trace, pub_inputs) =
             generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
-        let proof_options = ProofOptions {
-            blowup_factor: 4,
-            fri_number_of_queries: 3,
-            coset_offset: 3,
-            grinding_factor: 1,
-        };
+        let proof_options = ProofOptions::default_test_options();
 
         // The proof is generated and serialized.
         let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();

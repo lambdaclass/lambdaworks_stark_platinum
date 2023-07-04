@@ -33,18 +33,11 @@ use lambdaworks_stark::{
     FE,
 };
 
-const GRINDING_FACTOR: u8 = 1;
-
 #[test_log::test]
 fn test_prove_fib() {
     let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
 
-    let proof_options = ProofOptions {
-        blowup_factor: 2,
-        fri_number_of_queries: 7,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let pub_inputs = FibonacciPublicInputs {
         a0: FE::one(),
@@ -87,12 +80,7 @@ fn test_prove_fib17() {
 fn test_prove_fib_2_cols() {
     let trace = fibonacci_2_columns::fibonacci_trace_2_columns([FE::from(1), FE::from(1)], 16);
 
-    let proof_options = ProofOptions {
-        blowup_factor: 2,
-        fri_number_of_queries: 7,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let pub_inputs = FibonacciPublicInputs {
         a0: FE::one(),
@@ -111,12 +99,7 @@ fn test_prove_fib_2_cols() {
 fn test_prove_quadratic() {
     let trace = quadratic_air::quadratic_trace(FE::from(3), 4);
 
-    let proof_options = ProofOptions {
-        blowup_factor: 2,
-        fri_number_of_queries: 1,
-        coset_offset: 3,
-        grinding_factor: GRINDING_FACTOR,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let pub_inputs = QuadraticPublicInputs { a0: FE::from(3) };
 
@@ -130,12 +113,7 @@ fn test_prove_quadratic() {
 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) {
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let program_content = std::fs::read(file_path).unwrap();
     let (main_trace, pub_inputs) =
@@ -147,12 +125,7 @@ fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) 
 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
 fn test_prove_cairo1_program(file_path: &str) {
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: GRINDING_FACTOR,
-    };
+    let proof_options = ProofOptions::default_test_options();
     let program_content = std::fs::read(file_path).unwrap();
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V1, &None).unwrap();
@@ -203,12 +176,7 @@ fn test_prove_rap_fib() {
     let steps = 16;
     let trace = fibonacci_rap_trace([FE::from(1), FE::from(1)], steps);
 
-    let proof_options = ProofOptions {
-        blowup_factor: 2,
-        fri_number_of_queries: 1,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let pub_inputs = FibonacciRAPPublicInputs {
         steps,
@@ -229,12 +197,7 @@ fn test_prove_dummy() {
     let trace_length = 16;
     let trace = dummy_air::dummy_trace(trace_length);
 
-    let proof_options = ProofOptions {
-        blowup_factor: 2,
-        fri_number_of_queries: 1,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let proof = prove::<F, DummyAIR>(&trace, &(), &proof_options).unwrap();
     assert!(verify::<F, DummyAIR>(&proof, &(), &proof_options));
@@ -246,12 +209,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let (main_trace, mut pub_input) =
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let proof = generate_cairo_proof(&main_trace, &pub_input, &proof_options).unwrap();
 
@@ -271,12 +229,7 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
     let (main_trace, mut pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
 
     pub_inputs.range_check_min = Some(pub_inputs.range_check_min.unwrap() + 1);
@@ -299,12 +252,7 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     // The malicious value, we change the previous value to a 35.
     let malicious_rc_value = FE::from(35);
 
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let mut malicious_trace_columns = main_trace.cols();
     let n_cols = malicious_trace_columns.len();
@@ -337,12 +285,7 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 
     // These is the regular setup for generating the trace and the Cairo AIR, but now
     // we do it with the malicious memory
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
     let memory_segments = MemorySegmentMap::from([(MemorySegment::RangeCheck, 27..29)]);
 
     let mut pub_inputs = PublicInputs::from_regs_and_mem(
@@ -382,12 +325,7 @@ fn test_verifier_rejects_proof_with_changed_output() {
     let output_col_idx = *output_col_idx.unwrap();
     let output_row_idx = output_row_idx.unwrap();
 
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
+    let proof_options = ProofOptions::default_test_options();
 
     let mut malicious_trace_columns = main_trace.cols();
     let mut output_column = malicious_trace_columns[output_col_idx].clone();

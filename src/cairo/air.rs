@@ -1001,12 +1001,7 @@ mod test {
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
 
-        let proof_options = ProofOptions {
-            blowup_factor: 4,
-            fri_number_of_queries: 3,
-            coset_offset: 3,
-            grinding_factor: 1,
-        };
+        let proof_options = ProofOptions::default_test_options();
         let cairo_air = CairoAIR::new(main_trace.n_rows(), &public_input, &proof_options);
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
 

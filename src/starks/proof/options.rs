@@ -139,6 +139,8 @@ impl ProofOptions {
         Ok(())
     }
 
+    /// Default proof options used for testing purposes.
+    /// These options should not be used in production.
     pub fn default_test_options() -> Self {
         Self {
             blowup_factor: 4,
