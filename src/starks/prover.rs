@@ -506,7 +506,7 @@ where
 // FIXME remove unwrap() calls and return errors
 pub fn prove<F, A>(
     main_trace: &TraceTable<F>,
-    pub_inputs: A::PublicInputs,
+    pub_inputs: &A::PublicInputs,
     proof_options: ProofOptions,
 ) -> Result<StarkProof<F>, ProvingError>
 where

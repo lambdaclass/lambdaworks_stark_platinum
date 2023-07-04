@@ -239,75 +239,6 @@ pub struct CairoAIR {
 }
 
 impl CairoAIR {
-    /// Creates a new CairoAIR from proof_options
-    ///
-    /// # Arguments
-    ///
-    /// * `full_trace_length` - Trace length padded to 2^n
-    /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
-    /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
-    // #[rustfmt::skip]
-    // pub fn new(proof_options: ProofOptions, trace_length: usize,  public_inputs: PublicInputs, has_rc_builtin: bool) -> Self {
-
-    //     let mut trace_columns = 34 + 3 + 12 + 3;
-    //     let mut transition_degrees = vec![
-    //         2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
-    //         1, // Flag 15
-    //         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
-    //         2, 2, 2, 2, // Increasing memory auxiliary constraints.
-    //         2, 2, 2, 2, // Consistent memory auxiliary constraints.
-    //         2, 2, 2, 2, // Permutation auxiliary constraints.
-    //         2, 2, 2, // range-check increasing constraints.
-    //         2, 2, 2, // range-check permutation argument constraints.
-    //     ];
-    //     let mut transition_exemptions = vec![
-    //         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
-    //         0, // inst (1)
-    //         0, 0, 0, // operand consraints (3)
-    //         1, 1, 1, 1, 0, 0, // register constraints (6)
-    //         0, 0, 0, 0, 0, // opcode constraints (5)
-    //         0, 0, 0, 1, // memory continuous (4)
-    //         0, 0, 0, 1, // memory value consistency (4)
-    //         0, 0, 0, 1, // memory permutation argument (4)
-    //         0, 0, 1, // range check continuous (3)
-    //         0, 0, 0, // range check permutation argument (3)
-    //     ];
-    //     let mut num_transition_constraints = 49;
-
-    //     if has_rc_builtin {
-    //         trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
-    //         transition_degrees.push(1); // Range check builtin constraint
-    //         transition_exemptions.push(0); // range-check builtin exemption
-    //         num_transition_constraints += 1; // range-check builtin value decomposition constraint
-    //     }
-
-    //     let context = AirContext {
-    //         proof_options,
-    //         trace_columns,
-    //         transition_degrees,
-    //         transition_exemptions,
-    //         transition_offsets: vec![0, 1],
-    //         num_transition_constraints,
-    //     };
-
-    //     // The number of the transition constraints and the lengths of transition degrees
-    //     // and transition exemptions should be the same always.
-    //     debug_assert_eq!(
-    //         context.transition_degrees.len(),
-    //         context.num_transition_constraints
-    //     );
-    //     debug_assert_eq!(
-    //         context.transition_exemptions.len(),
-    //         context.num_transition_constraints
-    //     );
-
-    //     Self {
-    //         context,
-    //         public_inputs,
-    //         trace_length,
-    //     }
-    // }
-
     fn get_builtin_offset(&self) -> usize {
         if self.pub_inputs.layout == CairoLayout::Plain {
             0
@@ -445,7 +376,7 @@ impl AIR for CairoAIR {
     /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
     /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
     #[rustfmt::skip]
-    fn new( trace_length: usize, pub_inputs: Self::PublicInputs, proof_options: ProofOptions) -> Self {
+    fn new( trace_length: usize, pub_inputs: &Self::PublicInputs, proof_options: ProofOptions) -> Self {
 
         let mut trace_columns = 34 + 3 + 12 + 3;
         let mut transition_degrees = vec![
@@ -1046,7 +977,7 @@ mod test {
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
         let (main_trace, public_input) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None, 1).unwrap();
+            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
 
@@ -1056,7 +987,7 @@ mod test {
             coset_offset: 3,
             grinding_factor: 1,
         };
-        let cairo_air = CairoAIR::new(main_trace.n_rows(), public_input, proof_options);
+        let cairo_air = CairoAIR::new(main_trace.n_rows(), &public_input, proof_options);
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
 
         let aux_trace = cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges);

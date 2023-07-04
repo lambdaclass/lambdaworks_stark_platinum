@@ -42,7 +42,7 @@ where
 
     fn new(
         trace_length: usize,
-        pub_inputs: Self::PublicInputs,
+        pub_inputs: &Self::PublicInputs,
         proof_options: ProofOptions,
     ) -> Self {
         let context = AirContext {
@@ -55,7 +55,7 @@ where
         };
 
         Self {
-            pub_inputs,
+            pub_inputs: pub_inputs.clone(),
             context,
             trace_length,
         }

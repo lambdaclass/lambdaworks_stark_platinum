@@ -403,6 +403,7 @@ mod test {
             fri::fri_decommit::FriDecommitment,
             proof::options::ProofOptions,
             prover::prove,
+            traits::AIR,
             verifier::verify,
         },
     };
@@ -655,24 +656,9 @@ mod test {
     #[test]
     fn deserialize_and_verify() {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
-        let (main_trace, cairo_air, mut pub_inputs) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None, 1).unwrap();
+        let (main_trace, pub_inputs) =
+            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
-        // The proof is generated and serialized.
-        let proof = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
-        let proof_bytes = proof.serialize();
-
-        // The trace, AIR and original proof are dropped to show that they are decoupled from
-        // the verifying process.
-        drop(main_trace);
-        drop(cairo_air);
-        drop(proof);
-
-        // At this point, the verifier only knows about the serialized proof, the proof options
-        // and the public inputs.
-        let proof = StarkProof::<Stark252PrimeField>::deserialize(&proof_bytes).unwrap();
-
-        // The same proof configuration as used in the `generate_prover_args` function.
         let proof_options = ProofOptions {
             blowup_factor: 4,
             fri_number_of_queries: 3,
@@ -680,8 +666,22 @@ mod test {
             grinding_factor: 1,
         };
 
+        // The proof is generated and serialized.
+        let proof =
+            prove::<Stark252PrimeField, CairoAIR>(&main_trace, &pub_inputs, proof_options).unwrap();
+        let proof_bytes = proof.serialize();
+
+        // The trace and original proof are dropped to show that they are decoupled from
+        // the verifying process.
+        drop(main_trace);
+        drop(proof);
+
+        // At this point, the verifier only knows about the serialized proof, the proof options
+        // and the public inputs.
+        let proof = StarkProof::<Stark252PrimeField>::deserialize(&proof_bytes).unwrap();
+
         // The AIR is re-constructed in the verifier side
-        let air = CairoAIR::new(proof_options, proof.trace_length, pub_inputs.clone(), false);
+        let air = CairoAIR::new(proof.trace_length, &pub_inputs, proof_options);
 
         // The proof is verified successfully.
         assert!(verify(&proof, &air, &pub_inputs));

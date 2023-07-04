@@ -27,8 +27,8 @@ fn main() {
         return;
     };
 
-    let Ok((main_trace, mut pub_inputs)) =
-        generate_prover_args(&program_content, &cairo_version, &None, grinding_factor) else {
+    let Ok((main_trace, pub_inputs)) =
+        generate_prover_args(&program_content, &cairo_version, &None) else {
             println!("Error generating prover args");
             return;
         };
@@ -45,7 +45,7 @@ fn main() {
     let timer = Instant::now();
     println!("Making proof ...");
     let proof =
-        prove::<Stark252PrimeField, CairoAIR>(&main_trace, pub_inputs, proof_options).unwrap();
+        prove::<Stark252PrimeField, CairoAIR>(&main_trace, &pub_inputs, proof_options).unwrap();
     println!("Time spent in proving: {:?} \n", timer.elapsed());
 
     let timer = Instant::now();

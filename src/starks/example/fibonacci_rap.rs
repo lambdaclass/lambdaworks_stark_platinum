@@ -48,7 +48,7 @@ where
 
     fn new(
         trace_length: usize,
-        pub_inputs: Self::PublicInputs,
+        pub_inputs: &Self::PublicInputs,
         proof_options: ProofOptions,
     ) -> Self {
         let exemptions = 3 + trace_length - pub_inputs.steps - 1;
@@ -65,7 +65,7 @@ where
         Self {
             context,
             trace_length,
-            pub_inputs,
+            pub_inputs: pub_inputs.clone(),
         }
     }
 

@@ -244,7 +244,6 @@ pub fn generate_prover_args(
     program_content: &[u8],
     cairo_version: &CairoVersion,
     output_range: &Option<Range<u64>>,
-    grinding_factor: u8,
 ) -> Result<(TraceTable<Stark252PrimeField>, PublicInputs), Error> {
     let cairo_layout = match cairo_version {
         CairoVersion::V0 => CairoLayout::Small,
@@ -253,13 +252,6 @@ pub fn generate_prover_args(
 
     let (register_states, memory, program_size, range_check_builtin_range) =
         run_program(None, cairo_layout, program_content, cairo_version)?;
-
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor,
-    };
 
     let memory_segments = create_memory_segment_map(range_check_builtin_range, output_range);
 

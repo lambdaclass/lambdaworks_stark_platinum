@@ -19,15 +19,6 @@ pub struct DummyAIR {
     trace_length: usize,
 }
 
-impl DummyAIR {
-    pub fn new(context: AirContext, trace_length: usize) -> Self {
-        Self {
-            context,
-            trace_length,
-        }
-    }
-}
-
 impl AIR for DummyAIR {
     type Field = Stark252PrimeField;
     type RAPChallenges = ();
@@ -35,7 +26,7 @@ impl AIR for DummyAIR {
 
     fn new(
         trace_length: usize,
-        _pub_inputs: Self::PublicInputs,
+        _pub_inputs: &Self::PublicInputs,
         proof_options: ProofOptions,
     ) -> Self {
         let context = AirContext {
