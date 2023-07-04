@@ -1,6 +1,7 @@
 #[cfg(feature = "instruments")]
 use std::time::Instant;
 
+use itertools::multizip;
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
@@ -318,7 +319,6 @@ where
             // this is done in constant time
             result &= verify_query_and_sym_openings(
                 &proof.fri_layers_merkle_roots,
-                &proof.fri_last_value,
                 &challenges.zetas,
                 *iota_s,
                 proof_s,
@@ -389,7 +389,7 @@ where
         let deep_poly_evaluation =
             reconstruct_deep_composition_poly_evaluation(proof, domain, challenges, *iota_n, i);
 
-        let deep_poly_claimed_evaluation = &proof.query_list[i].first_layer_evaluation;
+        let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
         result &= deep_poly_claimed_evaluation == &deep_poly_evaluation;
     }
 
@@ -398,7 +398,6 @@ where
 
 fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
     fri_layers_merkle_roots: &[Commitment],
-    fri_last_value: &FieldElement<F>,
     zetas: &[FieldElement<F>],
     iota: usize,
     fri_decommitment: &FriDecommitment<F>,
@@ -408,18 +407,6 @@ where
     FieldElement<F>: ByteConversion,
 {
     let two_inv = &FieldElement::from(2).inv();
-
-    // Verify opening Open(p₀(D₀), 𝜐ₛ)
-    if !fri_decommitment
-        .first_layer_auth_path
-        .verify::<FriMerkleTreeBackend<F>>(
-            &fri_layers_merkle_roots[0],
-            iota,
-            &fri_decommitment.first_layer_evaluation,
-        )
-    {
-        return false;
-    }
 
     let evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
 
@@ -432,7 +419,7 @@ where
 
     FieldElement::inplace_batch_inverse(&mut evaluation_point_vec);
 
-    let mut v = fri_decommitment.first_layer_evaluation.clone();
+    let mut v = fri_decommitment.layers_evaluations[0].clone();
     // For each fri layer merkle proof check:
     // That each merkle path verifies
 
@@ -446,17 +433,27 @@ where
 
     // For each (merkle_root, merkle_auth_path) / fold
     // With the auth path containining the element that the path proves it's existence
-    for (k, ((merkle_root, (auth_path, evaluation_sym)), evaluation_point_inv)) in
-        fri_layers_merkle_roots
+    for (
+        k,
+        (
+            merkle_root,
+            (auth_path, evaluation),
+            (auth_path_sym, evaluation_sym),
+            evaluation_point_inv,
+        ),
+    ) in multizip((
+        fri_layers_merkle_roots,
+        fri_decommitment
+            .layers_auth_paths
             .iter()
-            .zip(
-                fri_decommitment
-                    .layers_auth_paths_sym
-                    .iter()
-                    .zip(fri_decommitment.layers_evaluations_sym.iter()),
-            )
-            .zip(evaluation_point_vec)
-            .enumerate()
+            .zip(&fri_decommitment.layers_evaluations),
+        fri_decommitment
+            .layers_auth_paths_sym
+            .iter()
+            .zip(&fri_decommitment.layers_evaluations_sym),
+        evaluation_point_vec,
+    ))
+    .enumerate()
     // Since we always derive the current layer from the previous layer
     // We start with the second one, skipping the first, so previous is layer is the first one
     {
@@ -467,7 +464,7 @@ where
         let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
 
         // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
-        if !auth_path.verify::<FriMerkleTreeBackend<F>>(
+        if !auth_path_sym.verify::<FriMerkleTreeBackend<F>>(
             merkle_root,
             layer_evaluation_index_sym,
             evaluation_sym,
@@ -475,14 +472,26 @@ where
             return false;
         }
 
+        // Verify opening Open(pₖ(Dₖ), 𝜐ₛ)
+        if !auth_path.verify::<FriMerkleTreeBackend<F>>(merkle_root, iota, evaluation) {
+            return false;
+        }
+
         let beta = &zetas[k];
         // v is the calculated element for the co linearity check
         v = (&v + evaluation_sym) * two_inv
             + beta * (&v - evaluation_sym) * two_inv * evaluation_point_inv;
+
+        // Check that next value is the given by the prover
+        if k < fri_decommitment.layers_evaluations.len() - 1 {
+            let next_layer_evaluation = &fri_decommitment.layers_evaluations[k + 1];
+            if v != *next_layer_evaluation {
+                return false;
+            }
+        }
     }
 
-    // Check that last value is the given by the prover
-    v == *fri_last_value
+    true
 }
 
 // Reconstruct Deep(\upsilon_0) off the values in the proof

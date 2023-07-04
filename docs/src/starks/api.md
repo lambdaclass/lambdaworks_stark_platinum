@@ -125,7 +125,7 @@ In our example, `fibonacci_trace` is just a helper function we use to generate t
 
 ## AIR Context
 
-After specifying our constraints and trace, the only thing left to do is provide a few parameters related to the STARK protocol and our `AIR`. These are all encapsulated in the `AirContext` struct, which in our example we instantiate like this:
+After specifying our constraints and trace, the only thing left to do is provide a few parameters related to the STARK protocol and our `AIR`. These specify things such as the number of columns of the trace and proof configuration, among others. They are all encapsulated in the `AirContext` struct, which in our example we instantiate like this:
 
 ```rust
 let context = AirContext {
@@ -134,7 +134,6 @@ let context = AirContext {
         fri_number_of_queries: 1,
         coset_offset: 3,
     },
-    trace_length,
     trace_columns: trace_table.n_cols,
     transition_degrees: vec![1],
     transition_exemptions: vec![2],
@@ -149,7 +148,7 @@ Let's go over each of them:
     - The `blowup_factor` used for the trace LDE extension, a parameter related to the security of the protocol.
     - The number of queries performed by the verifier when doing `FRI`, also related to security.
     - The `offset` used for the LDE coset. This depends on the field being used for the STARK proof.
-- `trace_length` and `trace_columns` are the number of rows and columns of the trace, respectively.
+- `trace_columns` are the number of columns of the trace, respectively.
 - `transition_degrees` holds the degree of each transition constraint.
 - `transition_exemptions` is a `Vec` which tells us, for each column, the number of rows the transition constraints should not apply, starting from the end of the trace. In the example, the transition constraints won't apply on the last two rows of the trace.
 - `transition_offsets` holds the indexes that define a frame for our `AIR`. In our fibonacci case, these are `[0, 1, 2]` because we need the current row and the two previous one to define our transition constraint.
@@ -160,11 +159,11 @@ Let's go over each of them:
 Having defined all of the above, proving our fibonacci example amounts to instantiating the necessary structs and then calling `prove` passing the `AIR` and the trace. We use a simple implementation of a hasher called `TestHasher` to handle merkle proof building.
 
 ```rust 
-let result = prove(&trace_table, &fibonacci_air);
+let proof = prove(&trace_table, &fibonacci_air);
 ```
 
 Verifying is then done by passing the proof of execution along with the same `AIR` to the `verify` function.
 
 ```rust
-assert!(verify(&result, &fibonacci_air));
+assert!(verify(&proof, &fibonacci_air));
 ```

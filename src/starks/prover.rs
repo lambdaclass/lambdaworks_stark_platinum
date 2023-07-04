@@ -529,12 +529,14 @@ where
 }
 
 // FIXME remove unwrap() calls and return errors
-pub fn prove<F: IsFFTField, A: AIR<Field = F>>(
+pub fn prove<F, A>(
     main_trace: &TraceTable<F>,
     air: &A,
     public_input: &mut A::PublicInput,
 ) -> Result<StarkProof<F>, ProvingError>
 where
+    F: IsFFTField,
+    A: AIR<Field = F>,
     FieldElement<F>: ByteConversion,
 {
     info!("Started proof generation...");
