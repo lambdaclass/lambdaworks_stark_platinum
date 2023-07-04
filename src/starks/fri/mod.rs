@@ -94,7 +94,7 @@ where
     T: Transcript,
     FieldElement<F>: ByteConversion,
 {
-    if let Some(first_layer) = fri_layers.get(0) {
+    if !fri_layers.is_empty() {
         let number_of_queries = air.context().options.fri_number_of_queries;
         let mut iotas: Vec<usize> = Vec::with_capacity(number_of_queries);
         let query_list = (0..number_of_queries)
@@ -102,28 +102,31 @@ where
                 // <<<< Receive challenge 𝜄ₛ (iota_s)
                 let iota_s = transcript_to_usize(transcript) % domain_size;
 
-                let first_layer_evaluation = first_layer.evaluation[iota_s].clone();
-                let first_layer_auth_path =
-                    first_layer.merkle_tree.get_proof_by_pos(iota_s).unwrap();
-
                 let mut layers_auth_paths_sym = vec![];
                 let mut layers_evaluations_sym = vec![];
+                let mut layers_evaluations = vec![];
+                let mut layers_auth_paths = vec![];
 
                 for layer in fri_layers {
                     // symmetric element
+                    let index = iota_s % layer.domain_size;
                     let index_sym = (iota_s + layer.domain_size / 2) % layer.domain_size;
                     let evaluation_sym = layer.evaluation[index_sym].clone();
                     let auth_path_sym = layer.merkle_tree.get_proof_by_pos(index_sym).unwrap();
+                    let evaluation = layer.evaluation[index].clone();
+                    let auth_path = layer.merkle_tree.get_proof_by_pos(index).unwrap();
                     layers_auth_paths_sym.push(auth_path_sym);
                     layers_evaluations_sym.push(evaluation_sym);
+                    layers_evaluations.push(evaluation);
+                    layers_auth_paths.push(auth_path);
                 }
                 iotas.push(iota_s);
 
                 FriDecommitment {
                     layers_auth_paths_sym,
                     layers_evaluations_sym,
-                    first_layer_evaluation,
-                    first_layer_auth_path,
+                    layers_evaluations,
+                    layers_auth_paths,
                 }
             })
             .collect();
