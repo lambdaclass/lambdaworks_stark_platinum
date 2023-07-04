@@ -108,20 +108,21 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let trace_length = self.air.trace_length();
         let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
         let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
+        // Maybe we can do this more efficiently by taking the offset's power and then using successors for roots of unity
         let d_adjustment_power = domain.lde_roots_of_unity_coset
                                     .iter()
                                     .map(|d| d.pow(boundary_term_degree_adjustment))
                                     .collect::<Vec<FieldElement<F>>>();  
         // check these iterators
-        let boundary_evaluation = (0..n_trace_colums)
+        let boundary_evaluation = boundary_constraints.cols_for_boundary().iter()
         .map(|col| {
             boundary_constraints
-            .steps(col)
+            .steps(col.clone())
             .iter()
             .map(|step| {
                 let i= boundary_steps.iter().position(|&x| x == step.clone());
                 if let Some(x) = i {
-                        boundary_polys_evaluations[col]
+                        boundary_polys_evaluations[col.clone()]
                             .iter()
                             .zip(boundary_zerofiers_inverse_evaluations[x].iter())
                             .map(|(n, d)| n*d)
@@ -131,11 +132,11 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                             todo!()
                         }         //boundary_polys_evaluations
             })
-            .zip(boundary_polys_evaluations[col].iter())
+            .zip(boundary_polys_evaluations[col.clone()].iter())
             .zip(d_adjustment_power.iter())
             .map(|((_c,x),d)| {
                 let (boundary_alpha, boundary_beta) =
-                alpha_and_beta_boundary_coefficients[col].clone();
+                alpha_and_beta_boundary_coefficients[col.clone()].clone();
                 x*(boundary_alpha*d+boundary_beta) 
             }).fold(FieldElement::<F>::zero(), |acc, sum| acc + sum)
             
