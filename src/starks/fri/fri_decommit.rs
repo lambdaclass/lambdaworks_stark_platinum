@@ -12,8 +12,8 @@ use crate::starks::utils::{deserialize_proof, serialize_proof};
 pub struct FriDecommitment<F: IsField> {
     pub layers_auth_paths_sym: Vec<Proof<Commitment>>,
     pub layers_evaluations_sym: Vec<FieldElement<F>>,
-    pub first_layer_evaluation: FieldElement<F>,
-    pub first_layer_auth_path: Proof<Commitment>,
+    pub layers_auth_paths: Vec<Proof<Commitment>>,
+    pub layers_evaluations: Vec<FieldElement<F>>,
 }
 
 impl<F> Serializable for FriDecommitment<F>
@@ -27,15 +27,20 @@ where
         for proof in &self.layers_auth_paths_sym {
             bytes.extend(serialize_proof(proof));
         }
-        let first_layer_evaluation_bytes = self.first_layer_evaluation.to_bytes_be();
-        let felt_len = first_layer_evaluation_bytes.len();
+        let felt_len = self.layers_evaluations[0].to_bytes_be().len();
         bytes.extend(felt_len.to_be_bytes());
         bytes.extend(self.layers_evaluations_sym.len().to_be_bytes());
         for evaluation in &self.layers_evaluations_sym {
             bytes.extend(evaluation.to_bytes_be());
         }
-        bytes.extend(first_layer_evaluation_bytes);
-        bytes.extend(serialize_proof(&self.first_layer_auth_path));
+        bytes.extend(self.layers_evaluations.len().to_be_bytes());
+        for evaluation in &self.layers_evaluations {
+            bytes.extend(evaluation.to_bytes_be());
+        }
+        bytes.extend(self.layers_auth_paths.len().to_be_bytes());
+        for proof in &self.layers_auth_paths {
+            bytes.extend(serialize_proof(proof));
+        }
         bytes
     }
 }
@@ -89,20 +94,43 @@ where
             layers_evaluations_sym.push(evaluation);
         }
 
-        let first_layer_evaluation = FieldElement::<F>::from_bytes_be(
-            bytes[..felt_len]
+        let layer_evaluations_len = usize::from_be_bytes(
+            bytes[..8]
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-        )?;
-        bytes = &bytes[felt_len..];
+        );
+        bytes = &bytes[8..];
 
-        let (first_layer_auth_path, _) = deserialize_proof(bytes)?;
+        let mut layers_evaluations = vec![];
+        for _ in 0..layer_evaluations_len {
+            let evaluation = FieldElement::<F>::from_bytes_be(
+                bytes[..felt_len]
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            )?;
+            bytes = &bytes[felt_len..];
+            layers_evaluations.push(evaluation);
+        }
+
+        let mut layers_auth_paths = vec![];
+        let layers_auth_paths_len = usize::from_be_bytes(
+            bytes[..8]
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+        bytes = &bytes[8..];
+
+        for _ in 0..layers_auth_paths_len {
+            let proof;
+            (proof, bytes) = deserialize_proof(bytes)?;
+            layers_auth_paths.push(proof);
+        }
 
         Ok(Self {
             layers_auth_paths_sym,
             layers_evaluations_sym,
-            first_layer_evaluation,
-            first_layer_auth_path,
+            layers_evaluations,
+            layers_auth_paths,
         })
     }
 }
@@ -166,14 +194,14 @@ mod tests {
         fn some_fri_decommitment()(
             layers_auth_paths_sym in proof_vec(),
             layers_evaluations_sym in field_vec(),
-            first_layer_evaluation in some_felt(),
-            first_layer_auth_path in some_proof()
+            layers_evaluations in field_vec(),
+            layers_auth_paths in proof_vec()
         ) -> FriDecommitment<Stark252PrimeField> {
             FriDecommitment{
                 layers_auth_paths_sym,
                 layers_evaluations_sym,
-                first_layer_evaluation,
-                first_layer_auth_path
+                layers_evaluations,
+                layers_auth_paths
             }
         }
     }
@@ -193,10 +221,13 @@ mod tests {
                 prop_assert_eq!(a, b);
             }
 
-            prop_assert_eq!(fri_decommitment.first_layer_evaluation, deserialized.first_layer_evaluation);
+            for (a, b) in fri_decommitment.layers_evaluations.iter().zip(deserialized.layers_evaluations.iter()) {
+                prop_assert_eq!(a, b);
+            }
 
-            prop_assert_eq!(fri_decommitment.first_layer_auth_path.merkle_path, deserialized.first_layer_auth_path.merkle_path);
-
+            for (a, b) in fri_decommitment.layers_auth_paths.iter().zip(deserialized.layers_auth_paths.iter()) {
+                prop_assert_eq!(&a.merkle_path, &b.merkle_path);
+            }
         }
     }
 }
