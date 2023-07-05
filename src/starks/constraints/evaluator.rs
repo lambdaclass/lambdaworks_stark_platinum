@@ -129,12 +129,10 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             // Step contains the indexes for the boundary constraints
             // Of the respective column we are interested in
             for column_step in boundary_constraints.steps(col).iter() {
-                let step_index = boundary_constraints
-                    .steps_for_boundary()
+                let step_index = boundary_steps
                     .iter()
-                    .position(|x| *x == *column_step)
+                    .position(|x| x == column_step)
                     .expect("Should be here");
-
                 // (,) ((,),)
                 // acc
                 acc = acc
@@ -216,14 +214,14 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                     zerofier_evaluations
                         .iter()
                         .cycle()
-                        .zip(row.iter())
+                        .zip(row)
                         .map(|(c1, c2)| c1 * c2)
                         .collect()
                 })
                 .collect();
 
         // Iterate over trace and domain and compute transitions
-        for (i, _d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
+        for i in 0..domain.lde_roots_of_unity_coset.len() {
             let frame = Frame::read_from_trace(
                 lde_trace,
                 i,
