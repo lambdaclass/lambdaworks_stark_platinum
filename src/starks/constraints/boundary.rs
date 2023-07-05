@@ -60,12 +60,12 @@ impl<F: IsField> BoundaryConstraints<F> {
             .collect()
     }
 
-    pub fn steps_for_boundary(&self) -> Vec<usize> {
+    pub fn steps_for_boundary(&self) -> impl Iterator<Item = usize> {
         self.constraints
             .iter()
+            .cloned()
             .unique_by(|elem| elem.step)
             .map(|v| v.step)
-            .collect()
     }
 
     /// Given the primitive root of some domain, returns the domain values corresponding
