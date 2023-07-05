@@ -1,9 +1,5 @@
 # Lambdaworks Cairo Prover
-
-We're still moving all the code from [LambdaWorks](https://github.com/lambdaclass/lambdaworks) related to the STARK Cairo prover.
-The GPU code hasn't yet been yet migrated.
-
-Disclaimer: This prover is still in development and may contain bugs. It is not intended to be used in production yet.
+Disclaimer: This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
 
 ## Main building blocks
 
