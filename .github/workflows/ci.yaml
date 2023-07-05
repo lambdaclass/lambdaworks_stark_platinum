@@ -51,7 +51,7 @@ jobs:
       - name: Run clippy
         run: make clippy
   test:
-    name: Test (Ubuntu)
+    name: Test (Ubuntu, Sequential)
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
@@ -81,6 +81,44 @@ jobs:
 
       - name: Run tests and generate code coverage
         run: make coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          fail_ci_if_error: true
+            test:
+  name: Test (Ubuntu, Parallel)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
+          
+      - name: Set up cargo cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install testing tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest,cargo-llvm-cov
+
+      - name: Python3 build
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+          cache: 'pip'
+
+      - name: Install cairo-lang toolchain and dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests and generate code coverage
+        run: make coverage_parallel
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
