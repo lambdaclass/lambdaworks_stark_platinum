@@ -26,15 +26,53 @@ To be added:
 
 For the moment, only programs in Cairo 0 with no arguments and contracts in Cairo 1 with no arguments are supported.
 
+### Prove and verify
+
+To prove Cairo programs you can use:
+
+```bash
+make prove PROGRAM_PATH=<compiled_program_path> PROOF_PATH=<output_proof_path>
+```
+
+To verify a proof you can use:
+  
+```bash
+make verify PROOF_PATH=<proof_path>
+```
+
+For example:
+
+```bash
+make prove PROGRAM_PATH=fibonacci.json PROOF_PATH=fibonacci_proof
+make verify PROOF_PATH=fibonacci_proof
+```
+
+To prove and verify with a single command you can use:
+
+```bash
+make run_all PROGRAM_PATH=<proof_path>
+```
+
+
 ### Using Docker compiler for Cairo 0 programs
 
 Build the compiler image with:
 
-`make docker_build_cairo_compiler`
+```bash
+make docker_build_cairo_compiler
+```
 
 Then for example, if you have a Cairo program in the project folder, you can use:
 
-`make docker_compile_and_run PROGRAM=program_name.cairo`
+```bash
+make docker_compile_and_run_all PROGRAM=program_name.cairo
+```
+
+Or
+
+```bash
+make docker_compile_and_prove PROGRAM=program_name.cairo PROOF_PATH=proof_path
+```
 
 ### Using cairo-compile for Cairo 0 programs
 
@@ -42,20 +80,14 @@ If you have `cairo-lang` installed, you can use it instead of the Dockerfile
 
 Then for example, if you have some Cairo program in the project folder, you can use:
 
-`make compile_and_run PROGRAM=program_name.cairo`
-
-### Compiling Cairo 1 contracts
-
-To run, prove and verify Cairo 1 contracts, use the following command:
-
-``` bash
-cargo run -- <PATH-TO-casm-FILE>
+```bash
+make compile_and_run_all PROGRAM=program_name.cairo
 ```
 
-for example:
+Or 
 
-``` bash
-cargo run -- cairo_programs/fibonacci_cairo1.casm
+```bash
+make compile_and_prove PROGRAM=program_name.cairo PROOF_PATH=proof_path
 ```
 
 #### Generating casm file from cairo contract file
