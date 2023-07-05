@@ -133,8 +133,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                     .iter()
                     .position(|x| x == column_step)
                     .expect("Should be here");
-                // (,) ((,),)
-                // acc
                 acc = acc
                     .into_iter()
                     .zip(&boundary_zerofiers_inverse_evaluations[step_index])
