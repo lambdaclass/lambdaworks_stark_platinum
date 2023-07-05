@@ -10,7 +10,7 @@ use rayon::prelude::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
 };
 
-#[cfg(debug_assertions)]
+#[cfg(all(debug_assertions, not(feature = "rayon")))]
 use crate::starks::debug::check_boundary_polys_divisibility;
 use crate::starks::domain::Domain;
 use crate::starks::frame::Frame;
@@ -45,7 +45,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         }
     }
 
-    #[cfg(not(feature = "parallel"))]
     pub fn evaluate(
         &self,
         lde_trace: &TraceTable<F>,
@@ -95,9 +94,10 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             boundary_constraints.generate_roots_of_unity(&self.primitive_root, n_trace_colums);
         let values = boundary_constraints.values(n_trace_colums);
 
-        #[cfg(debug_assertions)]
+        #[cfg(all(debug_assertions, not(feature = "rayon")))]
         let mut boundary_polys = Vec::new();
 
+        #[cfg(not(feature = "rayon"))]
         let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = zip(domains, values)
             .zip(self.trace_polys)
             .map(|((xs, ys), trace_poly)| {
@@ -117,6 +117,27 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .unwrap()
             })
             .collect();
+
+        #[cfg(feature = "rayon")]
+        let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = domains
+            .par_iter()
+            .zip(values)
+            .zip(self.trace_polys)
+            .map(|((xs, ys), trace_poly)| {
+                let boundary_poly = trace_poly
+                    - &Polynomial::interpolate(&xs, &ys)
+                        .expect("xs and ys have equal length and xs are unique");
+
+                evaluate_polynomial_on_lde_domain(
+                    &boundary_poly,
+                    domain.blowup_factor,
+                    domain.interpolation_domain_size,
+                    &domain.coset_offset,
+                )
+                .unwrap()
+            })
+            .collect();
+
         let mut boundary_evaluation =
             vec![FieldElement::<F>::zero(); boundary_polys_evaluations[0].len()];
 
@@ -152,31 +173,21 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .collect::<Vec<FieldElement<F>>>();
         }
 
-        #[cfg(debug_assertions)]
+        #[cfg(all(debug_assertions, not(feature = "rayon")))]
         let boundary_zerofiers = Vec::new();
 
-        #[cfg(debug_assertions)]
+        #[cfg(all(debug_assertions, not(feature = "rayon")))]
         check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
 
         let blowup_factor = self.air.blowup_factor();
 
-        #[cfg(debug_assertions)]
+        #[cfg(all(debug_assertions, not(feature = "rayon")))]
         let mut transition_evaluations = Vec::new();
 
         let transition_exemptions = self.air.transition_exemptions();
 
-        let transition_exemptions_evaluations: Vec<_> = transition_exemptions
-            .iter()
-            .map(|exemption| {
-                evaluate_polynomial_on_lde_domain(
-                    exemption,
-                    domain.blowup_factor,
-                    domain.interpolation_domain_size,
-                    &domain.coset_offset,
-                )
-                .unwrap()
-            })
-            .collect();
+        let transition_exemptions_evaluations =
+            evaluate_transition_exemptions(transition_exemptions, domain);
 
         let context = self.air.context();
         let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
@@ -235,7 +246,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
             let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
 
-            #[cfg(debug_assertions)]
+            #[cfg(all(debug_assertions, not(feature = "rayon")))]
             transition_evaluations.push(evaluations_transition.clone());
 
             // TODO: Remove clones
@@ -259,192 +270,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             );
 
             evaluations_sum += boundary_evaluation[i].clone();
-
-            evaluation_table.evaluations_acc.push(evaluations_sum);
-        }
-
-        evaluation_table
-    }
-
-    #[cfg(feature = "parallel")]
-    pub fn evaluate(
-        &self,
-        lde_trace: &TraceTable<F>,
-        domain: &Domain<F>,
-        alpha_and_beta_transition_coefficients: &[(FieldElement<F>, FieldElement<F>)],
-        alpha_and_beta_boundary_coefficients: &[(FieldElement<F>, FieldElement<F>)],
-        rap_challenges: &A::RAPChallenges,
-    ) -> ConstraintEvaluationTable<F>
-    where
-        A: Sync,
-        FieldElement<F>: ByteConversion + Send + Sync,
-    {
-        // The + 1 is for the boundary constraints column
-        let mut evaluation_table = ConstraintEvaluationTable::new(
-            self.air.context().num_transition_constraints() + 1,
-            &domain.lde_roots_of_unity_coset,
-        );
-        let n_trace_colums = self.trace_polys.len();
-        let boundary_constraints = &self.boundary_constraints;
-
-        let domains =
-            boundary_constraints.generate_roots_of_unity(&self.primitive_root, n_trace_colums);
-        let values = boundary_constraints.values(n_trace_colums);
-
-        let boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = domains
-            .par_iter()
-            .zip(values)
-            .zip(self.trace_polys)
-            .map(|((xs, ys), trace_poly)| {
-                let boundary_poly = trace_poly
-                    - &Polynomial::interpolate(&xs, &ys)
-                        .expect("xs and ys have equal length and xs are unique");
-
-                evaluate_polynomial_on_lde_domain(
-                    &boundary_poly,
-                    domain.blowup_factor,
-                    domain.interpolation_domain_size,
-                    &domain.coset_offset,
-                )
-                .unwrap()
-            })
-            .collect();
-
-        let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = (0..n_trace_colums)
-            .into_par_iter()
-            .map(|col| {
-                let zerofier = self
-                    .boundary_constraints
-                    .compute_zerofier(&self.primitive_root, col);
-
-                let mut evals = evaluate_polynomial_on_lde_domain(
-                    &zerofier,
-                    domain.blowup_factor,
-                    domain.interpolation_domain_size,
-                    &domain.coset_offset,
-                )
-                .unwrap();
-                FieldElement::inplace_batch_inverse(&mut evals);
-                evals
-            })
-            .collect();
-
-        let blowup_factor = self.air.blowup_factor();
-
-        let transition_exemptions = self.air.transition_exemptions();
-        let trace_length = self.air.trace_length();
-        let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
-        let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
-
-        let transition_exemptions_evaluations: Vec<_> = transition_exemptions
-            .par_iter()
-            .map(|exemption| {
-                evaluate_polynomial_on_lde_domain(
-                    exemption,
-                    domain.blowup_factor,
-                    domain.interpolation_domain_size,
-                    &domain.coset_offset,
-                )
-                .unwrap()
-            })
-            .collect();
-
-        let context = self.air.context();
-        let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
-
-        let degree_adjustments: Vec<Vec<FieldElement<F>>> = (1..=max_transition_degree)
-            .map(|transition_degree| {
-                domain
-                    .lde_roots_of_unity_coset
-                    .iter()
-                    .map(|d| {
-                        let degree_adjustment = composition_poly_degree_bound
-                            - (trace_length * (transition_degree - 1));
-                        d.pow(degree_adjustment)
-                    })
-                    .collect()
-            })
-            .collect();
-
-        let blowup_factor_order = u64::from(blowup_factor.trailing_zeros());
-
-        let offset = FieldElement::<F>::from(self.air.context().options.coset_offset);
-        let offset_pow = offset.pow(trace_length);
-        let one = FieldElement::<F>::one();
-        let mut zerofier_evaluations = get_powers_of_primitive_root_coset(
-            blowup_factor_order,
-            blowup_factor as usize,
-            &offset_pow,
-        )
-        .unwrap()
-        .iter()
-        .map(|v| v - &one)
-        .collect::<Vec<_>>();
-
-        FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
-        let transition_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
-            transition_exemptions_evaluations
-                .iter()
-                .map(|row| {
-                    zerofier_evaluations
-                        .iter()
-                        .cycle()
-                        .zip(row.iter())
-                        .map(|(c1, c2)| c1 * c2)
-                        .collect()
-                })
-                .collect();
-
-        // Iterate over trace and domain and compute transitions
-        for (i, d) in domain.lde_roots_of_unity_coset.iter().enumerate() {
-            let frame = Frame::read_from_trace(
-                lde_trace,
-                i,
-                blowup_factor,
-                &self.air.context().transition_offsets,
-            );
-
-            let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
-
-            // TODO: Remove clones
-            let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
-                .iter()
-                .map(|zerofier_evals| zerofier_evals[i].clone())
-                .collect();
-            let degree_adjustments: Vec<_> = context
-                .transition_degrees
-                .iter()
-                .map(|&transition_adjustments| {
-                    degree_adjustments[transition_adjustments - 1][i].clone()
-                })
-                .collect();
-
-            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
-                &evaluations_transition,
-                &denominators,
-                &degree_adjustments,
-                alpha_and_beta_transition_coefficients,
-            );
-
-            let d_adjustment_power = d.pow(boundary_term_degree_adjustment);
-            let boundary_evaluation = zip(
-                &boundary_polys_evaluations,
-                &boundary_zerofiers_inverse_evaluations,
-            )
-            .enumerate()
-            .map(
-                |(index, (boundary_poly_evaluation, zerofier_inverse_evaluation))| {
-                    let (boundary_alpha, boundary_beta) =
-                        alpha_and_beta_boundary_coefficients[index].clone();
-
-                    &boundary_poly_evaluation[i]
-                        * &zerofier_inverse_evaluation[i]
-                        * (&boundary_alpha * &d_adjustment_power + &boundary_beta)
-                },
-            )
-            .fold(FieldElement::<F>::zero(), |acc, eval| acc + eval);
-
-            evaluations_sum += boundary_evaluation;
 
             evaluation_table.evaluations_acc.push(evaluations_sum);
         }
@@ -489,4 +314,45 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
         ret
     }
+}
+
+#[cfg(not(feature = "rayon"))]
+fn evaluate_transition_exemptions<F: IsFFTField>(
+    transition_exemptions: Vec<Polynomial<FieldElement<F>>>,
+    domain: &Domain<F>,
+) -> Vec<Vec<FieldElement<F>>> {
+    transition_exemptions
+        .iter()
+        .map(|exemption| {
+            evaluate_polynomial_on_lde_domain(
+                exemption,
+                domain.blowup_factor,
+                domain.interpolation_domain_size,
+                &domain.coset_offset,
+            )
+            .unwrap()
+        })
+        .collect()
+}
+
+#[cfg(feature = "rayon")]
+fn evaluate_transition_exemptions<F: IsFFTField>(
+    transition_exemptions: Vec<Polynomial<FieldElement<F>>>,
+    domain: &Domain<F>,
+) -> Vec<Vec<FieldElement<F>>>
+where
+    Polynomial<FieldElement<F>>: Send + Sync,
+{
+    transition_exemptions
+        .par_iter()
+        .map(|exemption| {
+            evaluate_polynomial_on_lde_domain(
+                exemption,
+                domain.blowup_factor,
+                domain.interpolation_domain_size,
+                &domain.coset_offset,
+            )
+            .unwrap()
+        })
+        .collect()
 }
