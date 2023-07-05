@@ -255,8 +255,8 @@ fn round_2_compute_composition_polynomial<F, A>(
 ) -> Round2<F>
 where
     F: IsFFTField,
-    A: AIR<Field = F>,
-    FieldElement<F>: ByteConversion,
+    A: AIR<Field = F> + Sync,
+    FieldElement<F>: ByteConversion + Send + Sync,
 {
     // Create evaluation table
     let evaluator = ConstraintEvaluator::new(
@@ -554,7 +554,7 @@ pub fn prove<F, A>(
 ) -> Result<StarkProof<F>, ProvingError>
 where
     F: IsFFTField,
-    A: AIR<Field = F>,
+    A: AIR<Field = F> + Sync,
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     info!("Started proof generation...");
