@@ -90,7 +90,7 @@ Or
 make compile_and_prove PROGRAM=program_name.cairo PROOF_PATH=proof_path
 ```
 
-#### Generating casm file from cairo contract file
+### Compiling Cairo 1 contracts
 
 Clone `cairo` repository:
 
