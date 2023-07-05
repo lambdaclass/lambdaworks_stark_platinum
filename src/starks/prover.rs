@@ -17,7 +17,7 @@ use lambdaworks_math::{
 use log::info;
 
 #[cfg(feature = "parallel")]
-use parallel::prelude::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 #[cfg(debug_assertions)]
 use crate::starks::debug::validate_trace;
@@ -120,43 +120,6 @@ where
     }
 }
 
-#[cfg(not(feature = "parallel"))]
-#[allow(clippy::type_complexity)]
-fn interpolate_and_commit<T, F>(
-    trace: &TraceTable<F>,
-    domain: &Domain<F>,
-    transcript: &mut T,
-) -> (
-    Vec<Polynomial<FieldElement<F>>>,
-    Vec<Vec<FieldElement<F>>>,
-    BatchedMerkleTree<F>,
-    Commitment,
-)
-where
-    T: Transcript,
-    F: IsFFTField,
-    FieldElement<F>: ByteConversion,
-{
-    let trace_polys = trace.compute_trace_polys();
-
-    // Evaluate those polynomials t_j on the large domain D_LDE.
-    let lde_trace_evaluations = trace_polys
-        .iter()
-        .map(|poly| {
-            evaluate_polynomial_on_lde_domain(
-                poly,
-                domain.blowup_factor,
-                domain.interpolation_domain_size,
-                &domain.coset_offset,
-            )
-        })
-        .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
-        .unwrap();
-
-    compute_and_send_commitment(lde_trace_evaluations, transcript, trace_polys)
-}
-
-#[cfg(feature = "parallel")]
 #[allow(clippy::type_complexity)]
 fn interpolate_and_commit<T, F>(
     trace: &TraceTable<F>,
@@ -176,38 +139,8 @@ where
     let trace_polys = trace.compute_trace_polys();
 
     // Evaluate those polynomials t_j on the large domain D_LDE.
-    let lde_trace_evaluations = trace_polys
-        .par_iter()
-        .map(|poly| {
-            evaluate_polynomial_on_lde_domain(
-                poly,
-                domain.blowup_factor,
-                domain.interpolation_domain_size,
-                &domain.coset_offset,
-            )
-        })
-        .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
-        .unwrap();
+    let lde_trace_evaluations = compute_lde_trace_evaluations(&trace_polys, domain);
 
-    compute_and_send_commitment(lde_trace_evaluations, transcript, trace_polys)
-}
-
-#[allow(clippy::type_complexity)]
-fn compute_and_send_commitment<T, F>(
-    lde_trace_evaluations: Vec<Vec<FieldElement<F>>>,
-    transcript: &mut T,
-    trace_polys: Vec<Polynomial<FieldElement<F>>>,
-) -> (
-    Vec<Polynomial<FieldElement<F>>>,
-    Vec<Vec<FieldElement<F>>>,
-    BatchedMerkleTree<F>,
-    Commitment,
-)
-where
-    T: Transcript,
-    F: IsFFTField,
-    FieldElement<F>: ByteConversion,
-{
     // Compute commitments [t_j].
     let lde_trace = TraceTable::new_from_cols(&lde_trace_evaluations);
     let (lde_trace_merkle_tree, lde_trace_merkle_root) = batch_commit(&lde_trace.rows());
@@ -221,6 +154,55 @@ where
         lde_trace_merkle_tree,
         lde_trace_merkle_root,
     )
+}
+
+#[cfg(not(feature = "parallel"))]
+fn compute_lde_trace_evaluations<F>(
+    trace_polys: &[Polynomial<FieldElement<F>>],
+    domain: &Domain<F>,
+) -> Vec<Vec<FieldElement<F>>>
+where
+    F: IsFFTField,
+{
+    let lde_trace_evaluations = trace_polys
+        .iter()
+        .map(|poly| {
+            evaluate_polynomial_on_lde_domain(
+                poly,
+                domain.blowup_factor,
+                domain.interpolation_domain_size,
+                &domain.coset_offset,
+            )
+        })
+        .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
+        .unwrap();
+
+    lde_trace_evaluations
+}
+
+#[cfg(feature = "parallel")]
+fn compute_lde_trace_evaluations<F>(
+    trace_polys: &Vec<Polynomial<FieldElement<F>>>,
+    domain: &Domain<F>,
+) -> Vec<Vec<FieldElement<F>>>
+where
+    F: IsFFTField,
+    FieldElement<F>: Send + Sync,
+{
+    let lde_trace_evaluations = trace_polys
+        .par_iter()
+        .map(|poly| {
+            evaluate_polynomial_on_lde_domain(
+                poly,
+                domain.blowup_factor,
+                domain.interpolation_domain_size,
+                &domain.coset_offset,
+            )
+        })
+        .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
+        .unwrap();
+
+    lde_trace_evaluations
 }
 
 fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T: Transcript>(
