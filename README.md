@@ -1,7 +1,7 @@
 # Lambdaworks Cairo Prover
 
 We're still moving all the code from [LambdaWorks](https://github.com/lambdaclass/lambdaworks) related to the STARK Cairo prover.
-The CI, the documentation and the GPU code hasn't yet been yet migrated.
+The GPU code hasn't yet been yet migrated.
 
 Disclaimer: This prover is still in development and may contain bugs. It is not intended to be used in production yet.
 
@@ -12,10 +12,10 @@ Disclaimer: This prover is still in development and may contain bugs. It is not 
 
 To be added:
 
-- Grinding
+- Grinding ✔️
 - Skipping FRI layers
 - Optimizing verifier operations
-- Range-check and Pedersen built-ins
+- Range-check ✔️ and Pedersen built-ins
 - Different layouts
 
 ## Requirements
