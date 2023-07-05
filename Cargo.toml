@@ -34,7 +34,7 @@ rstest = "0.17.0"
 test_fiat_shamir = []
 instruments = []                   # This enables timing prints in prover and verifier
 metal = ["lambdaworks-math/metal"]
-rayon = ["dep:rayon"]
+parallel = ["dep:rayon"]
 
 [[bench]]
 name = "criterion_prover"

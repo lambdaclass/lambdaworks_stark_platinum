@@ -16,8 +16,8 @@ use lambdaworks_math::{
 };
 use log::info;
 
-#[cfg(feature = "rayon")]
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+#[cfg(feature = "parallel")]
+use parallel::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 #[cfg(debug_assertions)]
 use crate::starks::debug::validate_trace;
@@ -120,7 +120,7 @@ where
     }
 }
 
-#[cfg(not(feature = "rayon"))]
+#[cfg(not(feature = "parallel"))]
 #[allow(clippy::type_complexity)]
 fn interpolate_and_commit<T, F>(
     trace: &TraceTable<F>,
@@ -156,7 +156,7 @@ where
     compute_and_send_commitment(lde_trace_evaluations, transcript, trace_polys)
 }
 
-#[cfg(feature = "rayon")]
+#[cfg(feature = "parallel")]
 #[allow(clippy::type_complexity)]
 fn interpolate_and_commit<T, F>(
     trace: &TraceTable<F>,
