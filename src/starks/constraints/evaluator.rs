@@ -283,18 +283,18 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         degree_adjustments: &[FieldElement<F>],
         constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
     ) -> FieldElement<F> {
-        let mut ret = FieldElement::<F>::zero();
-        for (((eval, degree_adjustment), inverse_denominator), (alpha, beta)) in evaluations
+        evaluations
             .iter()
             .zip(degree_adjustments)
             .zip(inverse_denominators)
             .zip(constraint_coeffs)
-        {
-            let zerofied_eval = eval * inverse_denominator;
-            let result = zerofied_eval * (alpha * degree_adjustment + beta);
-            ret += result;
-        }
-
-        ret
+            .fold(
+                FieldElement::<F>::zero(),
+                |acc, (((ev, degree), inv), coeff)| {
+                    let (alpha, beta) = &coeff;
+                    let acc = acc + ev * (alpha * degree + beta) * inv;
+                    acc
+                },
+            )
     }
 }
