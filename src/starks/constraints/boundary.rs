@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use lambdaworks_math::{
     field::{element::FieldElement, traits::IsField},
     polynomial::Polynomial,
@@ -56,6 +57,14 @@ impl<F: IsField> BoundaryConstraints<F> {
             .iter()
             .filter(|v| v.col == col)
             .map(|c| c.step)
+            .collect()
+    }
+
+    pub fn steps_for_boundary(&self) -> Vec<usize> {
+        self.constraints
+            .iter()
+            .unique_by(|elem| elem.step)
+            .map(|v| v.step)
             .collect()
     }
 
