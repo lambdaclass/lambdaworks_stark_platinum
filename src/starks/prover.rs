@@ -16,6 +16,9 @@ use lambdaworks_math::{
 };
 use log::info;
 
+#[cfg(feature = "rayon")]
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+
 #[cfg(debug_assertions)]
 use crate::starks::debug::validate_trace;
 use crate::starks::transcript::sample_z_ood;
@@ -117,6 +120,7 @@ where
     }
 }
 
+#[cfg(not(feature = "rayon"))]
 #[allow(clippy::type_complexity)]
 fn interpolate_and_commit<T, F>(
     trace: &TraceTable<F>,
@@ -164,6 +168,54 @@ where
     )
 }
 
+#[cfg(feature = "rayon")]
+#[allow(clippy::type_complexity)]
+fn interpolate_and_commit<T, F>(
+    trace: &TraceTable<F>,
+    domain: &Domain<F>,
+    transcript: &mut T,
+) -> (
+    Vec<Polynomial<FieldElement<F>>>,
+    Vec<Vec<FieldElement<F>>>,
+    BatchedMerkleTree<F>,
+    Commitment,
+)
+where
+    T: Transcript,
+    F: IsFFTField,
+    FieldElement<F>: ByteConversion + Send + Sync,
+{
+    let trace_polys = trace.compute_trace_polys();
+
+    // Evaluate those polynomials t_j on the large domain D_LDE.
+    let lde_trace_evaluations = trace_polys
+        .par_iter()
+        .map(|poly| {
+            evaluate_polynomial_on_lde_domain(
+                poly,
+                domain.blowup_factor,
+                domain.interpolation_domain_size,
+                &domain.coset_offset,
+            )
+        })
+        .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
+        .unwrap();
+
+    // Compute commitments [t_j].
+    let lde_trace = TraceTable::new_from_cols(&lde_trace_evaluations);
+    let (lde_trace_merkle_tree, lde_trace_merkle_root) = batch_commit(&lde_trace.rows());
+
+    // >>>> Send commitments: [tⱼ]
+    transcript.append(&lde_trace_merkle_root);
+
+    (
+        trace_polys,
+        lde_trace_evaluations,
+        lde_trace_merkle_tree,
+        lde_trace_merkle_root,
+    )
+}
+
 fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T: Transcript>(
     air: &A,
     main_trace: &TraceTable<F>,
@@ -172,7 +224,7 @@ fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T
     transcript: &mut T,
 ) -> Result<Round1<F, A>, ProvingError>
 where
-    FieldElement<F>: ByteConversion,
+    FieldElement<F>: ByteConversion + Send + Sync,
 {
     let (mut trace_polys, mut evaluations, main_merkle_tree, main_merkle_root) =
         interpolate_and_commit(main_trace, domain, transcript);
@@ -514,7 +566,7 @@ pub fn prove<F, A>(
 where
     F: IsFFTField,
     A: AIR<Field = F>,
-    FieldElement<F>: ByteConversion,
+    FieldElement<F>: ByteConversion + Send + Sync,
 {
     info!("Started proof generation...");
     #[cfg(feature = "instruments")]
