@@ -8,6 +8,8 @@ use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
 
+use lambdaworks_crypto::merkle_tree::backends::batch_256_bits::Batch256BitsTree;
+use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
 use lambdaworks_math::fft::{errors::FFTError, polynomial::FFTPoly};
 use lambdaworks_math::{
     field::{element::FieldElement, traits::IsFFTField},
@@ -18,6 +20,8 @@ use log::info;
 
 #[cfg(feature = "rayon")]
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+use sha3::digest::core_api::CoreWrapper;
+use sha3::Keccak256Core;
 
 #[cfg(debug_assertions)]
 use crate::starks::debug::validate_trace;
@@ -153,19 +157,7 @@ where
         .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
         .unwrap();
 
-    // Compute commitments [t_j].
-    let lde_trace = TraceTable::new_from_cols(&lde_trace_evaluations);
-    let (lde_trace_merkle_tree, lde_trace_merkle_root) = batch_commit(&lde_trace.rows());
-
-    // >>>> Send commitments: [tⱼ]
-    transcript.append(&lde_trace_merkle_root);
-
-    (
-        trace_polys,
-        lde_trace_evaluations,
-        lde_trace_merkle_tree,
-        lde_trace_merkle_root,
-    )
+    compute_and_send_commitment(lde_trace_evaluations, transcript, trace_polys)
 }
 
 #[cfg(feature = "rayon")]
@@ -201,6 +193,25 @@ where
         .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
         .unwrap();
 
+    compute_and_send_commitment(lde_trace_evaluations, transcript, trace_polys)
+}
+
+#[allow(clippy::type_complexity)]
+fn compute_and_send_commitment<T, F>(
+    lde_trace_evaluations: Vec<Vec<FieldElement<F>>>,
+    transcript: &mut T,
+    trace_polys: Vec<Polynomial<FieldElement<F>>>,
+) -> (
+    Vec<Polynomial<FieldElement<F>>>,
+    Vec<Vec<FieldElement<F>>>,
+    MerkleTree<Batch256BitsTree<F, CoreWrapper<Keccak256Core>>>,
+    [u8; 32],
+)
+where
+    T: Transcript,
+    F: IsFFTField,
+    FieldElement<F>: ByteConversion,
+{
     // Compute commitments [t_j].
     let lde_trace = TraceTable::new_from_cols(&lde_trace_evaluations);
     let (lde_trace_merkle_tree, lde_trace_merkle_root) = batch_commit(&lde_trace.rows());
