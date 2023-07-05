@@ -586,11 +586,16 @@ impl AIR for CairoAIR {
     ///
     /// # Arguments
     ///
-    /// * `full_trace_length` - Trace length padded to 2^n
-    /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
-    /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
+    /// * `trace_length` - Length of the Cairo execution trace. Must be a power fo two. 
+    /// * `pub_inputs` - Public inputs sent by the Cairo runner.
+    /// * `proof_options` - STARK proving configuration options.
     #[rustfmt::skip]
-    fn new( trace_length: usize, pub_inputs: &Self::PublicInputs, proof_options: &ProofOptions) -> Self {
+    fn new(
+        trace_length: usize, 
+        pub_inputs: &Self::PublicInputs,
+        proof_options: &ProofOptions
+    ) -> Self {
+        debug_assert!(trace_length.is_power_of_two());
 
         let mut trace_columns = 34 + 3 + 12 + 3;
         let mut transition_degrees = vec![
@@ -618,7 +623,9 @@ impl AIR for CairoAIR {
         let mut num_transition_constraints = 49;
 
         // This is a hacky solution for the moment and must be changed once we start implementing 
-        // layouts functionality.
+        // layouts functionality. The `has_rc_builtin` boolean should not exist, we will know the
+        // layout from the Cairo public inputs directly, and the number of constraints and columns
+        // will be enforced through that.
         let has_rc_builtin = !pub_inputs.memory_segments.is_empty();
         if has_rc_builtin {
             trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
