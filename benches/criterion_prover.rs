@@ -3,7 +3,7 @@ use criterion::{
 };
 use lambdaworks_stark::{
     cairo::{
-        air::{generate_cairo_proof, verify_cairo_proof},
+        air::generate_cairo_proof,
         runner::run::{generate_prover_args, CairoVersion},
     },
     starks::proof::options::ProofOptions,

@@ -36,7 +36,7 @@ fn generate_proof(
 
     let timer = Instant::now();
     println!("Making proof ...");
-    let proof = match generate_cairo_proof(&main_trace, &pub_inputs, &proof_options) {
+    let proof = match generate_cairo_proof(&main_trace, &pub_inputs, proof_options) {
         Ok(p) => p,
         Err(e) => {
             println!("Error generating proof: {:?}", e);
@@ -57,7 +57,7 @@ fn verify_proof(
     let timer = Instant::now();
 
     println!("Verifying ...");
-    let proof_verified = verify_cairo_proof(&proof, &pub_inputs, &proof_options);
+    let proof_verified = verify_cairo_proof(&proof, &pub_inputs, proof_options);
     println!("Time spent in verifying: {:?} \n", timer.elapsed());
 
     if proof_verified {
