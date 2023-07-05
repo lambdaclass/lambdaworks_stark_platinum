@@ -120,7 +120,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             // e = e*alpha + beta
             boundary_polys_evaluations[col] = boundary_polys_evaluations[col]
                 .iter()
-                .zip(d_adjustment_power.iter())
+                .zip(&d_adjustment_power)
                 .map(|(v, d)| v * (alpha * d + beta))
                 .collect::<Vec<FieldElement<F>>>();
 
