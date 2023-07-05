@@ -68,14 +68,6 @@ impl<F: IsField> BoundaryConstraints<F> {
             .collect()
     }
 
-    pub fn cols_for_boundary(&self) -> Vec<usize> {
-        self.constraints
-            .iter()
-            .unique_by(|elem| elem.col)
-            .map(|v| v.col)
-            .collect()
-    }
-
     /// Given the primitive root of some domain, returns the domain values corresponding
     /// to the steps where the boundary conditions hold. This is useful when interpolating
     /// the boundary conditions, since we must know the x values
