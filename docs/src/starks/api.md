@@ -5,31 +5,19 @@ Let's go over the main test we use for our prover, where we compute a STARK proo
 ```rust
 fn test_prove_fib() {
     let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
-    let trace_length = trace[0].len();
-    let trace_table = TraceTable::new_from_cols(&trace);
+    let proof_options = ProofOptions::default_test_options();
 
-    let context = AirContext {
-        options: ProofOptions {
-            blowup_factor: 2,
-            fri_number_of_queries: 1,
-            coset_offset: 3,
-        },
-        trace_length,
-        trace_columns: trace_table.n_cols,
-        transition_degrees: vec![1],
-        transition_exemptions: vec![2],
-        transition_offsets: vec![0, 1, 2],
-        num_transition_constraints: 1,
+    let pub_inputs = FibonacciPublicInputs {
+        a0: FE::one(),
+        a1: FE::one(),
     };
 
-    let fibonacci_air = FibonacciAIR::new(context);
-
-    let result = prove(&trace_table, &fibonacci_air);
-    assert!(verify(&result, &fibonacci_air));
+    let proof = prove::<F, FibonacciAIR<F>>(&trace, &pub_inputs, &proof_options).unwrap();
+    assert!(verify::<F, FibonacciAIR<F>>(&proof, &pub_inputs, &proof_options));
 }
 ```
 
-The proving system revolves around the `prove` function, that takes a trace and an AIR as inputs to generate a proof, and a `verify` function that takes the proof and the AIR as inputs, outputting `true` when the proof is verified correctly and `false` otherwise.
+The proving system revolves around the `prove` function, that takes a trace, public inputs and proof options as inputs to generate a proof, and a `verify` function that takes the generated proof, the public inputs and the proof options as inputs, outputting `true` when the proof is verified correctly and `false` otherwise. Note that the public inputs and proof options should be the same for both. Public inputs should be shared by the Cairo runner to prover and verifier, and the proof options should have been agreed on beforehand by the two entities beforehand.
 
 Below we go over the main things involved in this code.
 
@@ -37,16 +25,19 @@ Below we go over the main things involved in this code.
 
 To prove the integrity of a fibonacci trace, we first need to define what it means for a trace to be valid. As we've talked about in the recap, this involves defining an `AIR` for our computation where we specify both the boundary and transition constraints for a fibonacci sequence.
 
-In code, this is done through the `AIR` trait. Implementing `AIR` requires defining four methods, but the two important ones are `boundary_constraints` and `compute_transition`, which encode the boundary and transition constraints of our computation.
+In code, this is done through the `AIR` trait. Implementing `AIR` requires defining a couple methods, but the two most important ones are `boundary_constraints` and `compute_transition`, which encode the boundary and transition constraints of our computation.
 
 
 ### Boundary Constraints
 For our Fibonacci `AIR`, boundary constraints look like this:
 
 ```rust
-fn boundary_constraints(&self) -> BoundaryConstraints<Self::Field> {
-    let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::one());
-    let a1 = BoundaryConstraint::new_simple(1, FieldElement::<Self::Field>::one());
+fn boundary_constraints(
+    &self,
+    _rap_challenges: &Self::RAPChallenges,
+) -> BoundaryConstraints<Self::Field> {
+    let a0 = BoundaryConstraint::new_simple(0, self.pub_inputs.a0.clone());
+    let a1 = BoundaryConstraint::new_simple(1, self.pub_inputs.a1.clone());
 
     BoundaryConstraints::from_constraints(vec![a0, a1])
 }
@@ -54,9 +45,8 @@ fn boundary_constraints(&self) -> BoundaryConstraints<Self::Field> {
 
 The `BoundaryConstraint` struct represents a specific boundary constraint, meaning "column `i` at row `j` should be equal to `x`". In this case, because we have only one column, we are using the `new_simple` method to simply say 
 
-- Row `0` should equal 1.
-- Row `1` should equal 1.
-- Row `3` (the result, as in this case the trace has 4 rows) should equal `3`.
+- Row `0` should equal the public input `a0`, which in the most common case is set to 1.
+- Row `1` should equal the public input `a1`, which in the most common case is set to 1.
 
 In the case of multiple columns, the `new` method exists so you can also specify column number.
 
@@ -70,6 +60,7 @@ The way we specify our fibonacci transition constraint looks like this:
 fn compute_transition(
     &self,
     frame: &air::frame::Frame<Self::Field>,
+    _rap_challenges: &Self::RAPChallenges,
 ) -> Vec<FieldElement<Self::Field>> {
     let first_row = frame.get_row(0);
     let second_row = frame.get_row(1);
@@ -156,14 +147,14 @@ Let's go over each of them:
 
 ## Proving execution
 
-Having defined all of the above, proving our fibonacci example amounts to instantiating the necessary structs and then calling `prove` passing the `AIR` and the trace. We use a simple implementation of a hasher called `TestHasher` to handle merkle proof building.
+Having defined all of the above, proving our fibonacci example amounts to instantiating the necessary structs and then calling `prove` passing the trace, public inputs and proof options. We use a simple implementation of a hasher called `TestHasher` to handle merkle proof building.
 
 ```rust 
-let proof = prove(&trace_table, &fibonacci_air);
+let proof = prove(&trace_table, &pub_inputs, &proof_options);
 ```
 
 Verifying is then done by passing the proof of execution along with the same `AIR` to the `verify` function.
 
 ```rust
-assert!(verify(&proof, &fibonacci_air));
+assert!(verify(&proof, &pub_inputs, &proof_options));
 ```

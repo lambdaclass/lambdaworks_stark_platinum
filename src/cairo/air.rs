@@ -161,7 +161,6 @@ pub enum MemorySegment {
 
 pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
 
-// TODO: For memory constraints and builtins, the commented fields may be useful.
 #[derive(Debug, Clone)]
 pub struct PublicInputs {
     pub pc_init: FE,
@@ -782,7 +781,6 @@ impl AIR for CairoAIR {
     fn boundary_constraints(
         &self,
         rap_challenges: &Self::RAPChallenges,
-        // public_input: &Self::PublicInputs,
     ) -> BoundaryConstraints<Self::Field> {
         let initial_pc =
             BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, self.pub_inputs.pc_init.clone());
@@ -1163,6 +1161,9 @@ fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
         - &curr[RC_VALUE]
 }
 
+/// Wrapper function for generating Cairo proofs without the need to specify
+/// concrete types.
+/// The field is set to Stark252PrimeField and the AIR to CairoAIR.
 pub fn generate_cairo_proof(
     trace: &TraceTable<Stark252PrimeField>,
     pub_input: &PublicInputs,
@@ -1171,6 +1172,9 @@ pub fn generate_cairo_proof(
     prove::<Stark252PrimeField, CairoAIR>(trace, pub_input, proof_options)
 }
 
+/// Wrapper function for verifying Cairo proofs without the need to specify
+/// concrete types.
+/// The field is set to Stark252PrimeField and the AIR to CairoAIR.
 pub fn verify_cairo_proof(
     proof: &StarkProof<Stark252PrimeField>,
     pub_input: &PublicInputs,
@@ -1236,7 +1240,6 @@ mod test {
             &cairo_air,
             &trace_polys,
             &domain,
-            // &public_input,
             &rap_challenges
         ));
     }

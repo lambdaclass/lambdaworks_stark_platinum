@@ -71,6 +71,7 @@ where
     }
 
     fn build_rap_challenges<T: Transcript>(&self, _transcript: &mut T) -> Self::RAPChallenges {}
+
     fn compute_transition(
         &self,
         frame: &Frame<Self::Field>,
