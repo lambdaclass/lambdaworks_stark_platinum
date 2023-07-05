@@ -48,37 +48,5 @@ fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, pr
     });
 }
 
-fn verifier_benches(c: &mut Criterion) {
-    let mut group = c.benchmark_group("VERIFIER");
-    group.sample_size(10);
-    group.measurement_time(Duration::from_secs(30));
-    run_verifier_bench(
-        &mut group,
-        "fibonacci/10",
-        &cairo0_program_path("fibonacci_10.json"),
-    );
-    run_verifier_bench(
-        &mut group,
-        "fibonacci/100",
-        &cairo0_program_path("fibonacci_100.json"),
-    );
-}
-
-fn run_verifier_bench(
-    group: &mut BenchmarkGroup<'_, WallTime>,
-    benchname: &str,
-    program_path: &str,
-) {
-    let program_content = std::fs::read(program_path).unwrap();
-    let proof_options = ProofOptions::default_test_options();
-    let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
-    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
-
-    group.bench_function(benchname, |bench| {
-        bench.iter(|| black_box(verify_cairo_proof(&proof, &pub_inputs, &proof_options)));
-    });
-}
-
-criterion_group!(benches, cairo_benches, verifier_benches);
+criterion_group!(benches, cairo_benches);
 criterion_main!(benches);
