@@ -12,13 +12,17 @@ To make all this less abstract, let's go through two examples.
 
 Throughout this section and the following we will use this example extensively to have a concrete example. Even though it's a bit contrived (no one cares about computing fibonacci numbers), it's simple enough to be useful. STARKs and proving systems in general are very abstract things; having an example in mind is essential to not get lost.
 
-Let's say our computation consists of calculating the `k`-th number in the fibonacci sequence. This is just the sequence of numbers $a_n$ satisfying
+Let's say our computation consists of calculating the `k`-th number in the fibonacci sequence. This is just the sequence of numbers \\(a_n\\) satisfying
 
-$$
-a_0 = 1 \\
-a_1 = 1 \\
-a_{n+2} = a_{n + 1} + a_n
-$$
+\\[
+    a_0 = 1 
+\\]
+\\[
+    a_1 = 1
+\\]
+\\[
+    a_{n+2} = a_{n + 1} + a_n
+\\]
 
 An execution trace for this just consists of a table with one column, where each row is the `i`-th number in the sequence:
 
@@ -58,7 +62,7 @@ Use the fibonacci example as your go-to for understanding all the moving parts; 
 
 # Fibonacci step by step walkthrough
 
-Below we go through a step by step explanation of a STARK prover. We will assume the trace of the fibonacci sequence mentioned above; it consists of only one column of length $2^n$. In this case, we'll take `n=3`. The trace looks like this
+Below we go through a step by step explanation of a STARK prover. We will assume the trace of the fibonacci sequence mentioned above; it consists of only one column of length \\(2^n\\). In this case, we'll take `n=3`. The trace looks like this
 
 | a_i    | 
 | ------ |
@@ -75,8 +79,8 @@ Below we go through a step by step explanation of a STARK prover. We will assume
 
 The first step is to interpolate these values to generate the `trace polynomial`. This will be a polynomial encoding all the information about the trace. The way we do it is the following: in the finite field we are working in, we take an `8`-th primitive root of unity, let's call it `g`. It being a primitive root means two things:
 
-- `g` is an `8`-th root of unity, i.e., $g^8 = 1$.
-- Every `8`-th root of unity is of the form $g^i$ for some $0 \leq i \leq 7$.
+- `g` is an `8`-th root of unity, i.e., \\(g^8 = 1\\).
+- Every `8`-th root of unity is of the form \\(g^i\\) for some \\(0 \leq i \leq 7\\).
 
 With `g` in hand, we take the trace polynomial `t` to be the one satisfying
 
@@ -84,7 +88,7 @@ $$
 t(g^i) = a_i
 $$
 
-From here onwards, we will talk about the validity of the trace in terms of properties that this polynomial must satisfy. We will also implicitly identify a certain power of $g$ with its corresponding trace element, so for example we sometimes think of $g^5$ as $a_5$, the fifth row in the trace, even though technically it's $t$ *evaluated in* $g^5$ that equals $a_5$.
+From here onwards, we will talk about the validity of the trace in terms of properties that this polynomial must satisfy. We will also implicitly identify a certain power of $g$ with its corresponding trace element, so for example we sometimes think of \\(g^5\\) as \\(a_5\\), the fifth row in the trace, even though technically it's \\(t\\) *evaluated in* \\(g^5\\) that equals \\(a_5\\).
 
 We talked about two different types of constraints the trace must satisfy to be valid. They were:
 
@@ -93,8 +97,8 @@ We talked about two different types of constraints the trace must satisfy to be 
 
 In terms of `t`, this translates to
 
-- $t(g^0) = 1$ and $t(g) = 1$.
-- $t(x g^2) - t(xg) - t(x) = 0$ for all $x \in \{g^0, g^1, g^2, g^3, g^4, g^5\}$. This is because multiplying by `g` is the same as advancing a row in the trace.
+- \\(t(g^0) = 1\\) and \\(t(g) = 1\\).
+- \\(t(x g^2) - t(xg) - t(x) = 0\\) for all \\(x \in \{g^0, g^1, g^2, g^3, g^4, g^5\}\\). This is because multiplying by `g` is the same as advancing a row in the trace.
 
 ## Composition Polynomial
 
@@ -102,7 +106,7 @@ To convince the verifier that the trace polynomial satisfies the relationships a
 
 ### Boundary polynomial
 
-To show that the boundary constraints are satisfied, we construct the `boundary polynomial`. Recall that our boundary constraints are $t(g^0) = t(g) = 1$. Let's call $P$ the polynomial that interpolates these constraints, that is, $P$ satisfies:
+To show that the boundary constraints are satisfied, we construct the `boundary polynomial`. Recall that our boundary constraints are \\(t(g^0) = t(g) = 1\\). Let's call \\(P\\) the polynomial that interpolates these constraints, that is, \\(P\\) satisfies:
 
 $$
 P(1) = 1 \\
@@ -121,19 +125,21 @@ How does $B$ encode the boundary constraints? The idea is that, if the trace sat
 
 $$
 t(1) - P(1) = 1 - 1 = 0 \\
+$$
+$$
 t(g) - P(g) = 1 - 1 = 0
 $$
 
-so $t(x) - P(x)$ has $1$ and $g$ as roots. Showing these values are roots is the same as showing that $B(x)$ is a polynomial instead of a rational function, and that's why we construct $B$ this way.
+so \\(t(x) - P(x)\\) has \\(1\\) and \\(g\\) as roots. Showing these values are roots is the same as showing that \\(B(x)\\) is a polynomial instead of a rational function, and that's why we construct \\(B\\) this way.
 
 ### Transition constraint polynomial
-To convince the verifier that the transition constraints are satisfied, we construct the `transition constraint polynomial` and call it $C(x)$. It's defined as follows:
+To convince the verifier that the transition constraints are satisfied, we construct the `transition constraint polynomial` and call it \\(C(x)\\). It's defined as follows:
 
 $$
 C(x) = \dfrac{t(xg^2) - t(xg) - t(x)}{\prod_{i = 0}^{5} (x - g^i)}
 $$
 
-How does $C$ encode the transition constraints? We mentioned above that these are satisfied if the polynomial in the numerator vanishes in the elements $\{g^0, g^1, g^2, g^3, g^4, g^5\}$. As with $B$, this is the same as showing that $C(x)$ is a polynomial instead of a rational function.
+How does $C$ encode the transition constraints? We mentioned above that these are satisfied if the polynomial in the numerator vanishes in the elements \\(\{g^0, g^1, g^2, g^3, g^4, g^5\}\\). As with $B$, this is the same as showing that $C(x)$ is a polynomial instead of a rational function.
 
 ### Constructing $H$
 With the boundary and transition constraint polynomials in hand, we build the `composition polynomial` $H$ as follows: The verifier will sample four numbers $\alpha_1, \alpha_2, \beta_1, \beta_2$ and $H$ will be
