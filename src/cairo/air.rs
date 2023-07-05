@@ -585,12 +585,12 @@ impl AIR for CairoAIR {
     ///
     /// # Arguments
     ///
-    /// * `trace_length` - Length of the Cairo execution trace. Must be a power fo two. 
+    /// * `trace_length` - Length of the Cairo execution trace. Must be a power fo two.
     /// * `pub_inputs` - Public inputs sent by the Cairo runner.
     /// * `proof_options` - STARK proving configuration options.
     #[rustfmt::skip]
     fn new(
-        trace_length: usize, 
+        trace_length: usize,
         pub_inputs: &Self::PublicInputs,
         proof_options: &ProofOptions
     ) -> Self {
