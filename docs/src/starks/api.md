@@ -45,8 +45,8 @@ fn boundary_constraints(
 
 The `BoundaryConstraint` struct represents a specific boundary constraint, meaning "column `i` at row `j` should be equal to `x`". In this case, because we have only one column, we are using the `new_simple` method to simply say 
 
-- Row `0` should equal the public input `a0`, which in the most common case is set to 1.
-- Row `1` should equal the public input `a1`, which in the most common case is set to 1.
+- Row `0` should equal the public input `a0`, which in the typical fibonacci is set to 1.
+- Row `1` should equal the public input `a1`, which in the typical fibonacci is set to 1.
 
 In the case of multiple columns, the `new` method exists so you can also specify column number.
 
