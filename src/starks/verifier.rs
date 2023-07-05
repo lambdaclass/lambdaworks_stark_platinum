@@ -2,13 +2,9 @@
 use std::time::Instant;
 
 use itertools::multizip;
-#[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use log::error;
-
-#[cfg(feature = "test_fiat_shamir")]
-use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
 
 use lambdaworks_math::{
     field::{
@@ -30,12 +26,6 @@ use super::{
     transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize},
 };
 
-#[cfg(feature = "test_fiat_shamir")]
-fn step_1_transcript_initialization() -> TestTranscript {
-    TestTranscript::new()
-}
-
-#[cfg(not(feature = "test_fiat_shamir"))]
 fn step_1_transcript_initialization() -> DefaultTranscript {
     // TODO: add strong fiat shamir
     DefaultTranscript::new()

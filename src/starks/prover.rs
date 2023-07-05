@@ -1,13 +1,8 @@
 #[cfg(feature = "instruments")]
 use std::time::Instant;
 
-#[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-
-#[cfg(feature = "test_fiat_shamir")]
-use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
-
 use lambdaworks_math::fft::{errors::FFTError, polynomial::FFTPoly};
 use lambdaworks_math::{
     field::{element::FieldElement, traits::IsFFTField},
@@ -77,12 +72,6 @@ struct Round4<F: IsFFTField> {
     nonce: u64,
 }
 
-#[cfg(feature = "test_fiat_shamir")]
-fn round_0_transcript_initialization() -> TestTranscript {
-    TestTranscript::new()
-}
-
-#[cfg(not(feature = "test_fiat_shamir"))]
 fn round_0_transcript_initialization() -> DefaultTranscript {
     // TODO: add strong fiat shamir
     DefaultTranscript::new()
