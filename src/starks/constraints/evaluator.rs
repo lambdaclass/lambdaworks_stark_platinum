@@ -10,7 +10,7 @@ use rayon::prelude::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
 };
 
-#[cfg(all(debug_assertions, not(feature = "rayon")))]
+#[cfg(all(debug_assertions, not(feature = "parallel")))]
 use crate::starks::debug::check_boundary_polys_divisibility;
 use crate::starks::domain::Domain;
 use crate::starks::frame::Frame;
@@ -94,10 +94,10 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             boundary_constraints.generate_roots_of_unity(&self.primitive_root, n_trace_colums);
         let values = boundary_constraints.values(n_trace_colums);
 
-        #[cfg(all(debug_assertions, not(feature = "rayon")))]
+        #[cfg(all(debug_assertions, not(feature = "parallel")))]
         let mut boundary_polys = Vec::new();
 
-        #[cfg(not(feature = "rayon"))]
+        #[cfg(not(feature = "parallel"))]
         let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = zip(domains, values)
             .zip(self.trace_polys)
             .map(|((xs, ys), trace_poly)| {
@@ -118,7 +118,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             })
             .collect();
 
-        #[cfg(feature = "rayon")]
+        #[cfg(feature = "parallel")]
         let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = domains
             .par_iter()
             .zip(values)
@@ -173,15 +173,15 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .collect::<Vec<FieldElement<F>>>();
         }
 
-        #[cfg(all(debug_assertions, not(feature = "rayon")))]
+        #[cfg(all(debug_assertions, not(feature = "parallel")))]
         let boundary_zerofiers = Vec::new();
 
-        #[cfg(all(debug_assertions, not(feature = "rayon")))]
+        #[cfg(all(debug_assertions, not(feature = "parallel")))]
         check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
 
         let blowup_factor = self.air.blowup_factor();
 
-        #[cfg(all(debug_assertions, not(feature = "rayon")))]
+        #[cfg(all(debug_assertions, not(feature = "parallel")))]
         let mut transition_evaluations = Vec::new();
 
         let transition_exemptions = self.air.transition_exemptions();
@@ -246,7 +246,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
             let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
 
-            #[cfg(all(debug_assertions, not(feature = "rayon")))]
+            #[cfg(all(debug_assertions, not(feature = "parallel")))]
             transition_evaluations.push(evaluations_transition.clone());
 
             // TODO: Remove clones
@@ -316,7 +316,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     }
 }
 
-#[cfg(not(feature = "rayon"))]
+#[cfg(not(feature = "parallel"))]
 fn evaluate_transition_exemptions<F: IsFFTField>(
     transition_exemptions: Vec<Polynomial<FieldElement<F>>>,
     domain: &Domain<F>,
@@ -335,7 +335,7 @@ fn evaluate_transition_exemptions<F: IsFFTField>(
         .collect()
 }
 
-#[cfg(feature = "rayon")]
+#[cfg(feature = "parallel")]
 fn evaluate_transition_exemptions<F: IsFFTField>(
     transition_exemptions: Vec<Polynomial<FieldElement<F>>>,
     domain: &Domain<F>,
