@@ -8,8 +8,6 @@ use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
 
-use lambdaworks_crypto::merkle_tree::backends::batch_256_bits::Batch256BitsTree;
-use lambdaworks_crypto::merkle_tree::merkle::MerkleTree;
 use lambdaworks_math::fft::{errors::FFTError, polynomial::FFTPoly};
 use lambdaworks_math::{
     field::{element::FieldElement, traits::IsFFTField},
@@ -20,8 +18,6 @@ use log::info;
 
 #[cfg(feature = "rayon")]
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
-use sha3::digest::core_api::CoreWrapper;
-use sha3::Keccak256Core;
 
 #[cfg(debug_assertions)]
 use crate::starks::debug::validate_trace;
@@ -204,8 +200,8 @@ fn compute_and_send_commitment<T, F>(
 ) -> (
     Vec<Polynomial<FieldElement<F>>>,
     Vec<Vec<FieldElement<F>>>,
-    MerkleTree<Batch256BitsTree<F, CoreWrapper<Keccak256Core>>>,
-    [u8; 32],
+    BatchedMerkleTree<F>,
+    Commitment,
 )
 where
     T: Transcript,
