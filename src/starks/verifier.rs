@@ -396,8 +396,8 @@ where
         // Verify that Deep(x) is constructed correctly
         let mut divisors = (0..proof.trace_ood_frame_evaluations.num_rows())
             .map(|row_idx| {
-                (&domain.lde_roots_of_unity_coset[*iota_n]
-                    - &challenges.z * primitive_root.pow(row_idx as u64))
+                &domain.lde_roots_of_unity_coset[*iota_n]
+                    - &challenges.z * primitive_root.pow(row_idx as u64)
             })
             .collect::<Vec<FieldElement<F>>>();
         FieldElement::inplace_batch_inverse(&mut divisors);
