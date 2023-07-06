@@ -507,41 +507,42 @@ fn open_deep_composition_poly<F: IsFFTField, A: AIR<Field = F>>(
 where
     FieldElement<F>: ByteConversion,
 {
-    let mut ret = Vec::new();
-    for index_to_open in indexes_to_open {
-        let index = index_to_open % domain.lde_roots_of_unity_coset.len();
+    indexes_to_open
+        .iter()
+        .map(|index_to_open| {
+            let index = index_to_open % domain.lde_roots_of_unity_coset.len();
 
-        let lde_composition_poly_proof = round_2_result
-            .composition_poly_merkle_tree
-            .get_proof_by_pos(index)
-            .unwrap();
+            let lde_composition_poly_proof = round_2_result
+                .composition_poly_merkle_tree
+                .get_proof_by_pos(index)
+                .unwrap();
 
-        // H₁ openings
-        let lde_composition_poly_even_evaluation =
-            round_2_result.lde_composition_poly_even_evaluations[index].clone();
+            // H₁ openings
+            let lde_composition_poly_even_evaluation =
+                round_2_result.lde_composition_poly_even_evaluations[index].clone();
 
-        // H₂ openings
-        let lde_composition_poly_odd_evaluation =
-            round_2_result.lde_composition_poly_odd_evaluations[index].clone();
+            // H₂ openings
+            let lde_composition_poly_odd_evaluation =
+                round_2_result.lde_composition_poly_odd_evaluations[index].clone();
 
-        // Trace polynomials openings
-        let lde_trace_merkle_proofs = round_1_result
-            .lde_trace_merkle_trees
-            .iter()
-            .map(|tree| tree.get_proof_by_pos(index).unwrap())
-            .collect();
+            // Trace polynomials openings
+            let lde_trace_merkle_proofs = round_1_result
+                .lde_trace_merkle_trees
+                .iter()
+                .map(|tree| tree.get_proof_by_pos(index).unwrap())
+                .collect();
 
-        let lde_trace_evaluations = round_1_result.lde_trace.get_row(index).to_vec();
+            let lde_trace_evaluations = round_1_result.lde_trace.get_row(index).to_vec();
 
-        ret.push(DeepPolynomialOpenings {
-            lde_composition_poly_proof,
-            lde_composition_poly_even_evaluation,
-            lde_composition_poly_odd_evaluation,
-            lde_trace_merkle_proofs,
-            lde_trace_evaluations,
-        });
-    }
-    ret
+            DeepPolynomialOpenings {
+                lde_composition_poly_proof,
+                lde_composition_poly_even_evaluation,
+                lde_composition_poly_odd_evaluation,
+                lde_trace_merkle_proofs,
+                lde_trace_evaluations,
+            }
+        })
+        .collect()
 }
 
 // FIXME remove unwrap() calls and return errors
