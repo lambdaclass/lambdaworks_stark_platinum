@@ -95,7 +95,7 @@ where
     FieldElement<F>: ByteConversion,
 {
     if !fri_layers.is_empty() {
-        let number_of_queries = air.context().options.fri_number_of_queries;
+        let number_of_queries = air.options().fri_number_of_queries;
         let iotas = (0..number_of_queries)
             .map(|_| transcript_to_usize(transcript) % domain_size)
             .collect::<Vec<usize>>();
