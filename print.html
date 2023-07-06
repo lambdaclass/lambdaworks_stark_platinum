@@ -334,43 +334,34 @@
 </span><span class="boring">fn main() {
 </span>fn test_prove_fib() {
     let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
-    let trace_length = trace[0].len();
-    let trace_table = TraceTable::new_from_cols(&amp;trace);
+    let proof_options = ProofOptions::default_test_options();
 
-    let context = AirContext {
-        options: ProofOptions {
-            blowup_factor: 2,
-            fri_number_of_queries: 1,
-            coset_offset: 3,
-        },
-        trace_length,
-        trace_columns: trace_table.n_cols,
-        transition_degrees: vec![1],
-        transition_exemptions: vec![2],
-        transition_offsets: vec![0, 1, 2],
-        num_transition_constraints: 1,
+    let pub_inputs = FibonacciPublicInputs {
+        a0: FE::one(),
+        a1: FE::one(),
     };
 
-    let fibonacci_air = FibonacciAIR::new(context);
-
-    let result = prove(&amp;trace_table, &amp;fibonacci_air);
-    assert!(verify(&amp;result, &amp;fibonacci_air));
+    let proof = prove::&lt;F, FibonacciAIR&lt;F&gt;&gt;(&amp;trace, &amp;pub_inputs, &amp;proof_options).unwrap();
+    assert!(verify::&lt;F, FibonacciAIR&lt;F&gt;&gt;(&amp;proof, &amp;pub_inputs, &amp;proof_options));
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>The proving system revolves around the <code>prove</code> function, that takes a trace and an AIR as inputs to generate a proof, and a <code>verify</code> function that takes the proof and the AIR as inputs, outputting <code>true</code> when the proof is verified correctly and <code>false</code> otherwise.</p>
+<p>The proving system revolves around the <code>prove</code> function, that takes a trace, public inputs and proof options as inputs to generate a proof, and a <code>verify</code> function that takes the generated proof, the public inputs and the proof options as inputs, outputting <code>true</code> when the proof is verified correctly and <code>false</code> otherwise. Note that the public inputs and proof options should be the same for both. Public inputs should be shared by the Cairo runner to prover and verifier, and the proof options should have been agreed on beforehand by the two entities beforehand.</p>
 <p>Below we go over the main things involved in this code.</p>
 <h2 id="air"><a class="header" href="#air">AIR</a></h2>
 <p>To prove the integrity of a fibonacci trace, we first need to define what it means for a trace to be valid. As we've talked about in the recap, this involves defining an <code>AIR</code> for our computation where we specify both the boundary and transition constraints for a fibonacci sequence.</p>
-<p>In code, this is done through the <code>AIR</code> trait. Implementing <code>AIR</code> requires defining four methods, but the two important ones are <code>boundary_constraints</code> and <code>compute_transition</code>, which encode the boundary and transition constraints of our computation.</p>
+<p>In code, this is done through the <code>AIR</code> trait. Implementing <code>AIR</code> requires defining a couple methods, but the two most important ones are <code>boundary_constraints</code> and <code>compute_transition</code>, which encode the boundary and transition constraints of our computation.</p>
 <h3 id="boundary-constraints"><a class="header" href="#boundary-constraints">Boundary Constraints</a></h3>
 <p>For our Fibonacci <code>AIR</code>, boundary constraints look like this:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>fn boundary_constraints(&amp;self) -&gt; BoundaryConstraints&lt;Self::Field&gt; {
-    let a0 = BoundaryConstraint::new_simple(0, FieldElement::&lt;Self::Field&gt;::one());
-    let a1 = BoundaryConstraint::new_simple(1, FieldElement::&lt;Self::Field&gt;::one());
+</span>fn boundary_constraints(
+    &amp;self,
+    _rap_challenges: &amp;Self::RAPChallenges,
+) -&gt; BoundaryConstraints&lt;Self::Field&gt; {
+    let a0 = BoundaryConstraint::new_simple(0, self.pub_inputs.a0.clone());
+    let a1 = BoundaryConstraint::new_simple(1, self.pub_inputs.a1.clone());
 
     BoundaryConstraints::from_constraints(vec![a0, a1])
 }
@@ -378,9 +369,8 @@
 </span></code></pre></pre>
 <p>The <code>BoundaryConstraint</code> struct represents a specific boundary constraint, meaning &quot;column <code>i</code> at row <code>j</code> should be equal to <code>x</code>&quot;. In this case, because we have only one column, we are using the <code>new_simple</code> method to simply say </p>
 <ul>
-<li>Row <code>0</code> should equal 1.</li>
-<li>Row <code>1</code> should equal 1.</li>
-<li>Row <code>3</code> (the result, as in this case the trace has 4 rows) should equal <code>3</code>.</li>
+<li>Row <code>0</code> should equal the public input <code>a0</code>, which in the typical fibonacci is set to 1.</li>
+<li>Row <code>1</code> should equal the public input <code>a1</code>, which in the typical fibonacci is set to 1.</li>
 </ul>
 <p>In the case of multiple columns, the <code>new</code> method exists so you can also specify column number.</p>
 <p>After instantiating each of these constraints, we return all of them through the struct <code>BoundaryConstraints</code>.</p>
@@ -392,6 +382,7 @@
 </span>fn compute_transition(
     &amp;self,
     frame: &amp;air::frame::Frame&lt;Self::Field&gt;,
+    _rap_challenges: &amp;Self::RAPChallenges,
 ) -&gt; Vec&lt;FieldElement&lt;Self::Field&gt;&gt; {
     let first_row = frame.get_row(0);
     let second_row = frame.get_row(1);
@@ -475,18 +466,18 @@ let trace_table = TraceTable {
 <li><code>num_transition_constraints</code> simply says how many transition constraints our <code>AIR</code> has.</li>
 </ul>
 <h2 id="proving-execution"><a class="header" href="#proving-execution">Proving execution</a></h2>
-<p>Having defined all of the above, proving our fibonacci example amounts to instantiating the necessary structs and then calling <code>prove</code> passing the <code>AIR</code> and the trace. We use a simple implementation of a hasher called <code>TestHasher</code> to handle merkle proof building.</p>
+<p>Having defined all of the above, proving our fibonacci example amounts to instantiating the necessary structs and then calling <code>prove</code> passing the trace, public inputs and proof options. We use a simple implementation of a hasher called <code>TestHasher</code> to handle merkle proof building.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>let proof = prove(&amp;trace_table, &amp;fibonacci_air);
+</span>let proof = prove(&amp;trace_table, &amp;pub_inputs, &amp;proof_options);
 <span class="boring">}
 </span></code></pre></pre>
 <p>Verifying is then done by passing the proof of execution along with the same <code>AIR</code> to the <code>verify</code> function.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>assert!(verify(&amp;proof, &amp;fibonacci_air));
+</span>assert!(verify(&amp;proof, &amp;pub_inputs, &amp;proof_options));
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
