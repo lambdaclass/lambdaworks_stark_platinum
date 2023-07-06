@@ -18,9 +18,15 @@ $(CAIRO0_PROGRAMS_DIR)/%.json: $(CAIRO0_PROGRAMS_DIR)/%.cairo
 build: 
 	cargo build --release
 
-run: build
-	cargo run --release $(PROGRAM_PATH)
-	
+prove: build
+	cargo run --release prove $(PROGRAM_PATH) $(PROOF_PATH)
+
+verify: build
+	cargo run --release verify $(PROOF_PATH)
+
+run_all: build
+	cargo run --release prove_and_verify $(PROGRAM_PATH)
+
 test: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo test
 
@@ -29,6 +35,9 @@ test_metal: $(COMPILED_CAIRO0_PROGRAMS)
 
 coverage: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo llvm-cov nextest --lcov --output-path lcov.info
+
+coverage_parallel: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo llvm-cov nextest --lcov --output-path lcov.info -F parallel
 
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
@@ -45,18 +54,32 @@ docker_compile_cairo:
 target/release/lambdaworks-stark: 
 	cargo build --release
 	
-docker_compile_and_run: target/release/lambdaworks-stark
+docker_compile_and_run_all: target/release/lambdaworks-stark
 	@echo "Compiling program with docker"
 	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --features instruments --quiet --release $(PROGRAM).json 
+	@cargo run --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
 	@rm $(PROGRAM).json
 
-compile_and_run: target/release/lambdaworks-stark
+docker_compile_and_prove: target/release/lambdaworks-stark
+	@echo "Compiling program with docker"
+	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
+	@echo "Compiling done \n"
+	@cargo run --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
+	@rm $(PROGRAM).json
+
+compile_and_run_all: target/release/lambdaworks-stark
 	@echo "Compiling program with cairo-compile"
 	@cairo-compile $(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --features instruments --quiet --release $(PROGRAM).json 
+	@cargo run --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
+	@rm $(PROGRAM).json
+
+compile_and_prove: target/release/lambdaworks-stark
+	@echo "Compiling program with cairo-compile"
+	@cairo-compile $(PROGRAM) > $(PROGRAM).json
+	@echo "Compiling done \n"
+	@cargo run --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
 	@rm $(PROGRAM).json
 
 clean:

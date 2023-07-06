@@ -1,15 +1,16 @@
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use lambdaworks_math::traits::{Deserializable, Serializable};
-use lambdaworks_stark::cairo::air::{CairoAIR, PublicInputs};
+use lambdaworks_stark::cairo::air::{generate_cairo_proof, verify_cairo_proof, PublicInputs};
 use lambdaworks_stark::cairo::runner::run::{generate_prover_args, CairoVersion};
 use lambdaworks_stark::starks::proof::options::ProofOptions;
 use lambdaworks_stark::starks::proof::stark::StarkProof;
-use lambdaworks_stark::starks::{prover::prove, verifier::verify};
 use std::env;
 use std::time::Instant;
 
-fn generate_proof(input_path: &String) -> Option<(StarkProof<Stark252PrimeField>, PublicInputs)> {
-    let grinding_factor = 1;
+fn generate_proof(
+    input_path: &String,
+    proof_options: &ProofOptions,
+) -> Option<(StarkProof<Stark252PrimeField>, PublicInputs)> {
     let timer = Instant::now();
 
     let cairo_version = if input_path.contains(".casm") {
@@ -21,45 +22,42 @@ fn generate_proof(input_path: &String) -> Option<(StarkProof<Stark252PrimeField>
     };
 
     let Ok(program_content) = std::fs::read(input_path) else {
-                println!("Error opening {input_path} file");
-                return None;
-            };
-    let Ok((main_trace, cairo_air, mut pub_inputs)) =
-                generate_prover_args(&program_content, &cairo_version, &None, grinding_factor) else {
-                    println!("Error generating prover args");
-                    return None;
-                };
+        println!("Error opening {input_path} file");
+        return None;
+    };
+
+    let Ok((main_trace, pub_inputs)) =
+        generate_prover_args(&program_content, &cairo_version, &None) else {
+            println!("Error generating prover args");
+            return None;
+        };
 
     println!("  Time spent: {:?} \n", timer.elapsed());
 
     let timer = Instant::now();
     println!("Making proof ...");
-    let proof = match prove(&main_trace, &cairo_air, &mut pub_inputs) {
+    let proof = match generate_cairo_proof(&main_trace, &pub_inputs, proof_options) {
         Ok(p) => p,
         Err(e) => {
-            println!("Error making proof: {:?}", e);
+            println!("Error generating proof: {:?}", e);
             return None;
         }
     };
+
     println!("Time spent in proving: {:?} \n", timer.elapsed());
 
     Some((proof, pub_inputs))
 }
 
-fn verify_proof(proof: StarkProof<Stark252PrimeField>, pub_inputs: PublicInputs) -> bool {
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
-
-    let air = CairoAIR::new(proof_options, proof.trace_length, pub_inputs.clone(), false);
-
+fn verify_proof(
+    proof: StarkProof<Stark252PrimeField>,
+    pub_inputs: PublicInputs,
+    proof_options: &ProofOptions,
+) -> bool {
     let timer = Instant::now();
 
     println!("Verifying ...");
-    let proof_verified = verify(&proof, &air, &pub_inputs);
+    let proof_verified = verify_cairo_proof(&proof, &pub_inputs, proof_options);
     println!("Time spent in verifying: {:?} \n", timer.elapsed());
 
     if proof_verified {
@@ -72,6 +70,8 @@ fn verify_proof(proof: StarkProof<Stark252PrimeField>, pub_inputs: PublicInputs)
 }
 
 fn main() {
+    let proof_options = ProofOptions::default_test_options();
+
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
@@ -91,7 +91,7 @@ fn main() {
             let input_path = &args[2];
             let output_path = &args[3];
 
-            let Some((proof, pub_inputs)) = generate_proof(input_path) else {
+            let Some((proof, pub_inputs)) = generate_proof(input_path, &proof_options) else {
                 return;
             };
 
@@ -140,7 +140,7 @@ fn main() {
                 return;
             };
 
-            verify_proof(proof, pub_inputs);
+            verify_proof(proof, pub_inputs, &proof_options);
         }
         "prove_and_verify" => {
             if args.len() < 3 {
@@ -149,10 +149,10 @@ fn main() {
             }
 
             let input_path = &args[2];
-            let Some((proof, pub_inputs)) = generate_proof(input_path) else {
+            let Some((proof, pub_inputs)) = generate_proof(input_path, &proof_options) else {
                 return;
             };
-            verify_proof(proof, pub_inputs);
+            verify_proof(proof, pub_inputs, &proof_options);
         }
         _ => {
             println!("Unknown command: {}", command);

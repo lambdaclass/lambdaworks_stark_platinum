@@ -95,7 +95,7 @@ where
     FieldElement<F>: ByteConversion,
 {
     if !fri_layers.is_empty() {
-        let number_of_queries = air.context().options.fri_number_of_queries;
+        let number_of_queries = air.context().proof_options.fri_number_of_queries;
         let mut iotas: Vec<usize> = Vec::with_capacity(number_of_queries);
         let query_list = (0..number_of_queries)
             .map(|_| {

@@ -1,36 +1,62 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::field::{
-    element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-    traits::IsFFTField,
-};
+use lambdaworks_math::field::{element::FieldElement, traits::IsFFTField};
 
 use crate::starks::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
     context::AirContext,
     frame::Frame,
+    proof::options::ProofOptions,
     trace::TraceTable,
     traits::AIR,
 };
 
 #[derive(Clone)]
-pub struct FibonacciAIR {
+pub struct FibonacciAIR<F>
+where
+    F: IsFFTField,
+{
     context: AirContext,
     trace_length: usize,
+    pub_inputs: FibonacciPublicInputs<F>,
 }
 
-impl FibonacciAIR {
-    pub fn new(context: AirContext, trace_length: usize) -> Self {
+#[derive(Clone, Debug)]
+pub struct FibonacciPublicInputs<F>
+where
+    F: IsFFTField,
+{
+    pub a0: FieldElement<F>,
+    pub a1: FieldElement<F>,
+}
+
+impl<F> AIR for FibonacciAIR<F>
+where
+    F: IsFFTField,
+{
+    type Field = F;
+    type RAPChallenges = ();
+    type PublicInputs = FibonacciPublicInputs<Self::Field>;
+
+    fn new(
+        trace_length: usize,
+        pub_inputs: &Self::PublicInputs,
+        proof_options: &ProofOptions,
+    ) -> Self {
+        let context = AirContext {
+            proof_options: proof_options.clone(),
+            trace_columns: 1,
+            transition_degrees: vec![1],
+            transition_exemptions: vec![2],
+            transition_offsets: vec![0, 1, 2],
+            num_transition_constraints: 1,
+        };
+
         Self {
+            pub_inputs: pub_inputs.clone(),
             context,
             trace_length,
         }
     }
-}
-
-impl AIR for FibonacciAIR {
-    type Field = Stark252PrimeField;
-    type RAPChallenges = ();
-    type PublicInput = ();
 
     fn composition_poly_degree_bound(&self) -> usize {
         self.trace_length()
@@ -40,12 +66,12 @@ impl AIR for FibonacciAIR {
         &self,
         _main_trace: &TraceTable<Self::Field>,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
     ) -> TraceTable<Self::Field> {
         TraceTable::empty()
     }
 
     fn build_rap_challenges<T: Transcript>(&self, _transcript: &mut T) -> Self::RAPChallenges {}
+
     fn compute_transition(
         &self,
         frame: &Frame<Self::Field>,
@@ -61,10 +87,9 @@ impl AIR for FibonacciAIR {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
     ) -> BoundaryConstraints<Self::Field> {
-        let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::one());
-        let a1 = BoundaryConstraint::new_simple(1, FieldElement::<Self::Field>::one());
+        let a0 = BoundaryConstraint::new_simple(0, self.pub_inputs.a0.clone());
+        let a1 = BoundaryConstraint::new_simple(1, self.pub_inputs.a1.clone());
 
         BoundaryConstraints::from_constraints(vec![a0, a1])
     }
@@ -79,6 +104,10 @@ impl AIR for FibonacciAIR {
 
     fn trace_length(&self) -> usize {
         self.trace_length
+    }
+
+    fn pub_inputs(&self) -> &Self::PublicInputs {
+        &self.pub_inputs
     }
 }
 

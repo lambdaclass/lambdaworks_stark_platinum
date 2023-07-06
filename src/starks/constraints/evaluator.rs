@@ -31,10 +31,9 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         air: &A,
         trace_polys: &'poly [Polynomial<FieldElement<F>>],
         primitive_root: &FieldElement<F>,
-        public_input: &A::PublicInput,
         rap_challenges: &A::RAPChallenges,
     ) -> Self {
-        let boundary_constraints = air.boundary_constraints(rap_challenges, public_input);
+        let boundary_constraints = air.boundary_constraints(rap_challenges);
 
         Self {
             air: air.clone(),
@@ -207,7 +206,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
         let blowup_factor_order = u64::from(blowup_factor.trailing_zeros());
 
-        let offset = FieldElement::<F>::from(self.air.context().options.coset_offset);
+        let offset = FieldElement::<F>::from(self.air.context().proof_options.coset_offset);
         let offset_pow = offset.pow(trace_length);
         let one = FieldElement::<F>::one();
         let mut zerofier_evaluations = get_powers_of_primitive_root_coset(
