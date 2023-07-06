@@ -342,7 +342,7 @@ where
     challenges
         .iotas
         .iter()
-        .zip(proof.deep_poly_openings.iter())
+        .zip(&proof.deep_poly_openings)
         .enumerate()
         .fold(true, |mut result, (i, (iota_n, deep_poly_opening))| {
             let evaluations = vec![
