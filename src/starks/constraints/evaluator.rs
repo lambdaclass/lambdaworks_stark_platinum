@@ -104,7 +104,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             .zip(self.trace_polys)
             .map(|((xs, ys), trace_poly)| {
                 let boundary_poly = trace_poly
-                    - &Polynomial::interpolate(&xs, &ys)
+                    - &Polynomial::interpolate(xs, &ys)
                         .expect("xs and ys have equal length and xs are unique");
 
                 evaluate_polynomial_on_lde_domain(
