@@ -314,6 +314,7 @@ where
     A: AIR<Field = F>,
 {
     // verify FRI
+    let two_inv = &FieldElement::from(2).inv();
     proof.query_list.iter().zip(challenges.iotas.iter()).fold(
         true,
         |mut result, (proof_s, iota_s)| {
@@ -324,6 +325,7 @@ where
                 *iota_s,
                 proof_s,
                 domain,
+                two_inv,
             );
             result
         },
@@ -399,12 +401,11 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
     iota: usize,
     fri_decommitment: &FriDecommitment<F>,
     domain: &Domain<F>,
+    two_inv: &FieldElement<F>,
 ) -> bool
 where
     FieldElement<F>: ByteConversion,
 {
-    let two_inv = &FieldElement::from(2).inv();
-
     let evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
 
     let mut evaluation_point_vec: Vec<FieldElement<F>> =
