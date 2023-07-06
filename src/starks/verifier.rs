@@ -509,7 +509,7 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     let z_squared = &(&challenges.z * &challenges.z);
     let denom_inv = (upsilon_0 - z_squared).inv();
     let mut divisors = (0..proof.trace_ood_frame_evaluations.num_rows())
-        .map(|row_idx| (upsilon_0 - &challenges.z * primitive_root.pow(row_idx as u64)))
+        .map(|row_idx| upsilon_0 - &challenges.z * primitive_root.pow(row_idx as u64))
         .collect::<Vec<FieldElement<F>>>();
     FieldElement::inplace_batch_inverse(&mut divisors);
     for (col_idx, coeff_row) in
