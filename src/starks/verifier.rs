@@ -339,62 +339,58 @@ fn step_4_verify_deep_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
 where
     FieldElement<F>: ByteConversion,
 {
-    let mut result = true;
-
-    for (i, (iota_n, deep_poly_opening)) in challenges
+    challenges
         .iotas
         .iter()
         .zip(proof.deep_poly_openings.iter())
         .enumerate()
-    {
-        let evaluations = vec![
-            deep_poly_opening
-                .lde_composition_poly_even_evaluation
-                .clone(),
-            deep_poly_opening
-                .lde_composition_poly_odd_evaluation
-                .clone(),
-        ];
+        .fold(true, |mut result, (i, (iota_n, deep_poly_opening))| {
+            let evaluations = vec![
+                deep_poly_opening
+                    .lde_composition_poly_even_evaluation
+                    .clone(),
+                deep_poly_opening
+                    .lde_composition_poly_odd_evaluation
+                    .clone(),
+            ];
 
-        // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
-        result &= deep_poly_opening
-            .lde_composition_poly_proof
-            .verify::<BatchedMerkleTreeBackend<F>>(
-                &proof.composition_poly_root,
-                *iota_n,
-                &evaluations,
-            );
-
-        let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
-        let lde_trace_evaluations = vec![
-            deep_poly_opening.lde_trace_evaluations[..num_main_columns].to_vec(),
-            deep_poly_opening.lde_trace_evaluations[num_main_columns..].to_vec(),
-        ];
-
-        // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
-        proof
-            .lde_trace_merkle_roots
-            .iter()
-            .zip(&deep_poly_opening.lde_trace_merkle_proofs)
-            .zip(lde_trace_evaluations)
-            .fold(result, |acc, ((merkle_root, merkle_proof), evaluation)| {
-                acc & merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
-                    merkle_root,
+            // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
+            result &= deep_poly_opening
+                .lde_composition_poly_proof
+                .verify::<BatchedMerkleTreeBackend<F>>(
+                    &proof.composition_poly_root,
                     *iota_n,
-                    &evaluation,
-                )
-            });
+                    &evaluations,
+                );
 
-        // DEEP consistency check
-        // Verify that Deep(x) is constructed correctly
-        let deep_poly_evaluation =
-            reconstruct_deep_composition_poly_evaluation(proof, domain, challenges, *iota_n, i);
+            let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
+            let lde_trace_evaluations = vec![
+                deep_poly_opening.lde_trace_evaluations[..num_main_columns].to_vec(),
+                deep_poly_opening.lde_trace_evaluations[num_main_columns..].to_vec(),
+            ];
 
-        let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
-        result &= deep_poly_claimed_evaluation == &deep_poly_evaluation;
-    }
+            // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
+            proof
+                .lde_trace_merkle_roots
+                .iter()
+                .zip(&deep_poly_opening.lde_trace_merkle_proofs)
+                .zip(lde_trace_evaluations)
+                .fold(result, |acc, ((merkle_root, merkle_proof), evaluation)| {
+                    acc & merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
+                        merkle_root,
+                        *iota_n,
+                        &evaluation,
+                    )
+                });
 
-    result
+            // DEEP consistency check
+            // Verify that Deep(x) is constructed correctly
+            let deep_poly_evaluation =
+                reconstruct_deep_composition_poly_evaluation(proof, domain, challenges, *iota_n, i);
+
+            let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
+            result & (deep_poly_claimed_evaluation == &deep_poly_evaluation)
+        })
 }
 
 fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
