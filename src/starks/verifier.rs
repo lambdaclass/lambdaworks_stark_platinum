@@ -372,18 +372,18 @@ where
         ];
 
         // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
-        for ((merkle_root, merkle_proof), evaluation) in proof
+        proof
             .lde_trace_merkle_roots
             .iter()
             .zip(&deep_poly_opening.lde_trace_merkle_proofs)
             .zip(lde_trace_evaluations)
-        {
-            result &= merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
-                merkle_root,
-                *iota_n,
-                &evaluation,
-            );
-        }
+            .fold(result, |acc, ((merkle_root, merkle_proof), evaluation)| {
+                acc & merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
+                    merkle_root,
+                    *iota_n,
+                    &evaluation,
+                )
+            });
 
         // DEEP consistency check
         // Verify that Deep(x) is constructed correctly
