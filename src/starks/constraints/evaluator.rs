@@ -6,9 +6,7 @@ use lambdaworks_math::{
 };
 
 #[cfg(feature = "parallel")]
-use rayon::prelude::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 #[cfg(all(debug_assertions, not(feature = "parallel")))]
 use crate::starks::debug::check_boundary_polys_divisibility;
@@ -19,6 +17,7 @@ use crate::starks::trace::TraceTable;
 use crate::starks::traits::AIR;
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
+#[cfg(not(feature = "parallel"))]
 use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
@@ -341,6 +340,7 @@ fn evaluate_transition_exemptions<F: IsFFTField>(
     domain: &Domain<F>,
 ) -> Vec<Vec<FieldElement<F>>>
 where
+    FieldElement<F>: Send + Sync,
     Polynomial<FieldElement<F>>: Send + Sync,
 {
     transition_exemptions
