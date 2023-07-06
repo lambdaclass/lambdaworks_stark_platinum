@@ -156,16 +156,18 @@ where
         .collect::<Vec<Vec<FieldElement<F>>>>();
 
     // FRI commit phase
-    let mut zetas: Vec<FieldElement<F>> = Vec::new();
-    let merkle_roots = &proof.fri_layers_merkle_roots;
-    for root in merkle_roots.iter() {
-        // <<<< Receive commitment: [pₖ] (the first one is [p₀])
-        transcript.append(root);
 
-        // >>>> Send challenge 𝜁ₖ
-        let zeta = transcript_to_field(transcript);
-        zetas.push(zeta);
-    }
+    let merkle_roots = &proof.fri_layers_merkle_roots;
+    let zetas = merkle_roots
+        .iter()
+        .map(|root| {
+            // <<<< Receive commitment: [pₖ] (the first one is [p₀])
+            transcript.append(root);
+
+            // >>>> Send challenge 𝜁ₖ
+            transcript_to_field(transcript)
+        })
+        .collect::<Vec<FieldElement<F>>>();
 
     // <<<< Receive value: pₙ
     transcript.append(&proof.fri_last_value.to_bytes_be());
