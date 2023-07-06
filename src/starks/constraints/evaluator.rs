@@ -17,8 +17,6 @@ use crate::starks::trace::TraceTable;
 use crate::starks::traits::AIR;
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
-#[cfg(not(feature = "parallel"))]
-use std::iter::zip;
 
 pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
     air: A,
@@ -93,32 +91,15 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let values = boundary_constraints.values(n_trace_colums);
 
         #[cfg(all(debug_assertions, not(feature = "parallel")))]
-        let mut boundary_polys = Vec::new();
+        let boundary_polys: Vec<Polynomial<FieldElement<F>>> = Vec::new();
 
         #[cfg(not(feature = "parallel"))]
-        let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = zip(domains, values)
-            .zip(self.trace_polys)
-            .map(|((xs, ys), trace_poly)| {
-                let boundary_poly = trace_poly
-                    - &Polynomial::interpolate(&xs, &ys)
-                        .expect("xs and ys have equal length and xs are unique");
-
-                #[cfg(debug_assertions)]
-                boundary_polys.push(boundary_poly.clone());
-
-                evaluate_polynomial_on_lde_domain(
-                    &boundary_poly,
-                    domain.blowup_factor,
-                    domain.interpolation_domain_size,
-                    &domain.coset_offset,
-                )
-                .unwrap()
-            })
-            .collect();
+        let domains_iter = domains.iter();
 
         #[cfg(feature = "parallel")]
-        let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = domains
-            .par_iter()
+        let domains_iter = domains.par_iter();
+
+        let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = domains_iter
             .zip(values)
             .zip(self.trace_polys)
             .map(|((xs, ys), trace_poly)| {
@@ -314,26 +295,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     }
 }
 
-#[cfg(not(feature = "parallel"))]
-fn evaluate_transition_exemptions<F: IsFFTField>(
-    transition_exemptions: Vec<Polynomial<FieldElement<F>>>,
-    domain: &Domain<F>,
-) -> Vec<Vec<FieldElement<F>>> {
-    transition_exemptions
-        .iter()
-        .map(|exemption| {
-            evaluate_polynomial_on_lde_domain(
-                exemption,
-                domain.blowup_factor,
-                domain.interpolation_domain_size,
-                &domain.coset_offset,
-            )
-            .unwrap()
-        })
-        .collect()
-}
-
-#[cfg(feature = "parallel")]
 fn evaluate_transition_exemptions<F: IsFFTField>(
     transition_exemptions: Vec<Polynomial<FieldElement<F>>>,
     domain: &Domain<F>,
@@ -342,8 +303,12 @@ where
     FieldElement<F>: Send + Sync,
     Polynomial<FieldElement<F>>: Send + Sync,
 {
-    transition_exemptions
-        .par_iter()
+    #[cfg(feature = "parallel")]
+    let exemptions_iter = transition_exemptions.par_iter();
+    #[cfg(not(feature = "parallel"))]
+    let exemptions_iter = transition_exemptions.iter();
+
+    exemptions_iter
         .map(|exemption| {
             evaluate_polynomial_on_lde_domain(
                 exemption,
