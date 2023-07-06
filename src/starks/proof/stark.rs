@@ -394,7 +394,7 @@ mod test {
 
     use crate::{
         cairo::{
-            air::CairoAIR,
+            air::{generate_cairo_proof, verify_cairo_proof},
             runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
         },
         starks::{
@@ -402,8 +402,6 @@ mod test {
             frame::Frame,
             fri::fri_decommit::FriDecommitment,
             proof::options::ProofOptions,
-            prover::prove,
-            verifier::verify,
         },
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
@@ -655,35 +653,25 @@ mod test {
     #[test]
     fn deserialize_and_verify() {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
-        let (main_trace, cairo_air, mut pub_inputs) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None, 1).unwrap();
+        let (main_trace, pub_inputs) =
+            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+
+        let proof_options = ProofOptions::default_test_options();
 
         // The proof is generated and serialized.
-        let proof = prove(&main_trace, &cairo_air, &mut pub_inputs).unwrap();
+        let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
         let proof_bytes = proof.serialize();
 
-        // The trace, AIR and original proof are dropped to show that they are decoupled from
+        // The trace and original proof are dropped to show that they are decoupled from
         // the verifying process.
         drop(main_trace);
-        drop(cairo_air);
         drop(proof);
 
         // At this point, the verifier only knows about the serialized proof, the proof options
         // and the public inputs.
         let proof = StarkProof::<Stark252PrimeField>::deserialize(&proof_bytes).unwrap();
 
-        // The same proof configuration as used in the `generate_prover_args` function.
-        let proof_options = ProofOptions {
-            blowup_factor: 4,
-            fri_number_of_queries: 3,
-            coset_offset: 3,
-            grinding_factor: 1,
-        };
-
-        // The AIR is re-constructed in the verifier side
-        let air = CairoAIR::new(proof_options, proof.trace_length, pub_inputs.clone(), false);
-
         // The proof is verified successfully.
-        assert!(verify(&proof, &air, &pub_inputs));
+        assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
     }
 }

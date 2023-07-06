@@ -14,10 +14,12 @@ use crate::{
         constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
         context::AirContext,
         frame::Frame,
-        proof::options::ProofOptions,
+        proof::{options::ProofOptions, stark::StarkProof},
+        prover::{prove, ProvingError},
         trace::TraceTable,
         traits::AIR,
         transcript::transcript_to_field,
+        verifier::verify,
     },
     FE,
 };
@@ -159,7 +161,6 @@ pub enum MemorySegment {
 
 pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
 
-// TODO: For memory constraints and builtins, the commented fields may be useful.
 #[derive(Debug, Clone)]
 pub struct PublicInputs {
     pub pc_init: FE,
@@ -446,81 +447,11 @@ impl Deserializable for PublicInputs {
 pub struct CairoAIR {
     pub context: AirContext,
     pub trace_length: usize,
-    pub public_inputs: PublicInputs,
+    pub pub_inputs: PublicInputs,
     has_rc_builtin: bool,
 }
 
 impl CairoAIR {
-    /// Creates a new CairoAIR from proof_options
-    ///
-    /// # Arguments
-    ///
-    /// * `full_trace_length` - Trace length padded to 2^n
-    /// * `number_steps` - Number of steps of the execution / register steps / rows in cairo runner trace
-    /// * `has_rc_builtin` - `true` if the related program uses the range-check builtin, `false` otherwise
-    #[rustfmt::skip]
-    pub fn new(proof_options: ProofOptions, trace_length: usize,  public_inputs: PublicInputs, has_rc_builtin: bool) -> Self {
-
-        let mut trace_columns = 34 + 3 + 12 + 3;
-        let mut transition_degrees = vec![
-            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
-            1, // Flag 15
-            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
-            2, 2, 2, 2, // Increasing memory auxiliary constraints.
-            2, 2, 2, 2, // Consistent memory auxiliary constraints.
-            2, 2, 2, 2, // Permutation auxiliary constraints.
-            2, 2, 2, // range-check increasing constraints.
-            2, 2, 2, // range-check permutation argument constraints.
-        ];
-        let mut transition_exemptions = vec![
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
-            0, // inst (1)
-            0, 0, 0, // operand consraints (3)
-            1, 1, 1, 1, 0, 0, // register constraints (6)
-            0, 0, 0, 0, 0, // opcode constraints (5)
-            0, 0, 0, 1, // memory continuous (4)
-            0, 0, 0, 1, // memory value consistency (4)
-            0, 0, 0, 1, // memory permutation argument (4)
-            0, 0, 1, // range check continuous (3)
-            0, 0, 0, // range check permutation argument (3)
-        ];
-        let mut num_transition_constraints = 49;
-
-        if has_rc_builtin {
-            trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
-            transition_degrees.push(1); // Range check builtin constraint
-            transition_exemptions.push(0); // range-check builtin exemption
-            num_transition_constraints += 1; // range-check builtin value decomposition constraint
-        }
-
-        let context = AirContext {
-            options: proof_options,
-            trace_columns,
-            transition_degrees,
-            transition_exemptions,
-            transition_offsets: vec![0, 1],
-            num_transition_constraints,
-        };
-
-        // The number of the transition constraints and the lengths of transition degrees
-        // and transition exemptions should be the same always.
-        debug_assert_eq!(
-            context.transition_degrees.len(),
-            context.num_transition_constraints
-        );
-        debug_assert_eq!(
-            context.transition_exemptions.len(),
-            context.num_transition_constraints
-        );
-
-        Self {
-            context,
-            public_inputs,
-            trace_length,
-            has_rc_builtin,
-        }
-    }
-
     fn get_builtin_offset(&self) -> usize {
         if self.has_rc_builtin {
             0
@@ -648,13 +579,92 @@ fn generate_range_check_permutation_argument_column(
 impl AIR for CairoAIR {
     type Field = Stark252PrimeField;
     type RAPChallenges = CairoRAPChallenges;
-    type PublicInput = PublicInputs;
+    type PublicInputs = PublicInputs;
+
+    /// Creates a new CairoAIR from proof_options
+    ///
+    /// # Arguments
+    ///
+    /// * `trace_length` - Length of the Cairo execution trace. Must be a power fo two.
+    /// * `pub_inputs` - Public inputs sent by the Cairo runner.
+    /// * `proof_options` - STARK proving configuration options.
+    #[rustfmt::skip]
+    fn new(
+        trace_length: usize,
+        pub_inputs: &Self::PublicInputs,
+        proof_options: &ProofOptions
+    ) -> Self {
+        debug_assert!(trace_length.is_power_of_two());
+
+        let mut trace_columns = 34 + 3 + 12 + 3;
+        let mut transition_degrees = vec![
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
+            1, // Flag 15
+            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
+            2, 2, 2, 2, // Increasing memory auxiliary constraints.
+            2, 2, 2, 2, // Consistent memory auxiliary constraints.
+            2, 2, 2, 2, // Permutation auxiliary constraints.
+            2, 2, 2, // range-check increasing constraints.
+            2, 2, 2, // range-check permutation argument constraints.
+        ];
+        let mut transition_exemptions = vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
+            0, // inst (1)
+            0, 0, 0, // operand consraints (3)
+            1, 1, 1, 1, 0, 0, // register constraints (6)
+            0, 0, 0, 0, 0, // opcode constraints (5)
+            0, 0, 0, 1, // memory continuous (4)
+            0, 0, 0, 1, // memory value consistency (4)
+            0, 0, 0, 1, // memory permutation argument (4)
+            0, 0, 1, // range check continuous (3)
+            0, 0, 0, // range check permutation argument (3)
+        ];
+        let mut num_transition_constraints = 49;
+
+        // This is a hacky solution for the moment and must be changed once we start implementing 
+        // layouts functionality. The `has_rc_builtin` boolean should not exist, we will know the
+        // layout from the Cairo public inputs directly, and the number of constraints and columns
+        // will be enforced through that.
+        let has_rc_builtin = !pub_inputs.memory_segments.is_empty();
+        if has_rc_builtin {
+            trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
+            transition_degrees.push(1); // Range check builtin constraint
+            transition_exemptions.push(0); // range-check builtin exemption
+            num_transition_constraints += 1; // range-check builtin value decomposition constraint
+        }
+
+        let context = AirContext {
+            proof_options: proof_options.clone(),
+            trace_columns,
+            transition_degrees,
+            transition_exemptions,
+            transition_offsets: vec![0, 1],
+            num_transition_constraints,
+        };
+
+        // The number of the transition constraints and the lengths of transition degrees
+        // and transition exemptions should be the same always.
+        debug_assert_eq!(
+            context.transition_degrees.len(),
+            context.num_transition_constraints
+        );
+        debug_assert_eq!(
+            context.transition_exemptions.len(),
+            context.num_transition_constraints
+        );
+
+        Self {
+            context,
+            pub_inputs: pub_inputs.clone(),
+            trace_length,
+            has_rc_builtin,
+        }
+    }
 
     fn build_auxiliary_trace(
         &self,
         main_trace: &TraceTable<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInput,
     ) -> TraceTable<Self::Field> {
         let addresses_original = main_trace
             .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
@@ -666,7 +676,7 @@ impl AIR for CairoAIR {
         let (addresses, values) = add_pub_memory_in_public_input_section(
             &addresses_original,
             &values_original,
-            public_input,
+            &self.pub_inputs,
         );
         let (addresses, values) = sort_columns_by_memory_address(addresses, values);
 
@@ -771,22 +781,21 @@ impl AIR for CairoAIR {
     fn boundary_constraints(
         &self,
         rap_challenges: &Self::RAPChallenges,
-        public_input: &Self::PublicInput,
     ) -> BoundaryConstraints<Self::Field> {
         let initial_pc =
-            BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, public_input.pc_init.clone());
+            BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, self.pub_inputs.pc_init.clone());
         let initial_ap =
-            BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, public_input.ap_init.clone());
+            BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, self.pub_inputs.ap_init.clone());
 
         let final_pc = BoundaryConstraint::new(
             MEM_A_TRACE_OFFSET,
-            self.public_inputs.num_steps - 1,
-            public_input.pc_final.clone(),
+            self.pub_inputs.num_steps - 1,
+            self.pub_inputs.pc_final.clone(),
         );
         let final_ap = BoundaryConstraint::new(
             MEM_P_TRACE_OFFSET,
-            self.public_inputs.num_steps - 1,
-            public_input.ap_final.clone(),
+            self.pub_inputs.num_steps - 1,
+            self.pub_inputs.ap_final.clone(),
         );
 
         // Auxiliary constraint: permutation argument final value
@@ -795,13 +804,13 @@ impl AIR for CairoAIR {
         let builtin_offset = self.get_builtin_offset();
 
         let mut cumulative_product = FieldElement::one();
-        for (address, value) in &public_input.public_memory {
+        for (address, value) in self.pub_inputs.public_memory.iter() {
             cumulative_product = cumulative_product
                 * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value));
         }
         let permutation_final = rap_challenges
             .z_memory
-            .pow(public_input.public_memory.len())
+            .pow(self.pub_inputs.public_memory.len())
             / cumulative_product;
         let permutation_final_constraint = BoundaryConstraint::new(
             PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
@@ -819,12 +828,12 @@ impl AIR for CairoAIR {
         let range_check_min = BoundaryConstraint::new(
             RANGE_CHECK_COL_1 - builtin_offset,
             0,
-            FieldElement::from(public_input.range_check_min.unwrap() as u64),
+            FieldElement::from(self.pub_inputs.range_check_min.unwrap() as u64),
         );
         let range_check_max = BoundaryConstraint::new(
             RANGE_CHECK_COL_3 - builtin_offset,
             final_index,
-            FieldElement::from(public_input.range_check_max.unwrap() as u64),
+            FieldElement::from(self.pub_inputs.range_check_max.unwrap() as u64),
         );
 
         let constraints = vec![
@@ -851,6 +860,10 @@ impl AIR for CairoAIR {
 
     fn trace_length(&self) -> usize {
         self.trace_length
+    }
+
+    fn pub_inputs(&self) -> &Self::PublicInputs {
+        &self.pub_inputs
     }
 }
 
@@ -1148,6 +1161,28 @@ fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
         - &curr[RC_VALUE]
 }
 
+/// Wrapper function for generating Cairo proofs without the need to specify
+/// concrete types.
+/// The field is set to Stark252PrimeField and the AIR to CairoAIR.
+pub fn generate_cairo_proof(
+    trace: &TraceTable<Stark252PrimeField>,
+    pub_input: &PublicInputs,
+    proof_options: &ProofOptions,
+) -> Result<StarkProof<Stark252PrimeField>, ProvingError> {
+    prove::<Stark252PrimeField, CairoAIR>(trace, pub_input, proof_options)
+}
+
+/// Wrapper function for verifying Cairo proofs without the need to specify
+/// concrete types.
+/// The field is set to Stark252PrimeField and the AIR to CairoAIR.
+pub fn verify_cairo_proof(
+    proof: &StarkProof<Stark252PrimeField>,
+    pub_input: &PublicInputs,
+    proof_options: &ProofOptions,
+) -> bool {
+    verify::<Stark252PrimeField, CairoAIR>(proof, pub_input, proof_options)
+}
+
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
@@ -1185,14 +1220,16 @@ mod test {
     #[test]
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
-        let (main_trace, cairo_air, public_input) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None, 1).unwrap();
+        let (main_trace, public_input) =
+            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
+
+        let proof_options = ProofOptions::default_test_options();
+        let cairo_air = CairoAIR::new(main_trace.n_rows(), &public_input, &proof_options);
         let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
 
-        let aux_trace =
-            cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges, &public_input);
+        let aux_trace = cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges);
         let aux_polys = aux_trace.compute_trace_polys();
 
         trace_polys.extend_from_slice(&aux_polys);
@@ -1203,7 +1240,6 @@ mod test {
             &cairo_air,
             &trace_polys,
             &domain,
-            &public_input,
             &rap_challenges
         ));
     }
