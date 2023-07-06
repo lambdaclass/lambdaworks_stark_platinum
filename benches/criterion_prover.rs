@@ -18,13 +18,13 @@ fn cairo_benches(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(30));
     run_cairo_bench(
         &mut group,
-        "fibonacci/10",
-        &cairo0_program_path("fibonacci_10.json"),
+        "fibonacci/1000",
+        &cairo0_program_path("fibonacci_1000.json"),
     );
     run_cairo_bench(
         &mut group,
-        "fibonacci/100",
-        &cairo0_program_path("fibonacci_100.json"),
+        "fibonacci/10000",
+        &cairo0_program_path("fibonacci_10000.json"),
     );
 }
 
@@ -36,16 +36,16 @@ fn cairo0_program_path(program_name: &str) -> String {
 }
 
 fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
-    let program_content = std::fs::read(program_path).unwrap();
-    let proof_options = ProofOptions::default_test_options();
-    let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+    // let program_content = std::fs::read(program_path).unwrap();
+    // let proof_options = ProofOptions::default_test_options();
+    // let (main_trace, pub_inputs) =
+    //     generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
-    group.bench_function(benchname, |bench| {
-        bench.iter(|| {
-            black_box(generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap())
-        });
-    });
+    // group.bench_function(benchname, |bench| {
+    //     bench.iter(|| {
+    //         black_box(generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap())
+    //     });
+    // });
 }
 
 criterion_group!(benches, cairo_benches);

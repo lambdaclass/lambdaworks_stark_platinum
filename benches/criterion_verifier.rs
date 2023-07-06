@@ -31,13 +31,13 @@ fn verifier_benches(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(30));
     run_verifier_bench(
         &mut group,
-        "fibonacci/10",
-        &cairo0_proof_path("fibonacci_10.proof"),
+        "fibonacci/1000",
+        &cairo0_proof_path("fibonacci_1000.proof"),
     );
     run_verifier_bench(
         &mut group,
-        "fibonacci/100",
-        &cairo0_proof_path("fibonacci_100.proof"),
+        "fibonacci/10000",
+        &cairo0_proof_path("fibonacci_10000.proof"),
     );
 }
 
