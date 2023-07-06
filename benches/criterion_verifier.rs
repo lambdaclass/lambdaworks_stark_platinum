@@ -5,11 +5,8 @@ use lambdaworks_math::{
     field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::Deserializable,
 };
 use lambdaworks_stark::{
-    cairo::air::{CairoAIR, PublicInputs},
-    starks::{
-        proof::{options::ProofOptions, stark::StarkProof},
-        verifier::verify,
-    },
+    cairo::air::{verify_cairo_proof, PublicInputs},
+    starks::proof::{options::ProofOptions, stark::StarkProof},
 };
 use std::time::Duration;
 
@@ -57,17 +54,9 @@ fn run_verifier_bench(
     program_path: &str,
 ) {
     let (proof, pub_inputs) = load_proof_and_pub_inputs(program_path);
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
-
-    let cairo_air = CairoAIR::new(proof_options, proof.trace_length, pub_inputs.clone(), false);
-
+    let proof_options = ProofOptions::default_test_options();
     group.bench_function(benchname, |bench| {
-        bench.iter(|| black_box(verify(&proof, &cairo_air, &pub_inputs)));
+        bench.iter(|| black_box(verify_cairo_proof(&proof, &pub_inputs, &proof_options)));
     });
 }
 
