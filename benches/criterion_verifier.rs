@@ -26,6 +26,12 @@ fn load_proof_and_pub_inputs(input_path: &str) -> (StarkProof<Stark252PrimeField
 }
 
 fn verifier_benches(c: &mut Criterion) {
+    #[cfg(feature = "parallel")]
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(8)
+        .build_global()
+        .unwrap();
+
     let mut group = c.benchmark_group("VERIFIER");
     group.sample_size(10);
     group.measurement_time(Duration::from_secs(30));
