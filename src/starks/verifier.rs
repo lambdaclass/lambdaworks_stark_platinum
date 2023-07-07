@@ -522,20 +522,20 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     divisors: &[FieldElement<F>],
     i: usize,
 ) -> FieldElement<F> {
-    let mut trace_terms = FieldElement::zero();
-
-    for (col_idx, coeff_row) in
-        (0..proof.trace_ood_frame_evaluations.num_columns()).zip(&challenges.trace_term_coeffs)
-    {
-        for (row_idx, coeff) in (0..proof.trace_ood_frame_evaluations.num_rows()).zip(coeff_row) {
-            let poly_evaluation = (proof.deep_poly_openings[i].lde_trace_evaluations[col_idx]
-                .clone()
-                - proof.trace_ood_frame_evaluations.get_row(row_idx)[col_idx].clone())
-                * &divisors[row_idx];
-
-            trace_terms += &poly_evaluation * coeff;
-        }
-    }
+    let trace_term = (0..proof.trace_ood_frame_evaluations.num_columns())
+        .zip(&challenges.trace_term_coeffs)
+        .fold(FieldElement::zero(), |trace_terms, (col_idx, coeff_row)| {
+            let trace_i = (0..proof.trace_ood_frame_evaluations.num_rows())
+                .zip(coeff_row)
+                .fold(FieldElement::zero(), |trace_t, (row_idx, coeff)| {
+                    let poly_evaluation =
+                        (proof.deep_poly_openings[i].lde_trace_evaluations[col_idx].clone()
+                            - proof.trace_ood_frame_evaluations.get_row(row_idx)[col_idx].clone())
+                            * &divisors[row_idx];
+                    trace_t + &poly_evaluation * coeff
+                });
+            trace_terms + trace_i
+        });
 
     let h_1_upsilon_0 = &proof.deep_poly_openings[i].lde_composition_poly_even_evaluation;
     let h_1_zsquared = &proof.composition_poly_even_ood_evaluation;
@@ -545,7 +545,7 @@ fn reconstruct_deep_composition_poly_evaluation<F: IsFFTField, A: AIR<Field = F>
     let h_1_term = (h_1_upsilon_0 - h_1_zsquared) * denom_inv;
     let h_2_term = (h_2_upsilon_0 - h_2_zsquared) * denom_inv;
 
-    trace_terms + h_1_term * &challenges.gamma_even + h_2_term * &challenges.gamma_odd
+    trace_term + h_1_term * &challenges.gamma_even + h_2_term * &challenges.gamma_odd
 }
 
 pub fn verify<F, A>(
