@@ -539,9 +539,9 @@ fn generate_memory_permutation_argument_column(
         .zip(&values_original)
         .zip(&denom)
         .scan(FE::one(), |product, ((a_i, v_i), den_i)| {
-            let ret = product.clone();
+            let ret = *product;
             *product = &ret * ((z - (a_i + alpha * v_i)) * den_i);
-            Some(product.clone())
+            Some(*product)
         })
         .collect::<Vec<FE>>()
 }
@@ -559,9 +559,9 @@ fn generate_range_check_permutation_argument_column(
         .iter()
         .zip(&denom)
         .scan(FE::one(), |product, (num_i, den_i)| {
-            let ret = product.clone();
+            let ret = *product;
             *product = &ret * (z - num_i) * den_i;
-            Some(product.clone())
+            Some(*product)
         })
         .collect::<Vec<FE>>()
 }
