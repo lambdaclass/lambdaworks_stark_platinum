@@ -193,7 +193,7 @@ impl PublicInputs {
         memory_segments: &MemorySegmentMap,
     ) -> Self {
         let output_range = memory_segments.get(&MemorySegment::Output);
-       
+
         let mut public_memory = (1..=program_size as u64)
             .map(|i| (FE::from(i), *memory.get(&i).unwrap()))
             .collect::<HashMap<FE, FE>>();

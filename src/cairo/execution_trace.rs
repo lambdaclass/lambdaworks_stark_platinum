@@ -115,8 +115,8 @@ fn pad_with_last_row_and_zeros<F: IsFFTField>(
     zero_pad_columns: &[usize],
 ) {
     let mut last_row = trace.last_row().to_vec();
-    for excemption_column in zero_pad_columns.iter() {
-        last_row[*excemption_column] = FieldElement::zero();
+    for exemption_column in zero_pad_columns.iter() {
+        last_row[*exemption_column] = FieldElement::zero();
     }
     let mut pad: Vec<_> = std::iter::repeat(&last_row)
         .take(number_rows)
