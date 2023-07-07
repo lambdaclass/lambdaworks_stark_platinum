@@ -342,7 +342,6 @@ fn step_4_verify_deep_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
 where
     FieldElement<F>: ByteConversion,
 {
-    let mut result = true;
     let primitive_root = &F::get_primitive_root_of_unity(domain.root_order as u64).unwrap();
     let z_squared = &(&challenges.z * &challenges.z);
     let mut denom_inv = challenges
@@ -399,19 +398,19 @@ where
             // DEEP consistency check
             // Verify that Deep(x) is constructed correctly
             let mut divisors = (0..proof.trace_ood_frame_evaluations.num_rows())
-            .map(|row_idx| {
-                &domain.lde_roots_of_unity_coset[*iota_n]
-                    - &challenges.z * primitive_root.pow(row_idx as u64)
-            })
-            .collect::<Vec<FieldElement<F>>>();
-        FieldElement::inplace_batch_inverse(&mut divisors);
+                .map(|row_idx| {
+                    &domain.lde_roots_of_unity_coset[*iota_n]
+                        - &challenges.z * primitive_root.pow(row_idx as u64)
+                })
+                .collect::<Vec<FieldElement<F>>>();
+            FieldElement::inplace_batch_inverse(&mut divisors);
             let deep_poly_evaluation = reconstruct_deep_composition_poly_evaluation(
-            proof,
-            challenges,
-            &denom_inv[i],
-            &divisors,
-            i,
-        );
+                proof,
+                challenges,
+                &denom_inv[i],
+                &divisors,
+                i,
+            );
 
             let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
             result & (deep_poly_claimed_evaluation == &deep_poly_evaluation)
