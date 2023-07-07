@@ -312,9 +312,11 @@ where
     A: AIR<Field = F>,
 {
     // verify FRI
-    proof.query_list.iter().zip(challenges.iotas.iter()).fold(
-        true,
-        |mut result, (proof_s, iota_s)| {
+    proof
+        .query_list
+        .iter()
+        .zip(&challenges.iotas)
+        .fold(true, |mut result, (proof_s, iota_s)| {
             // this is done in constant time
             result &= verify_query_and_sym_openings(
                 &proof.fri_layers_merkle_roots,
@@ -324,8 +326,7 @@ where
                 domain,
             );
             result
-        },
-    )
+        })
 }
 
 fn step_4_verify_deep_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
