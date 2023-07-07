@@ -216,7 +216,7 @@ We summarize below the steps required in a STARK proof for both prover and verif
 
 ### Prover side
 
-- Compute the trace polynomial `t` by interpolating the trace column over a set of $2^n$-th roots of unity \\(\{g^i : 0 \leq i < 2^n\}\\).
+- Compute the trace polynomial `t` by interpolating the trace column over a set of \\(2^n\\)-th roots of unity \\(\{g^i : 0 \leq i < 2^n\}\\).
 - Compute the boundary polynomial `B`.
 - Compute the transition constraint polynomial `C`.
 - Construct the composition polynomial `H` from `B` and `C`.
@@ -233,7 +233,7 @@ We summarize below the steps required in a STARK proof for both prover and verif
     $$
     H(z) = B(z) (\alpha_1 z^{D - deg(B)} + \beta_1) + C(z) (\alpha_2 z^{D - deg(C)} + \beta_2)
     $$
-- Check that the claimed evaluation $Deep(x_0)$ the prover gave us actually satisfies
+- Check that the claimed evaluation \\(Deep(x_0)\\) the prover gave us actually satisfies
     $$
     Deep(x_0) = \gamma_1 \dfrac{H(x_0) - H(z)}{x_0 - z} + \gamma_2 \dfrac{t(x_0) - t(z)}{x_0 - z} + \gamma_3 \dfrac{t(x_0) - t(zg)}{x_0 - zg} + \gamma_4 \dfrac{t(x_0) - t(zg^2)}{x_0 - zg^2}
     $$
@@ -260,7 +260,7 @@ $$
 
 which means "The first column on the next row has to be equal to the second column in the current row".
 
-Again, even though this seems way more complex, the ideas remain the same. The composition polynomial `H` will now include a term for every \\(C_i(x)\\), and for each one the prover will have to provide out of domain evaluations of the trace polynomials at the appropriate values. In our example above, to perform the consistency check on $C_1(x)$ the prover will have to provide the evaluations \\(t_1(zg)\\) and \\(t_2(z)\\).
+Again, even though this seems way more complex, the ideas remain the same. The composition polynomial `H` will now include a term for every \\(C_i(x)\\), and for each one the prover will have to provide out of domain evaluations of the trace polynomials at the appropriate values. In our example above, to perform the consistency check on \\(C_1(x)\\) the prover will have to provide the evaluations \\(t_1(zg)\\) and \\(t_2(z)\\).
 
 ### Composition polynomial decomposition
 
@@ -285,7 +285,7 @@ The domain we are going to choose to evaluate our `DEEP` polynomial on will be a
 
 Additionally, we also take it so that \\(\omega\\) satisfies \\(\omega^2 = g\\) (\\(g\\) being the \\(8\\)-th primitive root of unity we used to construct `t`).
 
-The evaluation of $t$ on the set \\(\{\omega^i : 0 \leq i \leq 15\}\\) is called a *low degree extension* (`LDE`) of \\(t\\). Notice this is not a new polynomial, they're evaluations of \\(t\\) on some set of points. Also note that, because \\(\omega^2 = g\\), the `LDE` contains all the evaluations of \\(t\\) on the set of powers of \\(g\\). In fact,
+The evaluation of \\(t\\) on the set \\(\{\omega^i : 0 \leq i \leq 15\}\\) is called a *low degree extension* (`LDE`) of \\(t\\). Notice this is not a new polynomial, they're evaluations of \\(t\\) on some set of points. Also note that, because \\(\omega^2 = g\\), the `LDE` contains all the evaluations of \\(t\\) on the set of powers of \\(g\\). In fact,
 
 $$
     \{t(\omega^{2i}) : 0 \leq i \leq 15\} = \{t(g^i) : 0 \leq i \leq 7\}
