@@ -452,28 +452,36 @@ where
     // ∑ ⱼₖ [ 𝛾ₖ ( tⱼ − tⱼ(z) ) / ( X − zgᵏ )]
 
     // @@@ this could be const
-    let mut trace_terms = Polynomial::zero();
-    for (i, t_j) in trace_polys.iter().enumerate() {
-        let i_times_trace_frame_evaluation = i * trace_frame_evaluations.len();
-        let iter_trace_gammas = trace_terms_gammas
+    let trace_term =
+        trace_polys
             .iter()
-            .skip(i_times_trace_frame_evaluation);
-        for ((evaluations, offset), elemen_trace_gamma) in trace_frame_evaluations
-            .iter()
-            .zip(transition_offsets)
-            .zip(iter_trace_gammas)
-        {
-            // @@@ we can avoid this clone
-            let t_j_z = evaluations[i].clone();
-            // @@@ this can be pre-computed
-            let z_shifted = z * primitive_root.pow(*offset);
-            let mut poly = t_j - t_j_z;
-            poly.ruffini_division_inplace(&z_shifted);
-            trace_terms = trace_terms + poly * elemen_trace_gamma;
-        }
-    }
+            .enumerate()
+            .fold(Polynomial::zero(), |trace_terms, (i, t_j)| {
+                let i_times_trace_frame_evaluation = i * trace_frame_evaluations.len();
+                let iter_trace_gammas = trace_terms_gammas
+                    .iter()
+                    .skip(i_times_trace_frame_evaluation);
+                let trace_int = trace_frame_evaluations
+                    .iter()
+                    .zip(transition_offsets)
+                    .zip(iter_trace_gammas)
+                    .fold(
+                        Polynomial::zero(),
+                        |trace_agg, ((eval, offset), trace_gamma)| {
+                            // @@@ we can avoid this clone
+                            let t_j_z = eval[i].clone();
+                            // @@@ this can be pre-computed
+                            let z_shifted = z * primitive_root.pow(*offset);
+                            let mut poly = t_j - t_j_z;
+                            poly.ruffini_division_inplace(&z_shifted);
+                            trace_agg + poly * trace_gamma
+                        },
+                    );
 
-    h_1_term + h_2_term + trace_terms
+                trace_terms + trace_int
+            });
+
+    h_1_term + h_2_term + trace_term
 }
 
 fn open_deep_composition_poly<F: IsFFTField, A: AIR<Field = F>>(
@@ -485,41 +493,42 @@ fn open_deep_composition_poly<F: IsFFTField, A: AIR<Field = F>>(
 where
     FieldElement<F>: ByteConversion,
 {
-    let mut ret = Vec::new();
-    for index_to_open in indexes_to_open {
-        let index = index_to_open % domain.lde_roots_of_unity_coset.len();
+    indexes_to_open
+        .iter()
+        .map(|index_to_open| {
+            let index = index_to_open % domain.lde_roots_of_unity_coset.len();
 
-        let lde_composition_poly_proof = round_2_result
-            .composition_poly_merkle_tree
-            .get_proof_by_pos(index)
-            .unwrap();
+            let lde_composition_poly_proof = round_2_result
+                .composition_poly_merkle_tree
+                .get_proof_by_pos(index)
+                .unwrap();
 
-        // H₁ openings
-        let lde_composition_poly_even_evaluation =
-            round_2_result.lde_composition_poly_even_evaluations[index].clone();
+            // H₁ openings
+            let lde_composition_poly_even_evaluation =
+                round_2_result.lde_composition_poly_even_evaluations[index].clone();
 
-        // H₂ openings
-        let lde_composition_poly_odd_evaluation =
-            round_2_result.lde_composition_poly_odd_evaluations[index].clone();
+            // H₂ openings
+            let lde_composition_poly_odd_evaluation =
+                round_2_result.lde_composition_poly_odd_evaluations[index].clone();
 
-        // Trace polynomials openings
-        let lde_trace_merkle_proofs = round_1_result
-            .lde_trace_merkle_trees
-            .iter()
-            .map(|tree| tree.get_proof_by_pos(index).unwrap())
-            .collect();
+            // Trace polynomials openings
+            let lde_trace_merkle_proofs = round_1_result
+                .lde_trace_merkle_trees
+                .iter()
+                .map(|tree| tree.get_proof_by_pos(index).unwrap())
+                .collect();
 
-        let lde_trace_evaluations = round_1_result.lde_trace.get_row(index).to_vec();
+            let lde_trace_evaluations = round_1_result.lde_trace.get_row(index).to_vec();
 
-        ret.push(DeepPolynomialOpenings {
-            lde_composition_poly_proof,
-            lde_composition_poly_even_evaluation,
-            lde_composition_poly_odd_evaluation,
-            lde_trace_merkle_proofs,
-            lde_trace_evaluations,
-        });
-    }
-    ret
+            DeepPolynomialOpenings {
+                lde_composition_poly_proof,
+                lde_composition_poly_even_evaluation,
+                lde_composition_poly_odd_evaluation,
+                lde_trace_merkle_proofs,
+                lde_trace_evaluations,
+            }
+        })
+        .collect()
 }
 
 // FIXME remove unwrap() calls and return errors

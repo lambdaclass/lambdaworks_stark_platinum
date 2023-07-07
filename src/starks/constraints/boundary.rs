@@ -76,17 +76,14 @@ impl<F: IsField> BoundaryConstraints<F> {
         primitive_root: &FieldElement<F>,
         count_cols_trace: usize,
     ) -> Vec<Vec<FieldElement<F>>> {
-        let mut ret = Vec::new();
-
-        for i in 0..count_cols_trace {
-            ret.push(
+        (0..count_cols_trace)
+            .map(|i| {
                 self.steps(i)
                     .into_iter()
                     .map(|s| primitive_root.pow(s))
-                    .collect(),
-            );
-        }
-        ret
+                    .collect::<Vec<FieldElement<F>>>()
+            })
+            .collect::<Vec<Vec<FieldElement<F>>>>()
     }
 
     /// For every trace column, give all the values the trace must be equal to in
@@ -114,14 +111,15 @@ impl<F: IsField> BoundaryConstraints<F> {
         primitive_root: &FieldElement<F>,
         col: usize,
     ) -> Polynomial<FieldElement<F>> {
-        let mut zerofier = Polynomial::new_monomial(FieldElement::<F>::one(), 0);
-        for step in self.steps(col).into_iter() {
-            let binomial = Polynomial::new(&[-primitive_root.pow(step), FieldElement::<F>::one()]);
-            // TODO: Implement the MulAssign trait for Polynomials?
-            zerofier = zerofier * binomial;
-        }
-
-        zerofier
+        self.steps(col).into_iter().fold(
+            Polynomial::new_monomial(FieldElement::<F>::one(), 0),
+            |zerofier, step| {
+                let binomial =
+                    Polynomial::new(&[-primitive_root.pow(step), FieldElement::<F>::one()]);
+                // TODO: Implement the MulAssign trait for Polynomials?
+                zerofier * binomial
+            },
+        )
     }
 }
 
