@@ -226,8 +226,8 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
 
                 let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
 
-            #[cfg(all(debug_assertions, not(feature = "parallel")))]
-            transition_evaluations.push(evaluations_transition.clone());
+                #[cfg(all(debug_assertions, not(feature = "parallel")))]
+                transition_evaluations.push(evaluations_transition.clone());
 
                 // TODO: Remove clones
                 let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
