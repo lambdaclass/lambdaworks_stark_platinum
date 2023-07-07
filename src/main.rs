@@ -1,12 +1,15 @@
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use lambdaworks_math::traits::{Deserializable, Serializable};
+#[cfg(feature = "cairo")]
 use lambdaworks_stark::cairo::air::{generate_cairo_proof, verify_cairo_proof, PublicInputs};
+#[cfg(feature = "cairo")]
 use lambdaworks_stark::cairo::runner::run::{generate_prover_args, CairoVersion};
 use lambdaworks_stark::starks::proof::options::ProofOptions;
 use lambdaworks_stark::starks::proof::stark::StarkProof;
 use std::env;
 use std::time::Instant;
 
+#[cfg(feature = "cairo")]
 fn generate_proof(
     input_path: &String,
     proof_options: &ProofOptions,
@@ -49,6 +52,7 @@ fn generate_proof(
     Some((proof, pub_inputs))
 }
 
+#[cfg(feature = "cairo")]
 fn verify_proof(
     proof: StarkProof<Stark252PrimeField>,
     pub_inputs: PublicInputs,
@@ -69,6 +73,12 @@ fn verify_proof(
     proof_verified
 }
 
+#[cfg(not(feature = "cairo"))]
+fn main() {
+}
+
+
+#[cfg(feature = "cairo")]
 fn main() {
     let proof_options = ProofOptions::default_test_options();
 

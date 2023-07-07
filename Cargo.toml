@@ -7,18 +7,19 @@ rust-version = "1.66"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rand = "0.8.5"
 lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "a17b951" }
 lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "a17b951" }
 thiserror = "1.0.38"
 log = "0.4.17"
-bincode = { version = "2.0.0-rc.2", tag = "v2.0.0-rc.2", git = "https://github.com/bincode-org/bincode.git" }
-cairo-vm = { version = "0.6.0", features = ["cairo-1-hints"] }
 sha3 = "0.10.6"
-cairo-lang-starknet = "1.1.0"
-serde_json = "1.0"
-num-integer = "0.1.45"
 itertools = "0.11.0"
+# Required by Cairo
+bincode = { version = "2.0.0-rc.2", tag = "v2.0.0-rc.2", git = "https://github.com/bincode-org/bincode.git", optional = true }
+cairo-vm = { version = "0.6.0", features = ["cairo-1-hints"], optional = true  }
+cairo-lang-starknet = {version = "1.1.0", optional = true}
+serde_json = { version = "1.0", optional = true}
+num-integer = { version = "0.1.45", optional = true}
+# Parallelization crates
 rayon = { version = "1.7.0", optional = true }
 
 [dev-dependencies]
@@ -29,9 +30,12 @@ env_logger = "*"
 test-log = { version = "0.2.11", features = ["log"] }
 assert_matches = "1.5.0"
 rstest = "0.17.0"
+rand = "0.8.5"
 
 [features]
+default = ["cairo"]
 test_fiat_shamir = []
+cairo = ["bincode", "cairo-vm", "cairo-lang-starknet", "serde_json", "num-integer"]
 instruments = []                   # This enables timing prints in prover and verifier
 metal = ["lambdaworks-math/metal"]
 parallel = ["dep:rayon"]
