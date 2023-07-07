@@ -533,7 +533,7 @@ fn generate_memory_permutation_argument_column(
         .map(|(ap, vp)| z - (ap + alpha * vp))
         .collect();
     FieldElement::inplace_batch_inverse(&mut denom);
-
+    // Returns the cumulative products of the numerators and denominators
     addresses_original
         .iter()
         .zip(&values_original)
