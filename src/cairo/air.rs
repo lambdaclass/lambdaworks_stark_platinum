@@ -793,15 +793,19 @@ impl AIR for CairoAIR {
 
         let builtin_offset = self.get_builtin_offset();
 
-        let mut cumulative_product = FieldElement::one();
-        for (address, value) in self.pub_inputs.public_memory.iter() {
-            cumulative_product = cumulative_product
-                * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value));
-        }
+        let cumulative_product = self
+            .pub_inputs
+            .public_memory
+            .iter()
+            .fold(FieldElement::one(), |product, (address, value)| {
+                product
+                    * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value))
+            })
+            .inv();
         let permutation_final = rap_challenges
             .z_memory
             .pow(self.pub_inputs.public_memory.len())
-            / cumulative_product;
+            * cumulative_product;
         let permutation_final_constraint = BoundaryConstraint::new(
             PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
             final_index,
