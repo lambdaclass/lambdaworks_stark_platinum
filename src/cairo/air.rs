@@ -534,21 +534,16 @@ fn generate_memory_permutation_argument_column(
         .collect();
     FieldElement::inplace_batch_inverse(&mut denom);
 
-    let num: Vec<_> = addresses_original
+    addresses_original
         .iter()
         .zip(&values_original)
         .zip(&denom)
-        .map(|((a_i, v_i), den_i)| (z - (a_i + alpha * v_i)) * den_i)
-        .collect();
-
-    let mut ret = Vec::with_capacity(num.len());
-    ret.push(num[0].clone());
-
-    for i in 1..num.len() {
-        ret.push(&ret[i - 1] * &num[i]);
-    }
-
-    ret
+        .scan(FE::one(), |product, ((a_i, v_i), den_i)| {
+            let ret = product.clone();
+            *product = &ret * ((z - (a_i + alpha * v_i)) * den_i);
+            Some(product.clone())
+        })
+        .collect::<Vec<FE>>()
 }
 fn generate_range_check_permutation_argument_column(
     offset_column_original: &[FE],
@@ -560,20 +555,15 @@ fn generate_range_check_permutation_argument_column(
     let mut denom: Vec<_> = offset_column_sorted.iter().map(|x| z - x).collect();
     FieldElement::inplace_batch_inverse(&mut denom);
 
-    let num: Vec<_> = offset_column_original
+    offset_column_original
         .iter()
         .zip(&denom)
-        .map(|(num_i, den_i)| (z - num_i) * den_i)
-        .collect();
-
-    let mut ret = Vec::with_capacity(num.len());
-    ret.push(num[0].clone());
-
-    for i in 1..num.len() {
-        ret.push(&ret[i - 1] * &num[i]);
-    }
-
-    ret
+        .scan(FE::one(), |product, (num_i, den_i)| {
+            let ret = product.clone();
+            *product = &ret * (z - num_i) * den_i;
+            Some(product.clone())
+        })
+        .collect::<Vec<FE>>()
 }
 
 impl AIR for CairoAIR {
