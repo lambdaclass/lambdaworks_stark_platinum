@@ -529,15 +529,15 @@ fn generate_memory_permutation_argument_column(
 
     let mut denom: Vec<_> = addresses_sorted
         .iter()
-        .zip(values_sorted.iter())
+        .zip(values_sorted)
         .map(|(ap, vp)| z - (ap + alpha * vp))
         .collect();
     FieldElement::inplace_batch_inverse(&mut denom);
 
     let num: Vec<_> = addresses_original
         .iter()
-        .zip(values_original.iter())
-        .zip(denom.iter())
+        .zip(&values_original)
+        .zip(&denom)
         .map(|((a_i, v_i), den_i)| (z - (a_i + alpha * v_i)) * den_i)
         .collect();
 
@@ -562,7 +562,7 @@ fn generate_range_check_permutation_argument_column(
 
     let num: Vec<_> = offset_column_original
         .iter()
-        .zip(denom.iter())
+        .zip(&denom)
         .map(|(num_i, den_i)| (z - num_i) * den_i)
         .collect();
 
