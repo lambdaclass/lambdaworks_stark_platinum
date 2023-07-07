@@ -2,7 +2,7 @@ use super::proof::options::ProofOptions;
 
 #[derive(Clone, Debug)]
 pub struct AirContext {
-    pub options: ProofOptions,
+    pub proof_options: ProofOptions,
     pub trace_columns: usize,
     pub transition_degrees: Vec<usize>,
 

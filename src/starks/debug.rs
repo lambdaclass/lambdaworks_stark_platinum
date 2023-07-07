@@ -15,7 +15,6 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
     air: &A,
     trace_polys: &[Polynomial<FieldElement<A::Field>>],
     domain: &Domain<A::Field>,
-    public_input: &A::PublicInput,
     rap_challenges: &A::RAPChallenges,
 ) -> bool {
     info!("Starting constraints validation over trace...");
@@ -31,7 +30,7 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
     let trace = TraceTable::new_from_cols(&trace_columns);
 
     // --------- VALIDATE BOUNDARY CONSTRAINTS ------------
-    air.boundary_constraints(rap_challenges, public_input)
+    air.boundary_constraints(rap_challenges)
         .constraints
         .iter()
         .for_each(|constraint| {

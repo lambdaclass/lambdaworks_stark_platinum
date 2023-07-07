@@ -36,6 +36,9 @@ test_metal: $(COMPILED_CAIRO0_PROGRAMS)
 coverage: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo llvm-cov nextest --lcov --output-path lcov.info
 
+coverage_parallel: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo llvm-cov nextest --lcov --output-path lcov.info -F parallel
+
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
 

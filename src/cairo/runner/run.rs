@@ -1,10 +1,9 @@
 use super::vec_writer::VecWriter;
-use crate::cairo::air::{CairoAIR, MemorySegment, MemorySegmentMap, PublicInputs};
+use crate::cairo::air::{MemorySegment, MemorySegmentMap, PublicInputs};
 use crate::cairo::cairo_layout::CairoLayout;
 use crate::cairo::cairo_mem::CairoMemory;
 use crate::cairo::execution_trace::build_main_trace;
 use crate::cairo::register_states::RegisterStates;
-use crate::starks::proof::options::ProofOptions;
 use crate::starks::trace::TraceTable;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
@@ -244,8 +243,7 @@ pub fn generate_prover_args(
     program_content: &[u8],
     cairo_version: &CairoVersion,
     output_range: &Option<Range<u64>>,
-    grinding_factor: u8,
-) -> Result<(TraceTable<Stark252PrimeField>, CairoAIR, PublicInputs), Error> {
+) -> Result<(TraceTable<Stark252PrimeField>, PublicInputs), Error> {
     let cairo_layout = match cairo_version {
         CairoVersion::V0 => CairoLayout::Small,
         CairoVersion::V1 => CairoLayout::Plain,
@@ -254,13 +252,6 @@ pub fn generate_prover_args(
     let (register_states, memory, program_size, range_check_builtin_range) =
         run_program(None, cairo_layout, program_content, cairo_version)?;
 
-    let proof_options = ProofOptions {
-        blowup_factor: 4,
-        fri_number_of_queries: 3,
-        coset_offset: 3,
-        grinding_factor,
-    };
-
     let memory_segments = create_memory_segment_map(range_check_builtin_range, output_range);
 
     let mut pub_inputs =
@@ -268,15 +259,7 @@ pub fn generate_prover_args(
 
     let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
 
-    let has_range_check_builtin = memory_segments.get(&MemorySegment::RangeCheck).is_some();
-    let cairo_air = CairoAIR::new(
-        proof_options,
-        main_trace.n_rows(),
-        pub_inputs.clone(),
-        has_range_check_builtin,
-    );
-
-    Ok((main_trace, cairo_air, pub_inputs))
+    Ok((main_trace, pub_inputs))
 }
 
 fn create_memory_segment_map(

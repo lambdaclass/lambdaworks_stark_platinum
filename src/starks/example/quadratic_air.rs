@@ -1,42 +1,66 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::field::{
-    element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-    traits::IsFFTField,
-};
+use lambdaworks_math::field::{element::FieldElement, traits::IsFFTField};
 
 use crate::starks::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
     context::AirContext,
     frame::Frame,
+    proof::options::ProofOptions,
     trace::TraceTable,
     traits::AIR,
 };
 
 #[derive(Clone)]
-pub struct QuadraticAIR {
+pub struct QuadraticAIR<F>
+where
+    F: IsFFTField,
+{
     context: AirContext,
     trace_length: usize,
+    pub_inputs: QuadraticPublicInputs<F>,
 }
 
-impl QuadraticAIR {
-    pub fn new(context: AirContext, trace_length: usize) -> Self {
+#[derive(Clone, Debug)]
+pub struct QuadraticPublicInputs<F>
+where
+    F: IsFFTField,
+{
+    pub a0: FieldElement<F>,
+}
+
+impl<F> AIR for QuadraticAIR<F>
+where
+    F: IsFFTField,
+{
+    type Field = F;
+    type RAPChallenges = ();
+    type PublicInputs = QuadraticPublicInputs<Self::Field>;
+
+    fn new(
+        trace_length: usize,
+        pub_inputs: &Self::PublicInputs,
+        proof_options: &ProofOptions,
+    ) -> Self {
+        let context = AirContext {
+            proof_options: proof_options.clone(),
+            trace_columns: 1,
+            transition_degrees: vec![2],
+            transition_exemptions: vec![1],
+            transition_offsets: vec![0, 1],
+            num_transition_constraints: 1,
+        };
+
         Self {
-            context,
             trace_length,
+            context,
+            pub_inputs: pub_inputs.clone(),
         }
     }
-}
-
-impl AIR for QuadraticAIR {
-    type Field = Stark252PrimeField;
-    type RAPChallenges = ();
-    type PublicInput = ();
 
     fn build_auxiliary_trace(
         &self,
         _main_trace: &TraceTable<Self::Field>,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
     ) -> TraceTable<Self::Field> {
         TraceTable::empty()
     }
@@ -61,9 +85,8 @@ impl AIR for QuadraticAIR {
     fn boundary_constraints(
         &self,
         _rap_challenges: &Self::RAPChallenges,
-        _public_input: &Self::PublicInput,
     ) -> BoundaryConstraints<Self::Field> {
-        let a0 = BoundaryConstraint::new_simple(0, FieldElement::<Self::Field>::from(3));
+        let a0 = BoundaryConstraint::new_simple(0, self.pub_inputs.a0.clone());
 
         BoundaryConstraints::from_constraints(vec![a0])
     }
@@ -78,6 +101,10 @@ impl AIR for QuadraticAIR {
 
     fn trace_length(&self) -> usize {
         self.trace_length
+    }
+
+    fn pub_inputs(&self) -> &Self::PublicInputs {
+        &self.pub_inputs
     }
 }
 
