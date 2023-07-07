@@ -32,11 +32,6 @@ fn cairo_benches(c: &mut Criterion) {
         "fibonacci/1000",
         &cairo0_program_path("fibonacci_1000.json"),
     );
-    run_cairo_bench(
-        &mut group,
-        "fibonacci/10000",
-        &cairo0_program_path("fibonacci_10000.json"),
-    );
 }
 
 fn cairo0_program_path(program_name: &str) -> String {

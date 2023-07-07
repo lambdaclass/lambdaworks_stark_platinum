@@ -48,11 +48,6 @@ fn verifier_benches(c: &mut Criterion) {
         "fibonacci/1000",
         &cairo0_proof_path("fibonacci_1000.proof"),
     );
-    run_verifier_bench(
-        &mut group,
-        "fibonacci/10000",
-        &cairo0_proof_path("fibonacci_10000.proof"),
-    );
 }
 
 fn cairo0_proof_path(program_name: &str) -> String {
