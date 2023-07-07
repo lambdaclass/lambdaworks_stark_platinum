@@ -322,7 +322,7 @@ where
         .fold(true, |mut result, (proof_s, iota_s)| {
             // this is done in constant time
             result &= verify_query_and_sym_openings(
-                &proof.fri_layers_merkle_roots,
+                &proof,
                 &challenges.zetas,
                 *iota_s,
                 proof_s,
@@ -418,7 +418,7 @@ where
 }
 
 fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
-    fri_layers_merkle_roots: &[Commitment],
+    proof: &StarkProof<F>,
     zetas: &[FieldElement<F>],
     iota: usize,
     fri_decommitment: &FriDecommitment<F>,
@@ -429,7 +429,7 @@ where
     FieldElement<F>: ByteConversion,
 {
     let evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
-
+    let fri_layers_merkle_roots = &proof.fri_layers_merkle_roots;
     let mut evaluation_point_vec: Vec<FieldElement<F>> =
         core::iter::successors(Some(evaluation_point), |evaluation_point| {
             Some(evaluation_point.square())
@@ -453,65 +453,52 @@ where
 
     // For each (merkle_root, merkle_auth_path) / fold
     // With the auth path containining the element that the path proves it's existence
-    for (
-        k,
-        (
-            merkle_root,
-            (auth_path, evaluation),
-            (auth_path_sym, evaluation_sym),
-            evaluation_point_inv,
-        ),
-    ) in multizip((
-        fri_layers_merkle_roots,
-        fri_decommitment
-            .layers_auth_paths
-            .iter()
-            .zip(&fri_decommitment.layers_evaluations),
-        fri_decommitment
-            .layers_auth_paths_sym
-            .iter()
-            .zip(&fri_decommitment.layers_evaluations_sym),
-        evaluation_point_vec,
-    ))
-    .enumerate()
-    // Since we always derive the current layer from the previous layer
-    // We start with the second one, skipping the first, so previous is layer is the first one
-    {
-        // This is the current layer's evaluation domain length.
-        // We need it to know what the decommitment index for the current
-        // layer is, so we can check the merkle paths at the right index.
-        let domain_length = 1 << (domain.lde_root_order - k as u32);
-        let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
+    fri_layers_merkle_roots
+        .iter()
+        .enumerate()
+        .zip(&fri_decommitment.layers_auth_paths)
+        .zip(&fri_decommitment.layers_evaluations)
+        .zip(&fri_decommitment.layers_auth_paths_sym)
+        .zip(&fri_decommitment.layers_evaluations_sym)
+        .zip(evaluation_point_vec)
+        .fold(
+            true,
+            |result,
+             (
+                (((((k, merkle_root), auth_path), evaluation), auth_path_sym), evaluation_sym),
+                evaluation_point_inv,
+            )| {
+                let domain_length = 1 << (domain.lde_root_order - k as u32);
+                let layer_evaluation_index_sym = (iota + domain_length / 2) % domain_length;
+                // Since we always derive the current layer from the previous layer
+                // We start with the second one, skipping the first, so previous is layer is the first one
+                // This is the current layer's evaluation domain length.
+                // We need it to know what the decommitment index for the current
+                // layer is, so we can check the merkle paths at the right index.
 
-        // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
-        if !auth_path_sym.verify::<FriMerkleTreeBackend<F>>(
-            merkle_root,
-            layer_evaluation_index_sym,
-            evaluation_sym,
-        ) {
-            return false;
-        }
+                // Verify opening Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
+                let auth_sym = &auth_path_sym.verify::<FriMerkleTreeBackend<F>>(
+                    merkle_root,
+                    layer_evaluation_index_sym,
+                    evaluation_sym,
+                );
+                // Verify opening Open(pₖ(Dₖ), 𝜐ₛ)
+                let auth_point =
+                    auth_path.verify::<FriMerkleTreeBackend<F>>(merkle_root, iota, evaluation);
+                let beta = &zetas[k];
+                // v is the calculated element for the co linearity check
+                v = (&v + evaluation_sym) * two_inv
+                    + beta * (&v - evaluation_sym) * two_inv * evaluation_point_inv;
 
-        // Verify opening Open(pₖ(Dₖ), 𝜐ₛ)
-        if !auth_path.verify::<FriMerkleTreeBackend<F>>(merkle_root, iota, evaluation) {
-            return false;
-        }
-
-        let beta = &zetas[k];
-        // v is the calculated element for the co linearity check
-        v = (&v + evaluation_sym) * two_inv
-            + beta * (&v - evaluation_sym) * two_inv * evaluation_point_inv;
-
-        // Check that next value is the given by the prover
-        if k < fri_decommitment.layers_evaluations.len() - 1 {
-            let next_layer_evaluation = &fri_decommitment.layers_evaluations[k + 1];
-            if v != *next_layer_evaluation {
-                return false;
-            }
-        }
-    }
-
-    true
+                // Check that next value is the given by the prover
+                if k < fri_decommitment.layers_evaluations.len() - 1 {
+                    let next_layer_evaluation = &fri_decommitment.layers_evaluations[k + 1];
+                    result & (v == *next_layer_evaluation) & auth_point & auth_sym
+                } else {
+                    result & (v == proof.fri_last_value) & auth_point & auth_sym
+                }
+            },
+        )
 }
 
 // Reconstruct Deep(\upsilon_0) off the values in the proof
