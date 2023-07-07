@@ -193,17 +193,10 @@ impl PublicInputs {
         memory_segments: &MemorySegmentMap,
     ) -> Self {
         let output_range = memory_segments.get(&MemorySegment::Output);
-
-        let public_memory_size = if let Some(output_range) = output_range {
-            program_size + (output_range.end - output_range.start) as usize
-        } else {
-            program_size
-        };
-        let mut public_memory = HashMap::with_capacity(public_memory_size);
-
-        for i in 1..=program_size as u64 {
-            public_memory.insert(FE::from(i), *memory.get(&i).unwrap());
-        }
+       
+        let mut public_memory = (1..=program_size as u64)
+            .map(|i| (FE::from(i), *memory.get(&i).unwrap()))
+            .collect::<HashMap<FE, FE>>();
 
         if let Some(output_range) = output_range {
             for addr in output_range.clone() {
