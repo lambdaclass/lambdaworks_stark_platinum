@@ -95,13 +95,14 @@ where
     FieldElement<F>: ByteConversion,
 {
     if !fri_layers.is_empty() {
-        let number_of_queries = air.context().proof_options.fri_number_of_queries;
-        let mut iotas: Vec<usize> = Vec::with_capacity(number_of_queries);
-        let query_list = (0..number_of_queries)
-            .map(|_| {
+        let number_of_queries = air.options().fri_number_of_queries;
+        let iotas = (0..number_of_queries)
+            .map(|_| transcript_to_usize(transcript) % domain_size)
+            .collect::<Vec<usize>>();
+        let query_list = iotas
+            .iter()
+            .map(|iota_s| {
                 // <<<< Receive challenge 𝜄ₛ (iota_s)
-                let iota_s = transcript_to_usize(transcript) % domain_size;
-
                 let mut layers_auth_paths_sym = vec![];
                 let mut layers_evaluations_sym = vec![];
                 let mut layers_evaluations = vec![];
@@ -120,7 +121,6 @@ where
                     layers_evaluations.push(evaluation);
                     layers_auth_paths.push(auth_path);
                 }
-                iotas.push(iota_s);
 
                 FriDecommitment {
                     layers_auth_paths_sym,

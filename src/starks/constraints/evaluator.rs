@@ -215,43 +215,47 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .collect();
 
         // Iterate over trace and domain and compute transitions
-        for i in 0..domain.lde_roots_of_unity_coset.len() {
-            let frame = Frame::read_from_trace(
-                lde_trace,
-                i,
-                blowup_factor,
-                &self.air.context().transition_offsets,
-            );
+        let evaluations_t = (0..domain.lde_roots_of_unity_coset.len())
+            .map(|i| {
+                let frame = Frame::read_from_trace(
+                    lde_trace,
+                    i,
+                    blowup_factor,
+                    &self.air.context().transition_offsets,
+                );
 
-            let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
+                let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
 
-            #[cfg(all(debug_assertions, not(feature = "parallel")))]
-            transition_evaluations.push(evaluations_transition.clone());
+                #[cfg(all(debug_assertions, not(feature = "parallel")))]
+                transition_evaluations.push(evaluations_transition.clone());
 
-            // TODO: Remove clones
-            let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
-                .iter()
-                .map(|zerofier_evals| zerofier_evals[i].clone())
-                .collect();
-            let degree_adjustments: Vec<_> = context
-                .transition_degrees
-                .iter()
-                .map(|&transition_adjustments| {
-                    degree_adjustments[transition_adjustments - 1][i].clone()
-                })
-                .collect();
+                // TODO: Remove clones
+                let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
+                    .iter()
+                    .map(|zerofier_evals| zerofier_evals[i].clone())
+                    .collect();
+                let degree_adjustments: Vec<_> = context
+                    .transition_degrees
+                    .iter()
+                    .map(|&transition_adjustments| {
+                        degree_adjustments[transition_adjustments - 1][i].clone()
+                    })
+                    .collect();
 
-            let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
-                &evaluations_transition,
-                &denominators,
-                &degree_adjustments,
-                alpha_and_beta_transition_coefficients,
-            );
+                let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
+                    &evaluations_transition,
+                    &denominators,
+                    &degree_adjustments,
+                    alpha_and_beta_transition_coefficients,
+                );
 
-            evaluations_sum += boundary_evaluation[i].clone();
+                evaluations_sum += boundary_evaluation[i].clone();
 
-            evaluation_table.evaluations_acc.push(evaluations_sum);
-        }
+                evaluations_sum
+            })
+            .collect::<Vec<FieldElement<F>>>();
+
+        evaluation_table.evaluations_acc = evaluations_t;
 
         evaluation_table
     }
@@ -279,19 +283,18 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         degree_adjustments: &[FieldElement<F>],
         constraint_coeffs: &[(FieldElement<F>, FieldElement<F>)],
     ) -> FieldElement<F> {
-        let mut ret = FieldElement::<F>::zero();
-        for (((eval, degree_adjustment), inverse_denominator), (alpha, beta)) in evaluations
+        evaluations
             .iter()
             .zip(degree_adjustments)
             .zip(inverse_denominators)
             .zip(constraint_coeffs)
-        {
-            let zerofied_eval = eval * inverse_denominator;
-            let result = zerofied_eval * (alpha * degree_adjustment + beta);
-            ret += result;
-        }
-
-        ret
+            .fold(
+                FieldElement::<F>::zero(),
+                |acc, (((ev, degree), inv), coeff)| {
+                    let (alpha, beta) = &coeff;
+                    acc + ev * (alpha * degree + beta) * inv
+                },
+            )
     }
 }
 
