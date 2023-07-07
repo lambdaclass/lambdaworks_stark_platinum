@@ -196,12 +196,12 @@ impl PublicInputs {
         let mut public_memory = HashMap::with_capacity(public_memory_size);
 
         for i in 1..=program_size as u64 {
-            public_memory.insert(FE::from(i), memory.get(&i).unwrap().clone());
+            public_memory.insert(FE::from(i), *memory.get(&i).unwrap());
         }
 
         if let Some(output_range) = output_range {
             for addr in output_range.clone() {
-                public_memory.insert(FE::from(addr), memory.get(&addr).unwrap().clone());
+                public_memory.insert(FE::from(addr), *memory.get(&addr).unwrap());
             }
         };
         let last_step = &register_states.rows[register_states.steps() - 1];
@@ -327,7 +327,7 @@ fn add_pub_memory_in_public_input_section(
     a_aux.splice(public_input_section.., pub_memory_addrs);
     for i in public_input_section..a_aux.len() {
         let address = &a_aux[i];
-        v_aux[i] = public_input.public_memory.get(address).unwrap().clone();
+        v_aux[i] = *public_input.public_memory.get(address).unwrap();
     }
 
     (a_aux, v_aux)
@@ -467,24 +467,24 @@ impl AIR for CairoAIR {
         // Convert from long-format to wide-format again
         let mut aux_table = Vec::new();
         for i in 0..main_trace.n_rows() {
-            aux_table.push(offsets_sorted[3 * i].clone());
-            aux_table.push(offsets_sorted[3 * i + 1].clone());
-            aux_table.push(offsets_sorted[3 * i + 2].clone());
-            aux_table.push(addresses[4 * i].clone());
-            aux_table.push(addresses[4 * i + 1].clone());
-            aux_table.push(addresses[4 * i + 2].clone());
-            aux_table.push(addresses[4 * i + 3].clone());
-            aux_table.push(values[4 * i].clone());
-            aux_table.push(values[4 * i + 1].clone());
-            aux_table.push(values[4 * i + 2].clone());
-            aux_table.push(values[4 * i + 3].clone());
-            aux_table.push(permutation_col[4 * i].clone());
-            aux_table.push(permutation_col[4 * i + 1].clone());
-            aux_table.push(permutation_col[4 * i + 2].clone());
-            aux_table.push(permutation_col[4 * i + 3].clone());
-            aux_table.push(range_check_permutation_col[3 * i].clone());
-            aux_table.push(range_check_permutation_col[3 * i + 1].clone());
-            aux_table.push(range_check_permutation_col[3 * i + 2].clone());
+            aux_table.push(offsets_sorted[3 * i]);
+            aux_table.push(offsets_sorted[3 * i + 1]);
+            aux_table.push(offsets_sorted[3 * i + 2]);
+            aux_table.push(addresses[4 * i]);
+            aux_table.push(addresses[4 * i + 1]);
+            aux_table.push(addresses[4 * i + 2]);
+            aux_table.push(addresses[4 * i + 3]);
+            aux_table.push(values[4 * i]);
+            aux_table.push(values[4 * i + 1]);
+            aux_table.push(values[4 * i + 2]);
+            aux_table.push(values[4 * i + 3]);
+            aux_table.push(permutation_col[4 * i]);
+            aux_table.push(permutation_col[4 * i + 1]);
+            aux_table.push(permutation_col[4 * i + 2]);
+            aux_table.push(permutation_col[4 * i + 3]);
+            aux_table.push(range_check_permutation_col[3 * i]);
+            aux_table.push(range_check_permutation_col[3 * i + 1]);
+            aux_table.push(range_check_permutation_col[3 * i + 2]);
         }
 
         TraceTable::new(aux_table, self.number_auxiliary_rap_columns())
@@ -542,19 +542,19 @@ impl AIR for CairoAIR {
         public_input: &Self::PublicInput,
     ) -> BoundaryConstraints<Self::Field> {
         let initial_pc =
-            BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, public_input.pc_init.clone());
+            BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, public_input.pc_init);
         let initial_ap =
-            BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, public_input.ap_init.clone());
+            BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, public_input.ap_init);
 
         let final_pc = BoundaryConstraint::new(
             MEM_A_TRACE_OFFSET,
             self.number_steps - 1,
-            public_input.pc_final.clone(),
+            public_input.pc_final,
         );
         let final_ap = BoundaryConstraint::new(
             MEM_P_TRACE_OFFSET,
             self.number_steps - 1,
-            public_input.ap_final.clone(),
+            public_input.ap_final,
         );
 
         // Auxiliary constraint: permutation argument final value
@@ -627,7 +627,7 @@ fn compute_instr_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prime
     for (i, flag) in curr[0..16].iter().enumerate() {
         constraints[i] = match i {
             0..=14 => flag * (flag - FE::one()),
-            15 => flag.clone(),
+            15 => *flag,
             _ => panic!("Unknown flag offset"),
         };
     }
@@ -733,7 +733,7 @@ fn compute_opcode_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prim
 fn enforce_selector(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
     let curr = frame.get_row(0);
     for result_cell in constraints.iter_mut().take(ASSERT_EQ + 1).skip(INST) {
-        *result_cell = result_cell.clone() * curr[FRAME_SELECTOR].clone();
+        *result_cell = *result_cell * curr[FRAME_SELECTOR];
     }
 }
 

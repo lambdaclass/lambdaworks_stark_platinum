@@ -51,7 +51,7 @@ impl AIR for FibonacciAIR {
         let second_row = frame.get_row(1);
         let third_row = frame.get_row(2);
 
-        vec![third_row[0].clone() - second_row[0].clone() - first_row[0].clone()]
+        vec![third_row[0] - second_row[0] - first_row[0]]
     }
 
     fn boundary_constraints(

@@ -52,7 +52,7 @@ impl AIR for FibonacciRAP {
                 aux_col.push(FieldElement::<Self::Field>::one());
             } else {
                 let z_i = &aux_col[i - 1];
-                let n_p_term = not_perm[i - 1].clone() + gamma;
+                let n_p_term = not_perm[i - 1] + gamma;
                 let p_term = &perm[i - 1] + gamma;
 
                 aux_col.push(z_i * n_p_term.div(p_term));
@@ -80,7 +80,7 @@ impl AIR for FibonacciRAP {
         let third_row = frame.get_row(2);
 
         let mut constraints =
-            vec![third_row[0].clone() - second_row[0].clone() - first_row[0].clone()];
+            vec![third_row[0] - second_row[0] - first_row[0]];
 
         // Auxiliary constraints
         let z_i = &frame.get_row(0)[2];
