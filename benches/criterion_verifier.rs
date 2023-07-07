@@ -26,18 +26,24 @@ fn load_proof_and_pub_inputs(input_path: &str) -> (StarkProof<Stark252PrimeField
 }
 
 fn verifier_benches(c: &mut Criterion) {
+    #[cfg(feature = "parallel")]
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(8)
+        .build_global()
+        .unwrap();
+
     let mut group = c.benchmark_group("VERIFIER");
     group.sample_size(10);
     group.measurement_time(Duration::from_secs(30));
     run_verifier_bench(
         &mut group,
-        "fibonacci/10",
-        &cairo0_proof_path("fibonacci_10.proof"),
+        "fibonacci/500",
+        &cairo0_proof_path("fibonacci_500.proof"),
     );
     run_verifier_bench(
         &mut group,
-        "fibonacci/100",
-        &cairo0_proof_path("fibonacci_100.proof"),
+        "fibonacci/1000",
+        &cairo0_proof_path("fibonacci_1000.proof"),
     );
 }
 

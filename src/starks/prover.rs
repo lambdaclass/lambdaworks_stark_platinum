@@ -157,41 +157,20 @@ where
     )
 }
 
-#[cfg(not(feature = "parallel"))]
 fn compute_lde_trace_evaluations<F>(
     trace_polys: &[Polynomial<FieldElement<F>>],
     domain: &Domain<F>,
 ) -> Vec<Vec<FieldElement<F>>>
 where
     F: IsFFTField,
-{
-    let lde_trace_evaluations = trace_polys
-        .iter()
-        .map(|poly| {
-            evaluate_polynomial_on_lde_domain(
-                poly,
-                domain.blowup_factor,
-                domain.interpolation_domain_size,
-                &domain.coset_offset,
-            )
-        })
-        .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
-        .unwrap();
-
-    lde_trace_evaluations
-}
-
-#[cfg(feature = "parallel")]
-fn compute_lde_trace_evaluations<F>(
-    trace_polys: &Vec<Polynomial<FieldElement<F>>>,
-    domain: &Domain<F>,
-) -> Vec<Vec<FieldElement<F>>>
-where
-    F: IsFFTField,
     FieldElement<F>: Send + Sync,
 {
-    let lde_trace_evaluations = trace_polys
-        .par_iter()
+    #[cfg(not(feature = "parallel"))]
+    let trace_polys_iter = trace_polys.iter();
+    #[cfg(feature = "parallel")]
+    let trace_polys_iter = trace_polys.par_iter();
+
+    trace_polys_iter
         .map(|poly| {
             evaluate_polynomial_on_lde_domain(
                 poly,
@@ -201,9 +180,7 @@ where
             )
         })
         .collect::<Result<Vec<Vec<FieldElement<F>>>, FFTError>>()
-        .unwrap();
-
-    lde_trace_evaluations
+        .unwrap()
 }
 
 fn round_1_randomized_air_with_preprocessing<F: IsFFTField, A: AIR<Field = F>, T: Transcript>(
@@ -254,8 +231,8 @@ fn round_2_compute_composition_polynomial<F, A>(
 ) -> Round2<F>
 where
     F: IsFFTField,
-    A: AIR<Field = F>,
-    FieldElement<F>: ByteConversion,
+    A: AIR<Field = F> + Sync,
+    FieldElement<F>: ByteConversion + Send + Sync,
 {
     // Create evaluation table
     let evaluator = ConstraintEvaluator::new(
@@ -561,7 +538,7 @@ pub fn prove<F, A>(
 ) -> Result<StarkProof<F>, ProvingError>
 where
     F: IsFFTField,
-    A: AIR<Field = F>,
+    A: AIR<Field = F> + Sync,
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     info!("Started proof generation...");

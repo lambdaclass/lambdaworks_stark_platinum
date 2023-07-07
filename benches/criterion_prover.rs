@@ -13,18 +13,24 @@ use std::time::Duration;
 pub mod functions;
 
 fn cairo_benches(c: &mut Criterion) {
+    #[cfg(feature = "parallel")]
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(8)
+        .build_global()
+        .unwrap();
+
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
     group.measurement_time(Duration::from_secs(30));
     run_cairo_bench(
         &mut group,
-        "fibonacci/10",
-        &cairo0_program_path("fibonacci_10.json"),
+        "fibonacci/500",
+        &cairo0_program_path("fibonacci_500.json"),
     );
     run_cairo_bench(
         &mut group,
-        "fibonacci/100",
-        &cairo0_program_path("fibonacci_100.json"),
+        "fibonacci/1000",
+        &cairo0_program_path("fibonacci_1000.json"),
     );
 }
 
