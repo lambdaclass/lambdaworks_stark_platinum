@@ -231,7 +231,8 @@ fn round_2_compute_composition_polynomial<F, A>(
 ) -> Round2<F>
 where
     F: IsFFTField,
-    A: AIR<Field = F> + Sync,
+    A: AIR<Field = F> + Send + Sync,
+    A::RAPChallenges: Send + Sync,
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     // Create evaluation table
@@ -529,7 +530,8 @@ pub fn prove<F, A>(
 ) -> Result<StarkProof<F>, ProvingError>
 where
     F: IsFFTField,
-    A: AIR<Field = F> + Sync,
+    A: AIR<Field = F> + Send + Sync,
+    A::RAPChallenges: Send + Sync,
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     info!("Started proof generation...");
