@@ -7,8 +7,9 @@ use lambdaworks_math::field::fields::{
 use lambdaworks_stark::{
     cairo::{
         air::{
-            generate_cairo_proof, verify_cairo_proof, MemorySegment, MemorySegmentMap,
-            PublicInputs, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR, FRAME_PC,
+            convert_cairo_air_to_string, generate_cairo_proof, verify_cairo_proof, MemorySegment,
+            MemorySegmentMap, PublicInputs, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR,
+            FRAME_PC,
         },
         cairo_layout::CairoLayout,
         execution_trace::build_main_trace,
@@ -26,13 +27,15 @@ use lambdaworks_stark::{
             simple_fibonacci::{self, FibonacciAIR, FibonacciPublicInputs},
         },
         proof::options::ProofOptions,
+        proof::stark::convert_stark_proof_to_string,
         prover::prove,
         trace::TraceTable,
+        traits::AIR,
         verifier::verify,
     },
     FE,
 };
-
+use std::fs;
 #[test_log::test]
 fn test_prove_fib() {
     let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
@@ -119,6 +122,17 @@ fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) 
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, output_range).unwrap();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
+
+    let cairo_air_2 = AIR::new(proof.trace_length, &pub_inputs, &proof_options);
+    let cair_air_string = convert_cairo_air_to_string(cairo_air_2);
+    let cairo_air_json = serde_json::to_string_pretty(&cair_air_string).unwrap();
+    let path = "tests/cairo_air.json";
+    fs::write(path, cairo_air_json).expect("Unable to write file");
+    let proof_copy = proof.clone();
+    let proof_string = convert_stark_proof_to_string(proof_copy);
+    let proof_json = serde_json::to_string_pretty(&proof_string).unwrap();
+    let path = "tests/proof.json";
+    fs::write(path, proof_json).expect("Unable to write file");
 
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }

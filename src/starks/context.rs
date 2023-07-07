@@ -1,6 +1,7 @@
 use super::proof::options::ProofOptions;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AirContext {
     pub proof_options: ProofOptions,
     pub trace_columns: usize,

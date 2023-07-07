@@ -1,4 +1,5 @@
 use lambdaworks_math::field::traits::IsPrimeField;
+use serde::{Deserialize, Serialize};
 
 use super::errors::InsecureOptionError;
 
@@ -17,7 +18,7 @@ pub enum SecurityLevel {
 /// - `fri_number_of_queries`: the number of queries for the FRI layer
 /// - `coset_offset`: the offset for the coset
 /// - `grinding_factor`: the number of leading zeros that we want for the Hash(hash || nonce)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ProofOptions {
     pub blowup_factor: u8,
     pub fri_number_of_queries: usize,
