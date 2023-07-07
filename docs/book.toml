@@ -1,8 +1,11 @@
 [book]
-authors = ["Javier Chatruc", "Estéfano Bargas"]
+authors = ["Javier Chatruc", "Estéfano Bargas", "Sergio Chouhy", "Agustin Garassino"]
 language = "en"
 multilingual = false
 src = "src"
 title = "docs"
 
 [preprocessor.katex]
+
+[output.html]
+mathjax-support = true
