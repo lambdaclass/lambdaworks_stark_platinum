@@ -372,8 +372,7 @@ fn add_rc_builtin_columns(
         trace_cols.push(column.to_vec())
     });
 
-    let mut rc_values_dereferenced: Vec<FE> =
-        range_checked_values.iter().map(|&x| *x).collect();
+    let mut rc_values_dereferenced: Vec<FE> = range_checked_values.iter().map(|&x| *x).collect();
     rc_values_dereferenced.resize(trace_cols[0].len(), FE::zero());
 
     trace_cols.push(rc_values_dereferenced);

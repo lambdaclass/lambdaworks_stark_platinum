@@ -1,9 +1,6 @@
-
 // Op ref suggest to not use references with FieldElements operations
 // This adds overhead of copying all the limbs, so clippy op_ref is disabled
-#![allow(
-    clippy::op_ref
-  )]
+#![allow(clippy::op_ref)]
 
 use lambdaworks_math::field::{
     element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,

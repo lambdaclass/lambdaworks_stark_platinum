@@ -782,10 +782,8 @@ impl AIR for CairoAIR {
         &self,
         rap_challenges: &Self::RAPChallenges,
     ) -> BoundaryConstraints<Self::Field> {
-        let initial_pc =
-            BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, self.pub_inputs.pc_init);
-        let initial_ap =
-            BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, self.pub_inputs.ap_init);
+        let initial_pc = BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, self.pub_inputs.pc_init);
+        let initial_ap = BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, self.pub_inputs.ap_init);
 
         let final_pc = BoundaryConstraint::new(
             MEM_A_TRACE_OFFSET,
