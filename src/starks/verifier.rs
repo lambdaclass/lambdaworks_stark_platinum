@@ -226,7 +226,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         Vec<FieldElement<F>>,
         Vec<FieldElement<F>>,
     ) = (0..number_of_b_constraints)
-        .map(|index | {
+        .map(|index| {
             let step = boundary_constraints.constraints[index].step;
             let point = &domain.trace_primitive_root.pow(step as u64);
             let trace_idx = boundary_constraints.constraints[index].col;
