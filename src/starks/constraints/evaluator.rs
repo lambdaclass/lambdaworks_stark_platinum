@@ -61,11 +61,11 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             self.air.context().num_transition_constraints() + 1,
             &domain.lde_roots_of_unity_coset,
         );
-        let n_trace_colums = self.trace_polys.len();
+        //let n_trace_colums = self.trace_polys.len();
         let boundary_constraints = &self.boundary_constraints;
 
         let boundary_steps = self.boundary_constraints.steps_for_boundary();
-
+        let boundary_cols = self.boundary_constraints.cols_for_boundary();
         let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = boundary_steps
             .iter()
             .map(|step| {
@@ -91,8 +91,8 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             .collect::<Vec<FieldElement<F>>>();
 
         let domains =
-            boundary_constraints.generate_roots_of_unity(&self.primitive_root, n_trace_colums);
-        let values = boundary_constraints.values(n_trace_colums);
+            boundary_constraints.generate_roots_of_unity(&self.primitive_root, &boundary_cols);
+        let values = boundary_constraints.values(&boundary_cols);
 
         #[cfg(all(debug_assertions, not(feature = "parallel")))]
         let boundary_polys: Vec<Polynomial<FieldElement<F>>> = Vec::new();
@@ -103,11 +103,12 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         #[cfg(feature = "parallel")]
         let domains_iter = domains.par_iter();
 
-        let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = domains_iter
-            .zip(values)
-            .zip(self.trace_polys)
-            .map(|((xs, ys), trace_poly)| {
-                let boundary_poly = trace_poly
+        let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = boundary_cols
+            .iter()
+            .zip(&domains)
+            .zip(&values)
+            .map(|((k, xs), ys)| {
+                let boundary_poly = &self.trace_polys[*k]
                     - &Polynomial::interpolate(xs, &ys)
                         .expect("xs and ys have equal length and xs are unique");
 
@@ -124,21 +125,21 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let mut boundary_evaluation =
             vec![FieldElement::<F>::zero(); boundary_polys_evaluations[0].len()];
 
-        for col in 0..n_trace_colums {
-            let (alpha, beta) = &alpha_and_beta_boundary_coefficients[col];
+        for (i, col) in boundary_cols.iter().enumerate() {
+            let (alpha, beta) = &alpha_and_beta_boundary_coefficients[i];
             // for each element e in columns
             // e = e*alpha + beta
-            boundary_polys_evaluations[col] = boundary_polys_evaluations[col]
+            boundary_polys_evaluations[i] = boundary_polys_evaluations[i]
                 .iter()
                 .zip(&d_adjustment_power)
                 .map(|(v, d)| v * (alpha * d + beta))
                 .collect::<Vec<FieldElement<F>>>();
 
             // Multiply each column for their correspondent zerofiers
-            let mut acc = boundary_polys_evaluations[col].clone();
+            let mut acc = boundary_polys_evaluations[i].clone();
             // Step contains the indexes for the boundary constraints
             // Of the respective column we are interested in
-            for column_step in boundary_constraints.steps(col).iter() {
+            for column_step in boundary_constraints.steps(*col).iter() {
                 let step_index = boundary_steps
                     .iter()
                     .position(|x| x == column_step)
