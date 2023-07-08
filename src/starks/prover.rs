@@ -19,6 +19,7 @@ use log::info;
 #[cfg(feature = "parallel")]
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
+//use crate::starks::constraints::boundary::BoundaryConstraint;
 #[cfg(debug_assertions)]
 use crate::starks::debug::validate_trace;
 use crate::starks::transcript::sample_z_ood;
@@ -597,11 +598,19 @@ where
     let timer2 = Instant::now();
 
     // <<<< Receive challenges: 𝛼_j^B
-    let boundary_coeffs_alphas =
-        batch_sample_challenges(round_1_result.trace_polys.len(), &mut transcript);
+    let boundary_coeffs_alphas = batch_sample_challenges(
+        air.boundary_constraints(&round_1_result.rap_challenges)
+            .constraints
+            .len(),
+        &mut transcript,
+    );
     // <<<< Receive challenges: 𝛽_j^B
-    let boundary_coeffs_betas =
-        batch_sample_challenges(round_1_result.trace_polys.len(), &mut transcript);
+    let boundary_coeffs_betas = batch_sample_challenges(
+        air.boundary_constraints(&round_1_result.rap_challenges)
+            .constraints
+            .len(),
+        &mut transcript,
+    );
     // <<<< Receive challenges: 𝛼_j^T
     let transition_coeffs_alphas =
         batch_sample_challenges(air.context().num_transition_constraints, &mut transcript);

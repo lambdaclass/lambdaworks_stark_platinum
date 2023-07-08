@@ -15,7 +15,6 @@ use lambdaworks_math::{
         element::FieldElement,
         traits::{IsFFTField, IsField},
     },
-    polynomial::Polynomial,
     traits::ByteConversion,
 };
 
@@ -91,9 +90,15 @@ where
 
     // These are the challenges alpha^B_j and beta^B_j
     // >>>> Send challenges: 𝛼_j^B
-    let boundary_coeffs_alphas = batch_sample_challenges(total_columns, transcript);
+    let boundary_coeffs_alphas = batch_sample_challenges(
+        air.boundary_constraints(&rap_challenges).constraints.len(),
+        transcript,
+    );
     // >>>> Send  challenges: 𝛽_j^B
-    let boundary_coeffs_betas = batch_sample_challenges(total_columns, transcript);
+    let boundary_coeffs_betas = batch_sample_challenges(
+        air.boundary_constraints(&rap_challenges).constraints.len(),
+        transcript,
+    );
     // >>>> Send challenges: 𝛼_j^T
     let transition_coeffs_alphas =
         batch_sample_challenges(air.context().num_transition_constraints, transcript);
