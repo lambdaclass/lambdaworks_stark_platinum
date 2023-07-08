@@ -98,12 +98,10 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let boundary_polys: Vec<Polynomial<FieldElement<F>>> = Vec::new();
 
         #[cfg(not(feature = "parallel"))]
-        let boundary_iter = boundary_cols
-        .iter();
+        let boundary_iter = boundary_cols.iter();
 
         #[cfg(feature = "parallel")]
-        let boundary_iter = boundary_cols
-        .par_iter();
+        let boundary_iter = boundary_cols.par_iter();
 
         let mut boundary_polys_evaluations: Vec<Vec<FieldElement<F>>> = boundary_iter
             .zip(&domains)
