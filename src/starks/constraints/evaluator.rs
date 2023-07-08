@@ -24,13 +24,11 @@ pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
     air: A,
     boundary_constraints: BoundaryConstraints<F>,
     trace_polys: &'poly [Polynomial<FieldElement<F>>],
-    primitive_root: FieldElement<F>,
 }
 impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F, A> {
     pub fn new(
         air: &A,
         trace_polys: &'poly [Polynomial<FieldElement<F>>],
-        primitive_root: &FieldElement<F>,
         rap_challenges: &A::RAPChallenges,
     ) -> Self {
         let boundary_constraints = air.boundary_constraints(rap_challenges);
@@ -39,7 +37,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
             air: air.clone(),
             boundary_constraints,
             trace_polys,
-            primitive_root: primitive_root.clone(),
         }
     }
 
