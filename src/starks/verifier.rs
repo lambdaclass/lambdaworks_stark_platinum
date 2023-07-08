@@ -1,7 +1,7 @@
 #[cfg(feature = "instruments")]
 use std::time::Instant;
 
-use itertools::multizip;
+//use itertools::multizip;
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
@@ -20,7 +20,7 @@ use lambdaworks_math::{
 };
 
 use super::{
-    config::{BatchedMerkleTreeBackend, Commitment, FriMerkleTreeBackend},
+    config::{BatchedMerkleTreeBackend, FriMerkleTreeBackend},
     constraints::evaluator::ConstraintEvaluator,
     domain::Domain,
     fri::fri_decommit::FriDecommitment,
@@ -322,7 +322,7 @@ where
         .fold(true, |mut result, (proof_s, iota_s)| {
             // this is done in constant time
             result &= verify_query_and_sym_openings(
-                &proof,
+                proof,
                 &challenges.zetas,
                 *iota_s,
                 proof_s,
