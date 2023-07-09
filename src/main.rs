@@ -1,27 +1,30 @@
+fn main() {
+}
+
+/*
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use lambdaworks_math::traits::{Deserializable, Serializable};
-#[cfg(feature = "cairo")]
 use lambdaworks_stark::cairo::air::{generate_cairo_proof, verify_cairo_proof, PublicInputs};
-#[cfg(feature = "cairo")]
-use lambdaworks_stark::cairo::runner::run::{generate_prover_args, CairoVersion};
+
+use lambdaworks_stark::cairo_runner::runner::run::{generate_prover_args, cairo_runnerVersion};
 use lambdaworks_stark::starks::proof::options::ProofOptions;
 use lambdaworks_stark::starks::proof::stark::StarkProof;
 use std::env;
 use std::time::Instant;
 
-#[cfg(feature = "cairo")]
+
 fn generate_proof(
     input_path: &String,
     proof_options: &ProofOptions,
 ) -> Option<(StarkProof<Stark252PrimeField>, PublicInputs)> {
     let timer = Instant::now();
 
-    let cairo_version = if input_path.contains(".casm") {
-        println!("Running casm on CairoVM and generating trace ...");
-        CairoVersion::V1
+    let cairo_runner_version = if input_path.contains(".casm") {
+        println!("Running casm on cairo_runnerVM and generating trace ...");
+        cairo_runnerVersion::V1
     } else {
-        println!("Running program on CairoVM and generating trace ...");
-        CairoVersion::V0
+        println!("Running program on cairo_runnerVM and generating trace ...");
+        cairo_runnerVersion::V0
     };
 
     let Ok(program_content) = std::fs::read(input_path) else {
@@ -30,7 +33,7 @@ fn generate_proof(
     };
 
     let Ok((main_trace, pub_inputs)) =
-        generate_prover_args(&program_content, &cairo_version, &None) else {
+        generate_prover_args(&program_content, &cairo_runner_version, &None) else {
             println!("Error generating prover args");
             return None;
         };
@@ -39,7 +42,7 @@ fn generate_proof(
 
     let timer = Instant::now();
     println!("Making proof ...");
-    let proof = match generate_cairo_proof(&main_trace, &pub_inputs, proof_options) {
+    let proof = match generate_cairo_runner_proof(&main_trace, &pub_inputs, proof_options) {
         Ok(p) => p,
         Err(e) => {
             println!("Error generating proof: {:?}", e);
@@ -52,7 +55,7 @@ fn generate_proof(
     Some((proof, pub_inputs))
 }
 
-#[cfg(feature = "cairo")]
+
 fn verify_proof(
     proof: StarkProof<Stark252PrimeField>,
     pub_inputs: PublicInputs,
@@ -61,7 +64,7 @@ fn verify_proof(
     let timer = Instant::now();
 
     println!("Verifying ...");
-    let proof_verified = verify_cairo_proof(&proof, &pub_inputs, proof_options);
+    let proof_verified = verify_cairo_runner_proof(&proof, &pub_inputs, proof_options);
     println!("Time spent in verifying: {:?} \n", timer.elapsed());
 
     if proof_verified {
@@ -73,12 +76,12 @@ fn verify_proof(
     proof_verified
 }
 
-#[cfg(not(feature = "cairo"))]
+#[cfg(not(feature = "cairo_runner"))]
 fn main() {
 }
 
 
-#[cfg(feature = "cairo")]
+
 fn main() {
     let proof_options = ProofOptions::default_test_options();
 
@@ -169,3 +172,4 @@ fn main() {
         }
     }
 }
+*/
