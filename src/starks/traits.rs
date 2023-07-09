@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::{
     fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
@@ -61,7 +62,8 @@ pub trait AIR: Clone {
         self.context()
             .transition_exemptions
             .iter()
-            .take(self.context().num_transition_constraints)
+            .unique_by(|elem| *elem)
+            .filter(|v| *v > &0_usize)
             .map(|cant_take| {
                 roots_of_unity
                     .iter()
@@ -92,4 +94,35 @@ pub trait AIR: Clone {
     }
 
     fn pub_inputs(&self) -> &Self::PublicInputs;
+
+    fn transition_exemptions_verifier(&self) -> Vec<Polynomial<FieldElement<Self::Field>>> {
+        let trace_length = self.trace_length();
+        let roots_of_unity_order = trace_length.trailing_zeros();
+        let roots_of_unity = get_powers_of_primitive_root_coset(
+            roots_of_unity_order as u64,
+            self.trace_length(),
+            &FieldElement::<Self::Field>::one(),
+        )
+        .unwrap();
+        let root_of_unity_len = roots_of_unity.len();
+
+        let x = Polynomial::new_monomial(FieldElement::one(), 1);
+
+        self.context()
+            .transition_exemptions
+            .iter()
+            .take(self.context().num_transition_constraints)
+            .map(|cant_take| {
+                roots_of_unity
+                    .iter()
+                    .take(root_of_unity_len)
+                    .rev()
+                    .take(*cant_take)
+                    .fold(
+                        Polynomial::new_monomial(FieldElement::one(), 0),
+                        |acc, root| acc * (&x - root),
+                    )
+            })
+            .collect()
+    }
 }

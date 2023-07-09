@@ -268,7 +268,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let divisor_x_n = (&challenges.z.pow(trace_length) - FieldElement::<F>::one()).inv();
 
     let denominators = air
-        .transition_exemptions()
+        .transition_exemptions_verifier()
         .iter()
         .map(|poly| poly.evaluate(&challenges.z) * &divisor_x_n)
         .collect::<Vec<FieldElement<F>>>();

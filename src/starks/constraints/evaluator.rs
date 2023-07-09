@@ -178,18 +178,6 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         .collect::<Vec<_>>();
 
         FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
-        let transition_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
-            transition_exemptions_evaluations
-                .iter()
-                .map(|row| {
-                    zerofier_evaluations
-                        .iter()
-                        .cycle()
-                        .zip(row)
-                        .map(|(c1, c2)| c1 * c2)
-                        .collect()
-                })
-                .collect();
 
         // Iterate over trace and domain and compute transitions
         #[cfg(feature = "parallel")]
@@ -199,7 +187,8 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let evaluations_t_iter = 0..domain.lde_roots_of_unity_coset.len();
 
         let evaluations_t = evaluations_t_iter
-            .map(|i| {
+            .zip(zerofier_evaluations.iter().cycle())
+            .map(|(i, zerofier)| {
                 let frame = Frame::read_from_trace(
                     lde_trace,
                     i,
@@ -212,29 +201,32 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 #[cfg(all(debug_assertions, not(feature = "parallel")))]
                 transition_evaluations.push(evaluations_transition.clone());
 
+                let acc_transition = evaluations_transition
+                    .iter()
+                    .zip(&self.air.context().transition_exemptions)
+                    .zip(&self.air.context().transition_degrees)
+                    .zip(alpha_and_beta_transition_coefficients)
+                    .fold(
+                        FieldElement::zero(),
+                        |acc, (((eval, exemption), degree), coeff)| {
+                            if *exemption == 0 {
+                                let (alpha, beta) = coeff;
+                                acc + zerofier
+                                    * (alpha * &degree_adjustments[degree - 1][i] + beta)
+                                    * eval
+                            } else {
+                                let (alpha, beta) = coeff;
+                                //TODO: change how exemptions are indexed!
+                                acc + zerofier
+                                    * (alpha * &degree_adjustments[degree - 1][i] + beta)
+                                    * eval
+                                    * &transition_exemptions_evaluations[exemption - 1][i]
+                            }
+                        },
+                    );
                 // TODO: Remove clones
-                let denominators: Vec<_> = transition_zerofiers_inverse_evaluations
-                    .iter()
-                    .map(|zerofier_evals| zerofier_evals[i].clone())
-                    .collect();
-                let degree_adjustments: Vec<_> = context
-                    .transition_degrees
-                    .iter()
-                    .map(|&transition_adjustments| {
-                        degree_adjustments[transition_adjustments - 1][i].clone()
-                    })
-                    .collect();
 
-                let mut evaluations_sum = Self::compute_constraint_composition_poly_evaluations_sum(
-                    &evaluations_transition,
-                    &denominators,
-                    &degree_adjustments,
-                    alpha_and_beta_transition_coefficients,
-                );
-
-                evaluations_sum += boundary_evaluation[i].clone();
-
-                evaluations_sum
+                acc_transition + &boundary_evaluation[i]
             })
             .collect::<Vec<FieldElement<F>>>();
 

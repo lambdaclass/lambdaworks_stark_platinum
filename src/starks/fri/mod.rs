@@ -10,9 +10,6 @@ pub use lambdaworks_math::{
     polynomial::Polynomial,
 };
 
-#[cfg(debug_assertions)]
-use log::error;
-
 use self::fri_commitment::FriLayer;
 use self::fri_decommit::FriDecommitment;
 use self::fri_functions::fold_polynomial;
