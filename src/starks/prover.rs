@@ -448,12 +448,13 @@ where
     // ∑ ⱼₖ [ 𝛾ₖ ( tⱼ − tⱼ(z) ) / ( X − zgᵏ )]
 
     // @@@ this could be const
+    let trace_frame_length = trace_frame_evaluations.len();
     let trace_term =
         trace_polys
             .iter()
             .enumerate()
             .fold(Polynomial::zero(), |trace_terms, (i, t_j)| {
-                let i_times_trace_frame_evaluation = i * trace_frame_evaluations.len();
+                let i_times_trace_frame_evaluation = i * trace_frame_length;
                 let iter_trace_gammas = trace_terms_gammas
                     .iter()
                     .skip(i_times_trace_frame_evaluation);
@@ -465,7 +466,7 @@ where
                         Polynomial::zero(),
                         |trace_agg, ((eval, offset), trace_gamma)| {
                             // @@@ we can avoid this clone
-                            let t_j_z = eval[i].clone();
+                            let t_j_z = &eval[i];
                             // @@@ this can be pre-computed
                             let z_shifted = z * primitive_root.pow(*offset);
                             let mut poly = t_j - t_j_z;
