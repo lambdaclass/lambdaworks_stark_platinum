@@ -110,13 +110,15 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
             })
             .collect::<Vec<Vec<FieldElement<F>>>>();
         let boundary_evaluation = (0..domain.lde_roots_of_unity_coset.len())
-            .map(|i| {
-                (0..number_of_b_constraints).fold(FieldElement::zero(), |acc, index| {
-                    let (alpha, beta) = &alpha_and_beta_boundary_coefficients[index];
-                    acc + &boundary_zerofiers_inverse_evaluations[index][i]
-                        * (alpha * &d_adjustment_power[i] + beta)
-                        * &boundary_polys_evaluations[index][i]
-                })
+            .zip(&d_adjustment_power)
+            .map(|(i, d)| {
+                (0..number_of_b_constraints)
+                    .zip(alpha_and_beta_boundary_coefficients)
+                    .fold(FieldElement::zero(), |acc, (index, (alpha, beta))| {
+                        acc + &boundary_zerofiers_inverse_evaluations[index][i]
+                            * (alpha * d + beta)
+                            * &boundary_polys_evaluations[index][i]
+                    })
             })
             .collect::<Vec<FieldElement<F>>>();
 
@@ -207,14 +209,12 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                     .zip(alpha_and_beta_transition_coefficients)
                     .fold(
                         FieldElement::zero(),
-                        |acc, (((eval, exemption), degree), coeff)| {
+                        |acc, (((eval, exemption), degree), (alpha, beta))| {
                             if *exemption == 0 {
-                                let (alpha, beta) = coeff;
                                 acc + zerofier
                                     * (alpha * &degree_adjustments[degree - 1][i] + beta)
                                     * eval
                             } else {
-                                let (alpha, beta) = coeff;
                                 //TODO: change how exemptions are indexed!
                                 acc + zerofier
                                     * (alpha * &degree_adjustments[degree - 1][i] + beta)
@@ -265,8 +265,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
             .zip(constraint_coeffs)
             .fold(
                 FieldElement::<F>::zero(),
-                |acc, (((ev, degree), inv), coeff)| {
-                    let (alpha, beta) = &coeff;
+                |acc, (((ev, degree), inv), (alpha, beta))| {
                     acc + ev * (alpha * degree + beta) * inv
                 },
             )
