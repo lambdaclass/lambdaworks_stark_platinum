@@ -4,6 +4,7 @@ use lambdaworks_math::{
     polynomial::Polynomial,
     traits::ByteConversion,
 };
+use std::cmp;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::{
@@ -139,6 +140,7 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let transition_exemptions_evaluations =
             evaluate_transition_exemptions(transition_exemptions, domain);
 
+        let num_exemptions = transition_exemptions_evaluations.len();
         let context = self.air.context();
         let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
 
@@ -187,8 +189,9 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let evaluations_t_iter = 0..domain.lde_roots_of_unity_coset.len();
 
         let evaluations_t = evaluations_t_iter
+            .zip(&boundary_evaluation)
             .zip(zerofier_evaluations.iter().cycle())
-            .map(|(i, zerofier)| {
+            .map(|((i, boundary), zerofier)| {
                 let frame = Frame::read_from_trace(
                     lde_trace,
                     i,
@@ -220,13 +223,14 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                                 acc + zerofier
                                     * (alpha * &degree_adjustments[degree - 1][i] + beta)
                                     * eval
-                                    * &transition_exemptions_evaluations[exemption - 1][i]
+                                    * &transition_exemptions_evaluations
+                                        [cmp::min(exemption - 1, num_exemptions - 1)][i]
                             }
                         },
                     );
                 // TODO: Remove clones
 
-                acc_transition + &boundary_evaluation[i]
+                acc_transition + boundary
             })
             .collect::<Vec<FieldElement<F>>>();
 
