@@ -33,9 +33,9 @@ where
     let mut domain_size = domain_size;
 
     let mut fri_layer_list = Vec::with_capacity(number_layers);
-    let mut current_layer = FriLayer::new(p_0, coset_offset, domain_size);
+    let mut current_layer = FriLayer::new(&p_0, coset_offset, domain_size);
     fri_layer_list.push(current_layer.clone());
-
+    let mut current_poly = p_0;
     // >>>> Send commitment: [p₀]
     transcript.append(&current_layer.merkle_tree.root);
 
@@ -48,8 +48,8 @@ where
         domain_size /= 2;
 
         // Compute layer polynomial and domain
-        let next_poly = fold_polynomial(&current_layer.poly, &zeta);
-        current_layer = FriLayer::new(next_poly, &coset_offset, domain_size);
+        current_poly = fold_polynomial(&current_poly, &zeta);
+        current_layer = FriLayer::new(&current_poly, &coset_offset, domain_size);
         let new_data = &current_layer.merkle_tree.root;
         fri_layer_list.push(current_layer.clone()); // TODO: remove this clone
 
@@ -60,15 +60,7 @@ where
     // <<<< Receive challenge: 𝜁ₙ₋₁
     let zeta = transcript_to_field(transcript);
 
-    let last_poly = fold_polynomial(&current_layer.poly, &zeta);
-
-    #[cfg(debug_assertions)]
-    if last_poly.coefficients().len() > 1 {
-        error!(
-            "Polynomial of last FRI layer must be constant, got polynomial of order {}",
-            last_poly.coefficients().len()
-        );
-    }
+    let last_poly = fold_polynomial(&current_poly, &zeta);
 
     let last_value = last_poly
         .coefficients()
