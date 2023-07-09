@@ -237,11 +237,7 @@ where
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     // Create evaluation table
-    let evaluator = ConstraintEvaluator::new(
-        air,
-        &round_1_result.trace_polys,
-        &round_1_result.rap_challenges,
-    );
+    let evaluator = ConstraintEvaluator::new(air, &round_1_result.rap_challenges);
 
     let constraint_evaluations = evaluator.evaluate(
         &round_1_result.lde_trace,

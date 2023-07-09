@@ -21,23 +21,17 @@ use crate::starks::traits::AIR;
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
 
-pub struct ConstraintEvaluator<'poly, F: IsFFTField, A: AIR> {
+pub struct ConstraintEvaluator<F: IsFFTField, A: AIR> {
     air: A,
     boundary_constraints: BoundaryConstraints<F>,
-    trace_polys: &'poly [Polynomial<FieldElement<F>>],
 }
-impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F, A> {
-    pub fn new(
-        air: &A,
-        trace_polys: &'poly [Polynomial<FieldElement<F>>],
-        rap_challenges: &A::RAPChallenges,
-    ) -> Self {
+impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
+    pub fn new(air: &A, rap_challenges: &A::RAPChallenges) -> Self {
         let boundary_constraints = air.boundary_constraints(rap_challenges);
 
         Self {
             air: air.clone(),
             boundary_constraints,
-            trace_polys,
         }
     }
 
@@ -62,21 +56,22 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         //let n_trace_colums = self.trace_polys.len();
         let boundary_constraints = &self.boundary_constraints;
         let number_of_b_constraints = boundary_constraints.constraints.len();
-        let boundary_cols = self.boundary_constraints.cols_for_boundary();
-        let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> = (0
-            ..number_of_b_constraints)
-            .map(|index| {
-                let step = boundary_constraints.constraints[index].step;
-                let point = &domain.trace_primitive_root.pow(step as u64);
-                let mut evals = domain
-                    .lde_roots_of_unity_coset
-                    .iter()
-                    .map(|v| v.clone() - point)
-                    .collect::<Vec<FieldElement<F>>>();
-                FieldElement::inplace_batch_inverse(&mut evals);
-                evals
-            })
-            .collect::<Vec<Vec<FieldElement<F>>>>();
+        let boundary_cols = boundary_constraints.cols_for_boundary();
+        let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
+            boundary_constraints
+                .constraints
+                .iter()
+                .map(|bc| {
+                    let point = &domain.trace_primitive_root.pow(bc.step as u64);
+                    let mut evals = domain
+                        .lde_roots_of_unity_coset
+                        .iter()
+                        .map(|v| v.clone() - point)
+                        .collect::<Vec<FieldElement<F>>>();
+                    FieldElement::inplace_batch_inverse(&mut evals);
+                    evals
+                })
+                .collect::<Vec<Vec<FieldElement<F>>>>();
 
         let trace_length = self.air.trace_length();
         let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
@@ -97,20 +92,21 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         #[cfg(feature = "parallel")]
         let boundary_iter = boundary_cols.par_iter();
 
+        let n_col = lde_trace.n_cols;
+        let n_elem = domain.lde_roots_of_unity_coset.len();
         let boundary_polys_evaluations = boundary_constraints
             .constraints
             .iter()
             .map(|constraint| {
                 let col = constraint.col;
-                let boundary_poly = &self.trace_polys[col] - &constraint.value;
-
-                evaluate_polynomial_on_lde_domain(
-                    &boundary_poly,
-                    domain.blowup_factor,
-                    domain.interpolation_domain_size,
-                    &domain.coset_offset,
-                )
-                .unwrap()
+                lde_trace
+                    .table
+                    .iter()
+                    .skip(col)
+                    .step_by(n_col)
+                    .take(n_elem)
+                    .map(|v| v - &constraint.value)
+                    .collect::<Vec<FieldElement<F>>>()
             })
             .collect::<Vec<Vec<FieldElement<F>>>>();
         let boundary_evaluation = (0..domain.lde_roots_of_unity_coset.len())
