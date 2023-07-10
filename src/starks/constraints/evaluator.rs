@@ -53,7 +53,6 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
             self.air.context().num_transition_constraints() + 1,
             &domain.lde_roots_of_unity_coset,
         );
-        //let n_trace_colums = self.trace_polys.len();
         let boundary_constraints = &self.boundary_constraints;
         let number_of_b_constraints = boundary_constraints.constraints.len();
         let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
