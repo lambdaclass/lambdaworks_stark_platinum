@@ -246,20 +246,13 @@ impl PublicInputs {
     ) -> Self {
         let output_range = memory_segments.get(&MemorySegment::Output);
 
-        let public_memory_size = if let Some(output_range) = output_range {
-            program_size + (output_range.end - output_range.start) as usize
-        } else {
-            program_size
-        };
-        let mut public_memory = HashMap::with_capacity(public_memory_size);
-
-        for i in 1..=program_size as u64 {
-            public_memory.insert(FE::from(i), memory.get(&i).unwrap().clone());
-        }
+        let mut public_memory = (1..=program_size as u64)
+            .map(|i| (FE::from(i), *memory.get(&i).unwrap()))
+            .collect::<HashMap<FE, FE>>();
 
         if let Some(output_range) = output_range {
             for addr in output_range.clone() {
-                public_memory.insert(FE::from(addr), memory.get(&addr).unwrap().clone());
+                public_memory.insert(FE::from(addr), *memory.get(&addr).unwrap());
             }
         };
         let last_step = &register_states.rows[register_states.steps() - 1];
@@ -555,7 +548,7 @@ fn add_pub_memory_in_public_input_section(
     a_aux.splice(public_input_section.., pub_memory_addrs);
     for i in public_input_section..a_aux.len() {
         let address = &a_aux[i];
-        v_aux[i] = public_input.public_memory.get(address).unwrap().clone();
+        v_aux[i] = *public_input.public_memory.get(address).unwrap();
     }
 
     (a_aux, v_aux)
@@ -602,26 +595,21 @@ fn generate_memory_permutation_argument_column(
 
     let mut denom: Vec<_> = addresses_sorted
         .iter()
-        .zip(values_sorted.iter())
+        .zip(values_sorted)
         .map(|(ap, vp)| z - (ap + alpha * vp))
         .collect();
     FieldElement::inplace_batch_inverse(&mut denom);
-
-    let num: Vec<_> = addresses_original
+    // Returns the cumulative products of the numerators and denominators
+    addresses_original
         .iter()
-        .zip(values_original.iter())
-        .zip(denom.iter())
-        .map(|((a_i, v_i), den_i)| (z - (a_i + alpha * v_i)) * den_i)
-        .collect();
-
-    let mut ret = Vec::with_capacity(num.len());
-    ret.push(num[0].clone());
-
-    for i in 1..num.len() {
-        ret.push(&ret[i - 1] * &num[i]);
-    }
-
-    ret
+        .zip(&values_original)
+        .zip(&denom)
+        .scan(FE::one(), |product, ((a_i, v_i), den_i)| {
+            let ret = *product;
+            *product = &ret * ((z - (a_i + alpha * v_i)) * den_i);
+            Some(*product)
+        })
+        .collect::<Vec<FE>>()
 }
 fn generate_range_check_permutation_argument_column(
     offset_column_original: &[FE],
@@ -633,20 +621,15 @@ fn generate_range_check_permutation_argument_column(
     let mut denom: Vec<_> = offset_column_sorted.iter().map(|x| z - x).collect();
     FieldElement::inplace_batch_inverse(&mut denom);
 
-    let num: Vec<_> = offset_column_original
+    offset_column_original
         .iter()
-        .zip(denom.iter())
-        .map(|(num_i, den_i)| (z - num_i) * den_i)
-        .collect();
-
-    let mut ret = Vec::with_capacity(num.len());
-    ret.push(num[0].clone());
-
-    for i in 1..num.len() {
-        ret.push(&ret[i - 1] * &num[i]);
-    }
-
-    ret
+        .zip(&denom)
+        .scan(FE::one(), |product, (num_i, den_i)| {
+            let ret = *product;
+            *product = &ret * (z - num_i) * den_i;
+            Some(*product)
+        })
+        .collect::<Vec<FE>>()
 }
 
 impl AIR for CairoAIR {
@@ -782,24 +765,24 @@ impl AIR for CairoAIR {
         // Convert from long-format to wide-format again
         let mut aux_table = Vec::new();
         for i in 0..main_trace.n_rows() {
-            aux_table.push(offsets_sorted[3 * i].clone());
-            aux_table.push(offsets_sorted[3 * i + 1].clone());
-            aux_table.push(offsets_sorted[3 * i + 2].clone());
-            aux_table.push(addresses[4 * i].clone());
-            aux_table.push(addresses[4 * i + 1].clone());
-            aux_table.push(addresses[4 * i + 2].clone());
-            aux_table.push(addresses[4 * i + 3].clone());
-            aux_table.push(values[4 * i].clone());
-            aux_table.push(values[4 * i + 1].clone());
-            aux_table.push(values[4 * i + 2].clone());
-            aux_table.push(values[4 * i + 3].clone());
-            aux_table.push(permutation_col[4 * i].clone());
-            aux_table.push(permutation_col[4 * i + 1].clone());
-            aux_table.push(permutation_col[4 * i + 2].clone());
-            aux_table.push(permutation_col[4 * i + 3].clone());
-            aux_table.push(range_check_permutation_col[3 * i].clone());
-            aux_table.push(range_check_permutation_col[3 * i + 1].clone());
-            aux_table.push(range_check_permutation_col[3 * i + 2].clone());
+            aux_table.push(offsets_sorted[3 * i]);
+            aux_table.push(offsets_sorted[3 * i + 1]);
+            aux_table.push(offsets_sorted[3 * i + 2]);
+            aux_table.push(addresses[4 * i]);
+            aux_table.push(addresses[4 * i + 1]);
+            aux_table.push(addresses[4 * i + 2]);
+            aux_table.push(addresses[4 * i + 3]);
+            aux_table.push(values[4 * i]);
+            aux_table.push(values[4 * i + 1]);
+            aux_table.push(values[4 * i + 2]);
+            aux_table.push(values[4 * i + 3]);
+            aux_table.push(permutation_col[4 * i]);
+            aux_table.push(permutation_col[4 * i + 1]);
+            aux_table.push(permutation_col[4 * i + 2]);
+            aux_table.push(permutation_col[4 * i + 3]);
+            aux_table.push(range_check_permutation_col[3 * i]);
+            aux_table.push(range_check_permutation_col[3 * i + 1]);
+            aux_table.push(range_check_permutation_col[3 * i + 2]);
         }
 
         TraceTable::new(aux_table, self.number_auxiliary_rap_columns())
@@ -855,20 +838,18 @@ impl AIR for CairoAIR {
         &self,
         rap_challenges: &Self::RAPChallenges,
     ) -> BoundaryConstraints<Self::Field> {
-        let initial_pc =
-            BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, self.pub_inputs.pc_init.clone());
-        let initial_ap =
-            BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, self.pub_inputs.ap_init.clone());
+        let initial_pc = BoundaryConstraint::new(MEM_A_TRACE_OFFSET, 0, self.pub_inputs.pc_init);
+        let initial_ap = BoundaryConstraint::new(MEM_P_TRACE_OFFSET, 0, self.pub_inputs.ap_init);
 
         let final_pc = BoundaryConstraint::new(
             MEM_A_TRACE_OFFSET,
             self.pub_inputs.num_steps - 1,
-            self.pub_inputs.pc_final.clone(),
+            self.pub_inputs.pc_final,
         );
         let final_ap = BoundaryConstraint::new(
             MEM_P_TRACE_OFFSET,
             self.pub_inputs.num_steps - 1,
-            self.pub_inputs.ap_final.clone(),
+            self.pub_inputs.ap_final,
         );
 
         // Auxiliary constraint: permutation argument final value
@@ -876,15 +857,19 @@ impl AIR for CairoAIR {
 
         let builtin_offset = self.get_builtin_offset();
 
-        let mut cumulative_product = FieldElement::one();
-        for (address, value) in self.pub_inputs.public_memory.iter() {
-            cumulative_product = cumulative_product
-                * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value));
-        }
+        let cumulative_product = self
+            .pub_inputs
+            .public_memory
+            .iter()
+            .fold(FieldElement::one(), |product, (address, value)| {
+                product
+                    * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value))
+            })
+            .inv();
         let permutation_final = rap_challenges
             .z_memory
             .pow(self.pub_inputs.public_memory.len())
-            / cumulative_product;
+            * cumulative_product;
         let permutation_final_constraint = BoundaryConstraint::new(
             PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
             final_index,
@@ -949,7 +934,7 @@ fn compute_instr_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prime
     for (i, flag) in curr[0..16].iter().enumerate() {
         constraints[i] = match i {
             0..=14 => flag * (flag - FE::one()),
-            15 => flag.clone(),
+            15 => *flag,
             _ => panic!("Unknown flag offset"),
         };
     }
@@ -1074,7 +1059,7 @@ fn compute_opcode_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prim
 fn enforce_selector(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
     let curr = frame.get_row(0);
     for result_cell in constraints.iter_mut().take(ASSERT_EQ + 1).skip(INST) {
-        *result_cell = result_cell.clone() * curr[FRAME_SELECTOR].clone();
+        *result_cell = *result_cell * curr[FRAME_SELECTOR];
     }
 }
 

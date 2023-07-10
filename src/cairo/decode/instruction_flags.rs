@@ -1,6 +1,4 @@
 use crate::{cairo::errors::InstructionDecodingError, FE};
-use lambdaworks_math::traits::ByteConversion;
-
 // Constants for instructions decoding
 const DST_REG_MASK: u64 = 0x0001;
 const DST_REG_OFF: u64 = 0;

@@ -6,7 +6,9 @@ use lambdaworks_math::{
 };
 
 #[cfg(feature = "parallel")]
-use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
 
 #[cfg(all(debug_assertions, not(feature = "parallel")))]
 use crate::starks::debug::check_boundary_polys_divisibility;
@@ -51,6 +53,8 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
     ) -> ConstraintEvaluationTable<F>
     where
         FieldElement<F>: ByteConversion + Send + Sync,
+        A: Send + Sync,
+        A::RAPChallenges: Send + Sync,
     {
         // The + 1 is for the boundary constraints column
         let mut evaluation_table = ConstraintEvaluationTable::new(
@@ -171,7 +175,13 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
         let context = self.air.context();
         let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
 
-        let degree_adjustments: Vec<Vec<FieldElement<F>>> = (1..=max_transition_degree)
+        #[cfg(feature = "parallel")]
+        let degree_adjustments_iter = (1..=max_transition_degree).into_par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let degree_adjustments_iter = 1..=max_transition_degree;
+
+        let degree_adjustments: Vec<Vec<FieldElement<F>>> = degree_adjustments_iter
             .map(|transition_degree| {
                 domain
                     .lde_roots_of_unity_coset
@@ -215,7 +225,13 @@ impl<'poly, F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<'poly, F
                 .collect();
 
         // Iterate over trace and domain and compute transitions
-        let evaluations_t = (0..domain.lde_roots_of_unity_coset.len())
+        #[cfg(feature = "parallel")]
+        let evaluations_t_iter = (0..domain.lde_roots_of_unity_coset.len()).into_par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let evaluations_t_iter = 0..domain.lde_roots_of_unity_coset.len();
+
+        let evaluations_t = evaluations_t_iter
             .map(|i| {
                 let frame = Frame::read_from_trace(
                     lde_trace,
