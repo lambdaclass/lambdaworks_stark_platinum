@@ -82,7 +82,7 @@ impl<F: IsField> BoundaryConstraints<F> {
     pub fn generate_roots_of_unity(
         &self,
         primitive_root: &FieldElement<F>,
-        cols_trace: &Vec<usize>,
+        cols_trace: &[usize],
     ) -> Vec<Vec<FieldElement<F>>> {
         cols_trace
             .iter()
@@ -97,7 +97,7 @@ impl<F: IsField> BoundaryConstraints<F> {
 
     /// For every trace column, give all the values the trace must be equal to in
     /// the steps where the boundary constraints hold
-    pub fn values(&self, cols_trace: &Vec<usize>) -> Vec<Vec<FieldElement<F>>> {
+    pub fn values(&self, cols_trace: &[usize]) -> Vec<Vec<FieldElement<F>>> {
         cols_trace
             .iter()
             .map(|i| {

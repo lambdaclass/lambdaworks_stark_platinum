@@ -229,8 +229,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                                         .iter()
                                         .cloned()
                                         .filter(|elem| elem > &0)
-                                        .unique_by(|elem| elem.clone())
-                                        .map(|v| v)
+                                        .unique_by(|elem| *elem)
                                         .collect::<Vec<usize>>();
                                     let index = vector
                                         .iter()
