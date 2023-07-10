@@ -1,4 +1,4 @@
-# Lambdaworks Cairo Prover
+# Starknet Stack Prover Lambdaworks
 Disclaimer: This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
 
 ## Main building blocks
