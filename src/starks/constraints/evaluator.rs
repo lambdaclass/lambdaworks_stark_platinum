@@ -56,7 +56,6 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
         //let n_trace_colums = self.trace_polys.len();
         let boundary_constraints = &self.boundary_constraints;
         let number_of_b_constraints = boundary_constraints.constraints.len();
-        let boundary_cols = boundary_constraints.cols_for_boundary();
         let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
             boundary_constraints
                 .constraints
@@ -85,12 +84,6 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
 
         #[cfg(all(debug_assertions, not(feature = "parallel")))]
         let boundary_polys: Vec<Polynomial<FieldElement<F>>> = Vec::new();
-
-        #[cfg(not(feature = "parallel"))]
-        let _boundary_iter = boundary_cols.iter();
-
-        #[cfg(feature = "parallel")]
-        let boundary_iter = boundary_cols.par_iter();
 
         let n_col = lde_trace.n_cols;
         let n_elem = domain.lde_roots_of_unity_coset.len();
@@ -179,15 +172,24 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
         FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
 
         // Iterate over trace and domain and compute transitions
+        let evaluations_t_iter;
+        let zerofier_iter;
         #[cfg(feature = "parallel")]
-        let evaluations_t_iter = (0..domain.lde_roots_of_unity_coset.len()).into_par_iter();
-
+        {
+            evaluations_t_iter = (0..domain.lde_roots_of_unity_coset.len()).into_par_iter();
+            zerofier_iter = evaluations_t_iter
+                .clone()
+                .map(|i| zerofier_evaluations[i % zerofier_evaluations.len()].clone());
+        }
         #[cfg(not(feature = "parallel"))]
-        let evaluations_t_iter = 0..domain.lde_roots_of_unity_coset.len();
+        {
+            evaluations_t_iter = 0..domain.lde_roots_of_unity_coset.len();
+            zerofier_iter = zerofier_evaluations.iter().cycle();
+        }
 
         let evaluations_t = evaluations_t_iter
             .zip(&boundary_evaluation)
-            .zip(zerofier_evaluations.iter().cycle())
+            .zip(zerofier_iter)
             .map(|((i, boundary), zerofier)| {
                 let frame = Frame::read_from_trace(
                     lde_trace,
@@ -209,6 +211,9 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                     .fold(
                         FieldElement::zero(),
                         |acc, (((eval, exemption), degree), (alpha, beta))| {
+                            #[cfg(feature = "parallel")]
+                            let zerofier = zerofier.clone();
+
                             if *exemption == 0 {
                                 acc + zerofier
                                     * (alpha * &degree_adjustments[degree - 1][i] + beta)
