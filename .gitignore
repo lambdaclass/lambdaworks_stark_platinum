@@ -18,3 +18,4 @@ proving_system/stark/src/cairo_run/program.trace
 
 **/.DS_Store
 **/*.swp
+*.json
