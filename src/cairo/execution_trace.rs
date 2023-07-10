@@ -594,17 +594,11 @@ fn update_values(
 /// Utility function to change from a rows representation to a columns
 /// representation of a slice of arrays.   
 fn rows_to_cols<const N: usize>(rows: &[[FE; N]]) -> Vec<Vec<FE>> {
-    let mut cols = Vec::new();
     let n_cols = rows[0].len();
 
-    for col_idx in 0..n_cols {
-        let mut col = Vec::new();
-        for row in rows {
-            col.push(row[col_idx]);
-        }
-        cols.push(col);
-    }
-    cols
+    (0..n_cols)
+        .map(|col_idx| rows.iter().map(|elem| elem[col_idx]).collect::<Vec<FE>>())
+        .collect::<Vec<Vec<FE>>>()
 }
 
 fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
