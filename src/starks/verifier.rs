@@ -266,9 +266,12 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         &proof.trace_ood_frame_evaluations,
         &challenges.rap_challenges,
     );
-
+    for (i, transition_ood_eval) in transition_ood_frame_evaluations.iter().enumerate() {
+        dbg!(format!("0x{:x}", i));
+        dbg!(transition_ood_eval.representative().to_string());
+    }
     let divisor_x_n = (&challenges.z.pow(trace_length) - FieldElement::<F>::one()).inv();
-
+    dbg!(divisor_x_n.representative().to_string());
     let denominators = air
         .transition_exemptions()
         .iter()
