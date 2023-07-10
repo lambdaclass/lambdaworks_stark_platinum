@@ -156,16 +156,18 @@ where
         .collect::<Vec<Vec<FieldElement<F>>>>();
 
     // FRI commit phase
-    let mut zetas: Vec<FieldElement<F>> = Vec::new();
-    let merkle_roots = &proof.fri_layers_merkle_roots;
-    for root in merkle_roots.iter() {
-        // <<<< Receive commitment: [pₖ] (the first one is [p₀])
-        transcript.append(root);
 
-        // >>>> Send challenge 𝜁ₖ
-        let zeta = transcript_to_field(transcript);
-        zetas.push(zeta);
-    }
+    let merkle_roots = &proof.fri_layers_merkle_roots;
+    let zetas = merkle_roots
+        .iter()
+        .map(|root| {
+            // <<<< Receive commitment: [pₖ] (the first one is [p₀])
+            transcript.append(root);
+
+            // >>>> Send challenge 𝜁ₖ
+            transcript_to_field(transcript)
+        })
+        .collect::<Vec<FieldElement<F>>>();
 
     // <<<< Receive value: pₙ
     transcript.append(&proof.fri_last_value.to_bytes_be());
@@ -315,6 +317,7 @@ where
     A: AIR<Field = F>,
 {
     // verify FRI
+    let two_inv = &FieldElement::from(2).inv();
     proof.query_list.iter().zip(challenges.iotas.iter()).fold(
         true,
         |mut result, (proof_s, iota_s)| {
@@ -325,6 +328,7 @@ where
                 *iota_s,
                 proof_s,
                 domain,
+                two_inv,
             );
             result
         },
@@ -340,62 +344,58 @@ fn step_4_verify_deep_composition_polynomial<F: IsFFTField, A: AIR<Field = F>>(
 where
     FieldElement<F>: ByteConversion,
 {
-    let mut result = true;
-
-    for (i, (iota_n, deep_poly_opening)) in challenges
+    challenges
         .iotas
         .iter()
-        .zip(proof.deep_poly_openings.iter())
+        .zip(&proof.deep_poly_openings)
         .enumerate()
-    {
-        let evaluations = vec![
-            deep_poly_opening
-                .lde_composition_poly_even_evaluation
-                .clone(),
-            deep_poly_opening
-                .lde_composition_poly_odd_evaluation
-                .clone(),
-        ];
+        .fold(true, |mut result, (i, (iota_n, deep_poly_opening))| {
+            let evaluations = vec![
+                deep_poly_opening
+                    .lde_composition_poly_even_evaluation
+                    .clone(),
+                deep_poly_opening
+                    .lde_composition_poly_odd_evaluation
+                    .clone(),
+            ];
 
-        // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
-        result &= deep_poly_opening
-            .lde_composition_poly_proof
-            .verify::<BatchedMerkleTreeBackend<F>>(
-                &proof.composition_poly_root,
-                *iota_n,
-                &evaluations,
-            );
+            // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
+            result &= deep_poly_opening
+                .lde_composition_poly_proof
+                .verify::<BatchedMerkleTreeBackend<F>>(
+                    &proof.composition_poly_root,
+                    *iota_n,
+                    &evaluations,
+                );
 
-        let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
-        let lde_trace_evaluations = vec![
-            deep_poly_opening.lde_trace_evaluations[..num_main_columns].to_vec(),
-            deep_poly_opening.lde_trace_evaluations[num_main_columns..].to_vec(),
-        ];
+            let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
+            let lde_trace_evaluations = vec![
+                deep_poly_opening.lde_trace_evaluations[..num_main_columns].to_vec(),
+                deep_poly_opening.lde_trace_evaluations[num_main_columns..].to_vec(),
+            ];
 
-        // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
-        for ((merkle_root, merkle_proof), evaluation) in proof
-            .lde_trace_merkle_roots
-            .iter()
-            .zip(&deep_poly_opening.lde_trace_merkle_proofs)
-            .zip(lde_trace_evaluations)
-        {
-            result &= merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
-                merkle_root,
-                *iota_n,
-                &evaluation,
-            );
-        }
+            // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
+            proof
+                .lde_trace_merkle_roots
+                .iter()
+                .zip(&deep_poly_opening.lde_trace_merkle_proofs)
+                .zip(lde_trace_evaluations)
+                .fold(result, |acc, ((merkle_root, merkle_proof), evaluation)| {
+                    acc & merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
+                        merkle_root,
+                        *iota_n,
+                        &evaluation,
+                    )
+                });
 
-        // DEEP consistency check
-        // Verify that Deep(x) is constructed correctly
-        let deep_poly_evaluation =
-            reconstruct_deep_composition_poly_evaluation(proof, domain, challenges, *iota_n, i);
+            // DEEP consistency check
+            // Verify that Deep(x) is constructed correctly
+            let deep_poly_evaluation =
+                reconstruct_deep_composition_poly_evaluation(proof, domain, challenges, *iota_n, i);
 
-        let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
-        result &= deep_poly_claimed_evaluation == &deep_poly_evaluation;
-    }
-
-    result
+            let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
+            result & (deep_poly_claimed_evaluation == &deep_poly_evaluation)
+        })
 }
 
 fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
@@ -404,12 +404,11 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
     iota: usize,
     fri_decommitment: &FriDecommitment<F>,
     domain: &Domain<F>,
+    two_inv: &FieldElement<F>,
 ) -> bool
 where
     FieldElement<F>: ByteConversion,
 {
-    let two_inv = &FieldElement::from(2).inv();
-
     let evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
 
     let mut evaluation_point_vec: Vec<FieldElement<F>> =

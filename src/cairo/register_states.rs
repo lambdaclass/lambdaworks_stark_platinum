@@ -58,10 +58,8 @@ impl RegisterStates {
         }
         let num_rows = bytes.len() / ROW_SIZE;
 
-        let mut rows: Vec<RegistersState> = Vec::with_capacity(num_rows);
-
-        for i in 0..num_rows {
-            rows.push(RegistersState {
+        let rows = (0..num_rows)
+            .map(|i| RegistersState {
                 ap: u64::from_le_bytes(bytes[i * ROW_SIZE..i * ROW_SIZE + 8].try_into().unwrap()),
                 fp: u64::from_le_bytes(
                     bytes[i * ROW_SIZE + 8..i * ROW_SIZE + 16]
@@ -74,7 +72,7 @@ impl RegisterStates {
                         .unwrap(),
                 ),
             })
-        }
+            .collect::<Vec<RegistersState>>();
 
         Ok(Self { rows })
     }

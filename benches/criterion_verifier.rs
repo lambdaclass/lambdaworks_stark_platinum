@@ -6,7 +6,10 @@ use lambdaworks_math::{
 };
 use lambdaworks_stark::{
     cairo::air::{verify_cairo_proof, PublicInputs},
-    starks::proof::{options::ProofOptions, stark::StarkProof},
+    starks::proof::{
+        options::{ProofOptions, SecurityLevel},
+        stark::StarkProof,
+    },
 };
 use std::time::Duration;
 
@@ -60,7 +63,7 @@ fn run_verifier_bench(
     program_path: &str,
 ) {
     let (proof, pub_inputs) = load_proof_and_pub_inputs(program_path);
-    let proof_options = ProofOptions::default_test_options();
+    let proof_options = ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
     group.bench_function(benchname, |bench| {
         bench.iter(|| black_box(verify_cairo_proof(&proof, &pub_inputs, &proof_options)));
     });

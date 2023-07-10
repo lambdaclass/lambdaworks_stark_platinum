@@ -6,7 +6,7 @@ use lambdaworks_stark::{
         air::generate_cairo_proof,
         runner::run::{generate_prover_args, CairoVersion},
     },
-    starks::proof::options::ProofOptions,
+    starks::proof::options::{ProofOptions, SecurityLevel},
 };
 use std::time::Duration;
 
@@ -43,7 +43,7 @@ fn cairo0_program_path(program_name: &str) -> String {
 
 fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
     let program_content = std::fs::read(program_path).unwrap();
-    let proof_options = ProofOptions::default_test_options();
+    let proof_options = ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 

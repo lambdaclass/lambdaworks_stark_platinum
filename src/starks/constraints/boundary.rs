@@ -76,17 +76,14 @@ impl<F: IsField> BoundaryConstraints<F> {
         primitive_root: &FieldElement<F>,
         count_cols_trace: usize,
     ) -> Vec<Vec<FieldElement<F>>> {
-        let mut ret = Vec::new();
-
-        for i in 0..count_cols_trace {
-            ret.push(
+        (0..count_cols_trace)
+            .map(|i| {
                 self.steps(i)
                     .into_iter()
                     .map(|s| primitive_root.pow(s))
-                    .collect(),
-            );
-        }
-        ret
+                    .collect::<Vec<FieldElement<F>>>()
+            })
+            .collect::<Vec<Vec<FieldElement<F>>>>()
     }
 
     /// For every trace column, give all the values the trace must be equal to in
@@ -114,14 +111,15 @@ impl<F: IsField> BoundaryConstraints<F> {
         primitive_root: &FieldElement<F>,
         col: usize,
     ) -> Polynomial<FieldElement<F>> {
-        let mut zerofier = Polynomial::new_monomial(FieldElement::<F>::one(), 0);
-        for step in self.steps(col).into_iter() {
-            let binomial = Polynomial::new(&[-primitive_root.pow(step), FieldElement::<F>::one()]);
-            // TODO: Implement the MulAssign trait for Polynomials?
-            zerofier = zerofier * binomial;
-        }
-
-        zerofier
+        self.steps(col).into_iter().fold(
+            Polynomial::new_monomial(FieldElement::<F>::one(), 0),
+            |zerofier, step| {
+                let binomial =
+                    Polynomial::new(&[-primitive_root.pow(step), FieldElement::<F>::one()]);
+                // TODO: Implement the MulAssign trait for Polynomials?
+                zerofier * binomial
+            },
+        )
     }
 }
 
@@ -142,8 +140,8 @@ mod test {
         //   * a0 = 1
         //   * a1 = 1
         //   * a7 = 32
-        let a0 = BoundaryConstraint::new_simple(0, one.clone());
-        let a1 = BoundaryConstraint::new_simple(1, one.clone());
+        let a0 = BoundaryConstraint::new_simple(0, one);
+        let a1 = BoundaryConstraint::new_simple(1, one);
         let result = BoundaryConstraint::new_simple(7, FieldElement::<PrimeField>::from(32));
 
         let constraints = BoundaryConstraints::from_constraints(vec![a0, a1, result]);
@@ -151,9 +149,9 @@ mod test {
         let primitive_root = PrimeField::get_primitive_root_of_unity(3).unwrap();
 
         // P_0(x) = (x - 1)
-        let a0_zerofier = Polynomial::new(&[-one.clone(), one.clone()]);
+        let a0_zerofier = Polynomial::new(&[-one, one]);
         // P_1(x) = (x - w^1)
-        let a1_zerofier = Polynomial::new(&[-primitive_root.pow(1u32), one.clone()]);
+        let a1_zerofier = Polynomial::new(&[-primitive_root.pow(1u32), one]);
         // P_res(x) = (x - w^7)
         let res_zerofier = Polynomial::new(&[-primitive_root.pow(7u32), one]);
 
