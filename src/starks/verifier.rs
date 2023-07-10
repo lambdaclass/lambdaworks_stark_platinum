@@ -15,7 +15,6 @@ use lambdaworks_math::{
         element::FieldElement,
         traits::{IsFFTField, IsField},
     },
-    polynomial::Polynomial,
     traits::ByteConversion,
 };
 
@@ -91,9 +90,15 @@ where
 
     // These are the challenges alpha^B_j and beta^B_j
     // >>>> Send challenges: 𝛼_j^B
-    let boundary_coeffs_alphas = batch_sample_challenges(total_columns, transcript);
+    let boundary_coeffs_alphas = batch_sample_challenges(
+        air.boundary_constraints(&rap_challenges).constraints.len(),
+        transcript,
+    );
     // >>>> Send  challenges: 𝛽_j^B
-    let boundary_coeffs_betas = batch_sample_challenges(total_columns, transcript);
+    let boundary_coeffs_betas = batch_sample_challenges(
+        air.boundary_constraints(&rap_challenges).constraints.len(),
+        transcript,
+    );
     // >>>> Send challenges: 𝛼_j^T
     let transition_coeffs_alphas =
         batch_sample_challenges(air.context().num_transition_constraints, transcript);
@@ -214,34 +219,27 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     let boundary_constraints = air.boundary_constraints(&challenges.rap_challenges);
 
-    let n_trace_cols = air.context().trace_columns;
+    //let n_trace_cols = air.context().trace_columns;
     // special cases.
     let trace_length = air.trace_length();
     let composition_poly_degree_bound = air.composition_poly_degree_bound();
     let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
-
-    let boundary_constraint_domains =
-        boundary_constraints.generate_roots_of_unity(&domain.trace_primitive_root, n_trace_cols);
-    let values = boundary_constraints.values(n_trace_cols);
+    let number_of_b_constraints = boundary_constraints.constraints.len();
 
     // Following naming conventions from https://www.notamonadtutorial.com/diving-deep-fri/
     let (boundary_c_i_evaluations_num, mut boundary_c_i_evaluations_den): (
         Vec<FieldElement<F>>,
         Vec<FieldElement<F>>,
-    ) = (0..n_trace_cols)
-        .map(|trace_idx| {
+    ) = (0..number_of_b_constraints)
+        .map(|index| {
+            let step = boundary_constraints.constraints[index].step;
+            let point = &domain.trace_primitive_root.pow(step as u64);
+            let trace_idx = boundary_constraints.constraints[index].col;
             let trace_evaluation = &proof.trace_ood_frame_evaluations.get_row(0)[trace_idx];
-            let boundary_constraints_domain = &boundary_constraint_domains[trace_idx];
-            let boundary_interpolating_polynomial =
-                &Polynomial::interpolate(boundary_constraints_domain, &values[trace_idx])
-                    .expect("xs and ys have equal length and xs are unique");
-
-            let boundary_zerofier =
-                boundary_constraints.compute_zerofier(&domain.trace_primitive_root, trace_idx);
-            let boundary_zerofier_challenges_z_den = boundary_zerofier.evaluate(&challenges.z);
+            let boundary_zerofier_challenges_z_den = &challenges.z - point;
 
             let boundary_quotient_ood_evaluation_num =
-                trace_evaluation - boundary_interpolating_polynomial.evaluate(&challenges.z);
+                trace_evaluation - &boundary_constraints.constraints[index].value;
 
             (
                 boundary_quotient_ood_evaluation_num,
@@ -270,7 +268,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let divisor_x_n = (&challenges.z.pow(trace_length) - FieldElement::<F>::one()).inv();
 
     let denominators = air
-        .transition_exemptions()
+        .transition_exemptions_verifier()
         .iter()
         .map(|poly| poly.evaluate(&challenges.z) * &divisor_x_n)
         .collect::<Vec<FieldElement<F>>>();
