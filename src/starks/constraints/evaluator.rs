@@ -226,7 +226,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                                         * eval
                                         * &transition_exemptions_evaluations[0][i]
                                 } else {
-                                    //TODO: fix this
+                                    // This case is not used for Cairo Programs, it can be improved in the future
                                     let vector = &self
                                         .air
                                         .context()
