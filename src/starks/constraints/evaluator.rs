@@ -234,12 +234,9 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                                         .collect::<Vec<usize>>();
                                     let index = vector
                                         .iter()
-                                        .position(|elem_2| {
-                                            elem_2
-                                                == &self.air.context().transition_exemptions
-                                                    [*exemption]
-                                        }).expect("is there");
-                                        
+                                        .position(|elem_2| elem_2 == exemption)
+                                        .expect("is there");
+
                                     acc + zerofier
                                         * (alpha * &degree_adjustments[degree - 1][i] + beta)
                                         * eval
