@@ -14,10 +14,17 @@ pub mod functions;
 
 fn cairo_benches(c: &mut Criterion) {
     #[cfg(feature = "parallel")]
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(8)
-        .build_global()
-        .unwrap();
+    {
+        let num_threads: usize = std::env::var("NUM_THREADS")
+            .unwrap_or("8".to_string())
+            .parse()
+            .unwrap();
+        println!("Running benchmarks using {} threads", num_threads);
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build_global()
+            .unwrap();
+    };
 
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
