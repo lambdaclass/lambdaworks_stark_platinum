@@ -615,7 +615,7 @@ impl AIR for CairoAIR {
             transition_exemptions.push(0); // range-check builtin exemption
             num_transition_constraints += 1; // range-check builtin value decomposition constraint
         }
-
+        let num_transition_exemptions =1_usize;
         let context = AirContext {
             proof_options: proof_options.clone(),
             trace_columns,
@@ -623,6 +623,7 @@ impl AIR for CairoAIR {
             transition_exemptions,
             transition_offsets: vec![0, 1],
             num_transition_constraints,
+            num_transition_exemptions,
         };
 
         // The number of the transition constraints and the lengths of transition degrees

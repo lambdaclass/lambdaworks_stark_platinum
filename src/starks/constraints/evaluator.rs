@@ -1,10 +1,10 @@
+use itertools::Itertools;
 use lambdaworks_math::{
     fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
     field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
     traits::ByteConversion,
 };
-use std::cmp;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::{
@@ -137,8 +137,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
 
         let transition_exemptions_evaluations =
             evaluate_transition_exemptions(transition_exemptions, domain);
-
-        let num_exemptions = transition_exemptions_evaluations.len();
+        let num_exemptions = self.air.context().num_transition_exemptions;
         let context = self.air.context();
         let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
 
@@ -216,11 +215,36 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                                     * eval
                             } else {
                                 //TODO: change how exemptions are indexed!
-                                acc + zerofier
-                                    * (alpha * &degree_adjustments[degree - 1][i] + beta)
-                                    * eval
-                                    * &transition_exemptions_evaluations
-                                        [cmp::min(exemption - 1, num_exemptions - 1)][i]
+                                if num_exemptions == 1 {
+                                    acc + zerofier
+                                        * (alpha * &degree_adjustments[degree - 1][i] + beta)
+                                        * eval
+                                        * &transition_exemptions_evaluations[0][i]
+                                } else {
+                                    //TODO: fix this
+                                    let vector = &self
+                                        .air
+                                        .context()
+                                        .transition_exemptions
+                                        .iter()
+                                        .cloned()
+                                        .filter(|elem| elem > &0)
+                                        .unique_by(|elem| elem.clone())
+                                        .map(|v| v)
+                                        .collect::<Vec<usize>>();
+                                    let index = vector
+                                        .iter()
+                                        .position(|elem_2| {
+                                            elem_2
+                                                == &self.air.context().transition_exemptions
+                                                    [*exemption]
+                                        }).expect("is there");
+                                        
+                                    acc + zerofier
+                                        * (alpha * &degree_adjustments[degree - 1][i] + beta)
+                                        * eval
+                                        * &transition_exemptions_evaluations[index][i]
+                                }
                             }
                         },
                     );

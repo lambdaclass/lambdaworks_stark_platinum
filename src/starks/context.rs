@@ -14,6 +14,7 @@ pub struct AirContext {
     pub transition_offsets: Vec<usize>,
     pub transition_exemptions: Vec<usize>,
     pub num_transition_constraints: usize,
+    pub num_transition_exemptions: usize,
 }
 
 impl AirContext {
