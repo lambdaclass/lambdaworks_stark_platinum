@@ -194,16 +194,9 @@ impl PublicInputs {
     ) -> Self {
         let output_range = memory_segments.get(&MemorySegment::Output);
 
-        let public_memory_size = if let Some(output_range) = output_range {
-            program_size + (output_range.end - output_range.start) as usize
-        } else {
-            program_size
-        };
-        let mut public_memory = HashMap::with_capacity(public_memory_size);
-
-        for i in 1..=program_size as u64 {
-            public_memory.insert(FE::from(i), *memory.get(&i).unwrap());
-        }
+        let mut public_memory = (1..=program_size as u64)
+            .map(|i| (FE::from(i), *memory.get(&i).unwrap()))
+            .collect::<HashMap<FE, FE>>();
 
         if let Some(output_range) = output_range {
             for addr in output_range.clone() {
@@ -529,26 +522,21 @@ fn generate_memory_permutation_argument_column(
 
     let mut denom: Vec<_> = addresses_sorted
         .iter()
-        .zip(values_sorted.iter())
+        .zip(values_sorted)
         .map(|(ap, vp)| z - (ap + alpha * vp))
         .collect();
     FieldElement::inplace_batch_inverse(&mut denom);
-
-    let num: Vec<_> = addresses_original
+    // Returns the cumulative products of the numerators and denominators
+    addresses_original
         .iter()
-        .zip(values_original.iter())
-        .zip(denom.iter())
-        .map(|((a_i, v_i), den_i)| (z - (a_i + alpha * v_i)) * den_i)
-        .collect();
-
-    let mut ret = Vec::with_capacity(num.len());
-    ret.push(num[0]);
-
-    for i in 1..num.len() {
-        ret.push(&ret[i - 1] * &num[i]);
-    }
-
-    ret
+        .zip(&values_original)
+        .zip(&denom)
+        .scan(FE::one(), |product, ((a_i, v_i), den_i)| {
+            let ret = *product;
+            *product = &ret * ((z - (a_i + alpha * v_i)) * den_i);
+            Some(*product)
+        })
+        .collect::<Vec<FE>>()
 }
 fn generate_range_check_permutation_argument_column(
     offset_column_original: &[FE],
@@ -560,20 +548,15 @@ fn generate_range_check_permutation_argument_column(
     let mut denom: Vec<_> = offset_column_sorted.iter().map(|x| z - x).collect();
     FieldElement::inplace_batch_inverse(&mut denom);
 
-    let num: Vec<_> = offset_column_original
+    offset_column_original
         .iter()
-        .zip(denom.iter())
-        .map(|(num_i, den_i)| (z - num_i) * den_i)
-        .collect();
-
-    let mut ret = Vec::with_capacity(num.len());
-    ret.push(num[0]);
-
-    for i in 1..num.len() {
-        ret.push(&ret[i - 1] * &num[i]);
-    }
-
-    ret
+        .zip(&denom)
+        .scan(FE::one(), |product, (num_i, den_i)| {
+            let ret = *product;
+            *product = &ret * (z - num_i) * den_i;
+            Some(*product)
+        })
+        .collect::<Vec<FE>>()
 }
 
 impl AIR for CairoAIR {
@@ -801,15 +784,19 @@ impl AIR for CairoAIR {
 
         let builtin_offset = self.get_builtin_offset();
 
-        let mut cumulative_product = FieldElement::one();
-        for (address, value) in self.pub_inputs.public_memory.iter() {
-            cumulative_product = cumulative_product
-                * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value));
-        }
+        let cumulative_product = self
+            .pub_inputs
+            .public_memory
+            .iter()
+            .fold(FieldElement::one(), |product, (address, value)| {
+                product
+                    * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value))
+            })
+            .inv();
         let permutation_final = rap_challenges
             .z_memory
             .pow(self.pub_inputs.public_memory.len())
-            / cumulative_product;
+            * cumulative_product;
         let permutation_final_constraint = BoundaryConstraint::new(
             PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
             final_index,
