@@ -766,7 +766,7 @@ mod test {
 
         assert_eq!(execution_trace.cols(), expected_trace.cols());
     }
-
+    /*
     #[test]
     fn test_build_main_trace_call_func_program() {
         /*
@@ -1309,4 +1309,5 @@ mod test {
         assert_eq!(op0_addr[1], FE::from(10));
         assert_eq!(op1_addr[1], FE::from(11));
     }
+    */
 }

@@ -20,7 +20,6 @@ use lambdaworks_math::{
 
 use super::{
     config::{BatchedMerkleTreeBackend, FriMerkleTreeBackend},
-    constraints::evaluator::ConstraintEvaluator,
     domain::Domain,
     fri::fri_decommit::FriDecommitment,
     grinding::hash_transcript_with_int_and_get_leading_zeros,
@@ -265,18 +264,21 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         &challenges.rap_challenges,
     );
 
-    let divisor_x_n = (&challenges.z.pow(trace_length) - FieldElement::<F>::one()).inv();
+    let denominator = (&challenges.z.pow(trace_length) - FieldElement::<F>::one()).inv();
 
-    let denominators = air
-        .transition_exemptions_verifier()
+    let exemption = air
+        .transition_exemptions_verifier(&domain.trace_roots_of_unity.iter().last().expect("has last"))
         .iter()
-        .map(|poly| poly.evaluate(&challenges.z) * &divisor_x_n)
+        .map(|poly| poly.evaluate(&challenges.z))
         .collect::<Vec<FieldElement<F>>>();
 
-    let degree_adjustments = air
+    let max_degree = air
         .context()
         .transition_degrees()
         .iter()
+        .max()
+        .expect("has maximum degree");
+    let degree_adjustments = (1..=*max_degree)
         .map(|transition_degree| {
             let degree_adjustment =
                 composition_poly_degree_bound - (trace_length * (transition_degree - 1));
@@ -284,20 +286,31 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         })
         .collect::<Vec<FieldElement<F>>>();
 
-    let transition_c_i_evaluations_sum =
-        ConstraintEvaluator::<F, A>::compute_constraint_composition_poly_evaluations_sum(
-            &transition_ood_frame_evaluations,
-            &denominators,
-            &degree_adjustments,
-            &challenges.transition_coeffs,
+    let transition_c_i_evaluations_sum = transition_ood_frame_evaluations
+        .iter()
+        .zip(&air.context().transition_degrees)
+        .zip(&air.context().transition_exemptions)
+        .zip(&challenges.transition_coeffs)
+        .fold(
+            FieldElement::zero(),
+            |acc, (((eval, degree), except), (alpha, beta))| {
+                if except == &0 {
+                    acc + &denominator * eval * (alpha * &degree_adjustments[degree - 1] + beta)
+                } else {
+                    acc + &denominator
+                        * eval
+                        * (alpha * &degree_adjustments[degree - 1] + beta)
+                        * &exemption[except - 1]
+                }
+            },
         );
 
     let composition_poly_ood_evaluation =
         &boundary_quotient_ood_evaluation + transition_c_i_evaluations_sum;
-
+        println!("ood evaluation: {:?}", &composition_poly_ood_evaluation);
     let composition_poly_claimed_ood_evaluation =
         composition_poly_even_ood_evaluation + &challenges.z * composition_poly_odd_ood_evaluation;
-
+        println!("claimed ood evaluation: {:?}", &composition_poly_claimed_ood_evaluation);
     composition_poly_claimed_ood_evaluation == composition_poly_ood_evaluation
 }
 
