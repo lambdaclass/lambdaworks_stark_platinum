@@ -133,6 +133,9 @@ fn test_prove_cairo1_program(file_path: &str) {
         generate_prover_args(&program_content, &CairoVersion::V1, &None).unwrap();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
 
+    println!("Proof bytes");
+    println!("{:?}", proof.serialize());
+
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }
 
@@ -147,6 +150,13 @@ fn test_prove_cairo_simple_program() {
 fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None);
 }
+
+#[test_log::test]
+
+fn test_prove_cairo_fibonacci_1000() {
+    test_prove_cairo_program(&cairo0_program_path("fibonacci_1000.json"), &None);
+}
+
 
 #[cfg_attr(feature = "metal", ignore)]
 
