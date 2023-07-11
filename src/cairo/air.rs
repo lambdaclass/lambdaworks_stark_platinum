@@ -282,37 +282,49 @@ impl Deserializable for PublicInputs {
     {
         let mut bytes = bytes;
         let felt_len = usize::from_be_bytes(
-            bytes[0..8]
+            bytes
+                .get(0..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
         bytes = &bytes[8..];
         let pc_init = FE::from_bytes_be(
-            bytes[0..felt_len]
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
         let ap_init = FE::from_bytes_be(
-            bytes[0..felt_len]
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
         let fp_init = FE::from_bytes_be(
-            bytes[0..felt_len]
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
         let pc_final = FE::from_bytes_be(
-            bytes[0..felt_len]
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
         let ap_final = FE::from_bytes_be(
-            bytes[0..felt_len]
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
@@ -362,7 +374,9 @@ impl Deserializable for PublicInputs {
 
         let mut memory_segments = MemorySegmentMap::new();
         let memory_segment_length = usize::from_be_bytes(
-            bytes[0..8]
+            bytes
+                .get(0..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
@@ -378,13 +392,17 @@ impl Deserializable for PublicInputs {
             };
             bytes = &bytes[1..];
             let start = u64::from_be_bytes(
-                bytes[0..8]
+                bytes
+                    .get(0..8)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             );
             bytes = &bytes[8..];
             let end = u64::from_be_bytes(
-                bytes[0..8]
+                bytes
+                    .get(0..8)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             );
@@ -394,20 +412,26 @@ impl Deserializable for PublicInputs {
 
         let mut public_memory = HashMap::new();
         let public_memory_length = usize::from_be_bytes(
-            bytes[0..8]
+            bytes
+                .get(0..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
         bytes = &bytes[8..];
         for _ in 0..public_memory_length {
             let address = FE::from_bytes_be(
-                bytes[0..felt_len]
+                bytes
+                    .get(..felt_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             let value = FE::from_bytes_be(
-                bytes[0..felt_len]
+                bytes
+                    .get(..felt_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
@@ -416,7 +440,9 @@ impl Deserializable for PublicInputs {
         }
 
         let num_steps = usize::from_be_bytes(
-            bytes[0..8]
+            bytes
+                .get(0..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
