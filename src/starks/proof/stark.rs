@@ -390,8 +390,6 @@ where
                 bytes
                     .get(..opening_len)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
 
             bytes = &bytes[opening_len..];
