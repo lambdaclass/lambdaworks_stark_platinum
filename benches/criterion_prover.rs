@@ -28,7 +28,6 @@ fn cairo_benches(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
-    group.measurement_time(Duration::from_secs(30));
     run_cairo_bench(
         &mut group,
         "fibonacci/500",
