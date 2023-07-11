@@ -371,7 +371,7 @@ where
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
-        
+
         bytes = &bytes[8..];
 
         let mut deep_poly_openings = vec![];
