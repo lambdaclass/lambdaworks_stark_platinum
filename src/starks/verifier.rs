@@ -356,7 +356,7 @@ where
     FieldElement<F>: ByteConversion,
 {
     let primitive_root = &F::get_primitive_root_of_unity(domain.root_order as u64).unwrap();
-    let z_squared = &(&challenges.z * &challenges.z);
+    let z_squared = &challenges.z.square();
     let mut denom_inv = challenges
         .iotas
         .iter()
