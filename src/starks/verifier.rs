@@ -306,16 +306,13 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
                 }
             },
         );
-    println!("Transition quotients: {:?}", transition_c_i_evaluations_sum);
+
     let composition_poly_ood_evaluation =
         &boundary_quotient_ood_evaluation + transition_c_i_evaluations_sum;
-    println!("ood evaluation: {:?}", &composition_poly_ood_evaluation);
+
     let composition_poly_claimed_ood_evaluation =
         composition_poly_even_ood_evaluation + &challenges.z * composition_poly_odd_ood_evaluation;
-    println!(
-        "claimed ood evaluation: {:?}",
-        &composition_poly_claimed_ood_evaluation
-    );
+
     composition_poly_claimed_ood_evaluation == composition_poly_ood_evaluation
 }
 
