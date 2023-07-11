@@ -267,7 +267,7 @@ where
         let trace_ood_frame_evaluations: Frame<F> = Frame::deserialize(
             bytes
                 .get(..trace_ood_frame_evaluations_len)
-                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
 
         bytes = &bytes[trace_ood_frame_evaluations_len..];
