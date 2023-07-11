@@ -126,7 +126,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
         let mut transition_evaluations = Vec::new();
 
         let transition_exemptions = self.air.transition_exemptions();
-
+            
         let transition_exemptions_evaluations =
             evaluate_transition_exemptions(transition_exemptions, domain);
         let num_exemptions = self.air.context().num_transition_exemptions;
