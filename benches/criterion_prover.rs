@@ -8,7 +8,6 @@ use lambdaworks_stark::{
     },
     starks::proof::options::{ProofOptions, SecurityLevel},
 };
-use std::time::Duration;
 
 pub mod functions;
 
