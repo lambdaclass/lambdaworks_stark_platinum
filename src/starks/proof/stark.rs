@@ -235,7 +235,6 @@ where
                 .get(..8)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
-                // After a get of ..8, it has to have the right size
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
         // This can't panic, since we have already done a get(..8) before
@@ -709,7 +708,7 @@ mod test {
     }
 
     #[test]
-    fn deserialize_should_not_panic_with_changed_bytes() {
+    fn deserialize_should_not_panic_with_changed_and_sliced_bytes() {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
         let (main_trace, pub_inputs) =
             generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
