@@ -268,7 +268,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
 
     let exemption = air
         .transition_exemptions_verifier(
-            &domain.trace_roots_of_unity.iter().last().expect("has last"),
+            domain.trace_roots_of_unity.iter().last().expect("has last"),
         )
         .iter()
         .map(|poly| poly.evaluate(&challenges.z))
