@@ -231,70 +231,92 @@ where
         bytes = &bytes[8..];
 
         let lde_trace_merkle_roots_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+
         bytes = &bytes[8..];
 
-        let mut lde_trace_merkle_roots = vec![];
+        let mut lde_trace_merkle_roots: Vec<[u8; 32]> = vec![];
         for _ in 0..lde_trace_merkle_roots_len {
-            let commitment = bytes[..32]
+            let commitment = bytes
+                .get(..32)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
+
             lde_trace_merkle_roots.push(commitment);
             bytes = &bytes[32..];
         }
 
         let trace_ood_frame_evaluations_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+
         bytes = &bytes[8..];
+
         let trace_ood_frame_evaluations: Frame<F> = Frame::deserialize(
             bytes[..trace_ood_frame_evaluations_len]
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
+
         bytes = &bytes[trace_ood_frame_evaluations_len..];
 
         let composition_poly_root = bytes[..32]
             .try_into()
             .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
+
         bytes = &bytes[32..];
 
         let felt_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+
         bytes = &bytes[8..];
 
         let composition_poly_even_ood_evaluation = FieldElement::from_bytes_be(
-            bytes[..felt_len]
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
+
         bytes = &bytes[felt_len..];
 
         let composition_poly_odd_ood_evaluation = FieldElement::from_bytes_be(
-            bytes[..felt_len]
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
+
         bytes = &bytes[felt_len..];
 
         let fri_layers_merkle_roots_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+
         bytes = &bytes[8..];
 
-        let mut fri_layers_merkle_roots = vec![];
+        let mut fri_layers_merkle_roots: Vec<[u8; 32]> = vec![];
         for _ in 0..fri_layers_merkle_roots_len {
-            let commitment = bytes[..32]
+            let commitment = bytes
+                .get(..32)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
             fri_layers_merkle_roots.push(commitment);
@@ -302,26 +324,33 @@ where
         }
 
         let fri_last_value = FieldElement::from_bytes_be(
-            bytes[..felt_len]
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
+
         bytes = &bytes[felt_len..];
 
         let query_list_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+
         bytes = &bytes[8..];
 
         let mut query_list = vec![];
         for _ in 0..query_list_len {
             let query_len = usize::from_be_bytes(
-                bytes[..8]
+                bytes
+                    .get(..8)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             );
+
             bytes = &bytes[8..];
 
             let query = FriDecommitment::deserialize(
@@ -329,31 +358,40 @@ where
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
+
             bytes = &bytes[query_len..];
 
             query_list.push(query);
         }
 
         let deep_poly_openings_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+
         bytes = &bytes[8..];
+
         let mut deep_poly_openings = vec![];
         for _ in 0..deep_poly_openings_len {
             let opening_len = usize::from_be_bytes(
-                bytes[..8]
+                bytes
+                    .get(..8)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             );
+
             bytes = &bytes[8..];
 
             let opening = DeepPolynomialOpenings::deserialize(
-                bytes[..opening_len]
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+                bytes
+                    .get(..opening_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
+
             bytes = &bytes[opening_len..];
 
             deep_poly_openings.push(opening);
@@ -387,8 +425,11 @@ where
 #[cfg(test)]
 mod test {
     use lambdaworks_crypto::merkle_tree::proof::Proof;
-    use lambdaworks_math::field::{
-        element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+    use lambdaworks_math::{
+        errors::DeserializationError,
+        field::{
+            element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+        },
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
@@ -673,5 +714,35 @@ mod test {
 
         // The proof is verified successfully.
         assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
+    }
+
+    #[test]
+    fn deserialize_should_not_panic_with_changed_and_sliced_bytes() {
+        let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
+        let (main_trace, pub_inputs) =
+            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+
+        let proof_options = ProofOptions::default_test_options();
+
+        // The proof is generated and serialized.
+        let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
+        let mut proof_bytes = proof.serialize();
+
+        // The trace and original proof are dropped to show that they are decoupled from
+        // the verifying process.
+        drop(main_trace);
+        drop(proof);
+
+        for byte in proof_bytes.iter_mut().take(21664) {
+            *byte = 255;
+        }
+        proof_bytes = proof_bytes[0..517].to_vec();
+
+        assert_eq!(
+            DeserializationError::InvalidAmountOfBytes,
+            StarkProof::<Stark252PrimeField>::deserialize(&proof_bytes)
+                .err()
+                .unwrap()
+        );
     }
 }
