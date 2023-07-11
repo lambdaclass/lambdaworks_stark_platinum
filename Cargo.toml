@@ -29,6 +29,9 @@ env_logger = "*"
 test-log = { version = "0.2.11", features = ["log"] }
 assert_matches = "1.5.0"
 rstest = "0.17.0"
+giza-core = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints" }
+giza-prover = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints" }
+giza-runner = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints" }
 
 [features]
 test_fiat_shamir = []
@@ -43,6 +46,11 @@ metal = ["lambdaworks-math/metal"]
 
 [[bench]]
 name = "criterion_verifier"
+harness = false
+metal = ["lambdaworks-math/metal"]
+
+[[bench]]
+name = "criterion_giza"
 harness = false
 metal = ["lambdaworks-math/metal"]
 
