@@ -389,7 +389,7 @@ where
             let opening = DeepPolynomialOpenings::deserialize(
                 bytes
                     .get(..opening_len)
-                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
 
             bytes = &bytes[opening_len..];
