@@ -46,6 +46,10 @@ benchmarks_sequential: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench
 
 benchmarks_parallel: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench -F parallel --bench criterion_prover
+	cargo bench -F parallel --bench criterion_verifier
+
+benchmarks_parallel_all: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel
 
 build_metal:
