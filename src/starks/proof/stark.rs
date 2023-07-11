@@ -223,7 +223,9 @@ where
         let mut bytes = bytes;
         let trace_length_buffer_size = mem::size_of::<usize>();
         let trace_length = usize::from_be_bytes(
-            bytes[..trace_length_buffer_size]
+            bytes
+                .get(..trace_length_buffer_size)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
@@ -741,6 +743,16 @@ mod test {
         assert_eq!(
             DeserializationError::InvalidAmountOfBytes,
             StarkProof::<Stark252PrimeField>::deserialize(&proof_bytes)
+                .err()
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn deserialize_empty_proof_should_give_error() {
+        assert_eq!(
+            DeserializationError::InvalidAmountOfBytes,
+            StarkProof::<Stark252PrimeField>::deserialize(&[])
                 .err()
                 .unwrap()
         );
