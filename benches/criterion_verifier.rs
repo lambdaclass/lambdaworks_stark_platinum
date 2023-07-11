@@ -11,7 +11,6 @@ use lambdaworks_stark::{
         stark::StarkProof,
     },
 };
-use std::time::Duration;
 
 pub mod functions;
 
@@ -43,8 +42,6 @@ fn verifier_benches(c: &mut Criterion) {
     };
 
     let mut group = c.benchmark_group("VERIFIER");
-    group.sample_size(10);
-    group.measurement_time(Duration::from_secs(30));
     run_verifier_bench(
         &mut group,
         "fibonacci/500",
