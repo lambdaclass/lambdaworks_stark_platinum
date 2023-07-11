@@ -42,6 +42,12 @@ coverage_parallel: $(COMPILED_CAIRO0_PROGRAMS)
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
 
+benchmarks_sequential: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench
+
+benchmarks_parallel: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench -F parallel
+
 build_metal:
 	cargo b --features metal --release
 
