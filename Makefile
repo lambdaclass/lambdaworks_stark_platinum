@@ -93,3 +93,9 @@ clean:
 	rm -f $(CAIRO0_PROGRAMS_DIR)/*.trace
 	rm -f $(CAIRO0_PROGRAMS_DIR)/*.memory
 
+CUDAFUZZER = deserialize
+fuzzer:
+		cargo +nightly fuzz run $(CUDAFUZZER)
+		
+fuzzer_tools: 
+		cargo install cargo-fuzz
