@@ -237,7 +237,7 @@ where
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
-        // This can't panic, since we have already done a get(..8) before
+
         bytes = &bytes[8..];
 
         let mut lde_trace_merkle_roots: Vec<[u8; 32]> = vec![];
@@ -261,11 +261,13 @@ where
         );
 
         bytes = &bytes[8..];
+
         let trace_ood_frame_evaluations: Frame<F> = Frame::deserialize(
             bytes[..trace_ood_frame_evaluations_len]
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
+
         bytes = &bytes[trace_ood_frame_evaluations_len..];
 
         let composition_poly_root = bytes[..32]
@@ -307,6 +309,7 @@ where
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+
         bytes = &bytes[8..];
 
         let mut fri_layers_merkle_roots: Vec<[u8; 32]> = vec![];
@@ -325,6 +328,7 @@ where
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
+
         bytes = &bytes[felt_len..];
 
         let query_list_len = usize::from_be_bytes(
@@ -334,6 +338,7 @@ where
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+
         bytes = &bytes[8..];
 
         let mut query_list = vec![];
@@ -345,6 +350,7 @@ where
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             );
+
             bytes = &bytes[8..];
 
             let query = FriDecommitment::deserialize(
@@ -352,6 +358,7 @@ where
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
+
             bytes = &bytes[query_len..];
 
             query_list.push(query);
@@ -364,7 +371,9 @@ where
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+        
         bytes = &bytes[8..];
+
         let mut deep_poly_openings = vec![];
         for _ in 0..deep_poly_openings_len {
             let opening_len = usize::from_be_bytes(
@@ -374,6 +383,7 @@ where
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             );
+
             bytes = &bytes[8..];
 
             let opening = DeepPolynomialOpenings::deserialize(
@@ -383,6 +393,7 @@ where
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
+
             bytes = &bytes[opening_len..];
 
             deep_poly_openings.push(opening);
