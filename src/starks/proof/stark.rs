@@ -733,8 +733,8 @@ mod test {
         drop(main_trace);
         drop(proof);
 
-        for i in 0..21664 {
-            proof_bytes[i] = 255;
+        for byte in proof_bytes.iter_mut().take(21664) {
+            *byte = 255;
         }
         proof_bytes = proof_bytes[0..517].to_vec();
 
