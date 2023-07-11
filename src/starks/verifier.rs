@@ -267,9 +267,12 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
     let denominator = (&challenges.z.pow(trace_length) - FieldElement::<F>::one()).inv();
 
     let exemption = air
-        .transition_exemptions_verifier(&domain.trace_roots_of_unity.iter().last().expect("has last"))
+        .transition_exemptions_verifier(
+            &domain.trace_roots_of_unity.iter().last().expect("has last"),
+        )
         .iter()
-        .map(|poly| poly.evaluate(&challenges.z))
+        //.map(|poly| poly.evaluate(&challenges.z))
+        .map(|poly| poly.evaluate(&FieldElement::from(2)))
         .collect::<Vec<FieldElement<F>>>();
 
     let max_degree = air
@@ -304,13 +307,16 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
                 }
             },
         );
-
+    println!("Transition quotients: {:?}", transition_c_i_evaluations_sum);
     let composition_poly_ood_evaluation =
         &boundary_quotient_ood_evaluation + transition_c_i_evaluations_sum;
-        println!("ood evaluation: {:?}", &composition_poly_ood_evaluation);
+    println!("ood evaluation: {:?}", &composition_poly_ood_evaluation);
     let composition_poly_claimed_ood_evaluation =
         composition_poly_even_ood_evaluation + &challenges.z * composition_poly_odd_ood_evaluation;
-        println!("claimed ood evaluation: {:?}", &composition_poly_claimed_ood_evaluation);
+    println!(
+        "claimed ood evaluation: {:?}",
+        &composition_poly_claimed_ood_evaluation
+    );
     composition_poly_claimed_ood_evaluation == composition_poly_ood_evaluation
 }
 

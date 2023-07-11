@@ -110,7 +110,7 @@ pub trait AIR: Clone {
             .expect("has maximum");
         (1..=*max)
             .map(|index| {
-                (1..index).fold(
+                (1..=index).fold(
                     Polynomial::new_monomial(FieldElement::one(), 0),
                     |acc, k| acc * (&x - root.pow(k)),
                 )
