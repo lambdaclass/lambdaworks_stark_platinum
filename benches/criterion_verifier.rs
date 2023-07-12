@@ -69,8 +69,34 @@ fn run_verifier_bench(
     benchname: &str,
     program_path: &str,
 ) {
+    run_verifier_bench_with_security_level(
+        group,
+        &format!("80_bits/{benchname}"),
+        program_path,
+        SecurityLevel::Provable80Bits,
+    );
+    run_verifier_bench_with_security_level(
+        group,
+        &format!("100_bits/{benchname}"),
+        program_path,
+        SecurityLevel::Provable100Bits,
+    );
+    run_verifier_bench_with_security_level(
+        group,
+        &format!("128_bits/{benchname}"),
+        program_path,
+        SecurityLevel::Provable128Bits,
+    );
+}
+
+fn run_verifier_bench_with_security_level(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    benchname: &str,
+    program_path: &str,
+    security_level: SecurityLevel,
+) {
     let (proof, pub_inputs) = load_proof_and_pub_inputs(program_path);
-    let proof_options = ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
+    let proof_options = ProofOptions::new_secure(security_level, 3);
     group.bench_function(benchname, |bench| {
         bench.iter(|| black_box(verify_cairo_proof(&proof, &pub_inputs, &proof_options)));
     });

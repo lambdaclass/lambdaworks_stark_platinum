@@ -29,6 +29,7 @@ fn cairo_benches(c: &mut Criterion) {
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
     group.measurement_time(Duration::from_secs(30));
+
     run_cairo_bench(
         &mut group,
         "fibonacci/500",
@@ -49,8 +50,34 @@ fn cairo0_program_path(program_name: &str) -> String {
 }
 
 fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
+    run_cairo_bench_with_security_level(
+        group,
+        &format!("80_bits/{benchname}"),
+        program_path,
+        SecurityLevel::Provable80Bits,
+    );
+    run_cairo_bench_with_security_level(
+        group,
+        &format!("100_bits/{benchname}"),
+        program_path,
+        SecurityLevel::Provable100Bits,
+    );
+    run_cairo_bench_with_security_level(
+        group,
+        &format!("128_bits/{benchname}"),
+        program_path,
+        SecurityLevel::Provable128Bits,
+    );
+}
+
+fn run_cairo_bench_with_security_level(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    benchname: &str,
+    program_path: &str,
+    security_level: SecurityLevel,
+) {
     let program_content = std::fs::read(program_path).unwrap();
-    let proof_options = ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
+    let proof_options = ProofOptions::new_secure(security_level, 3);
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
