@@ -8,7 +8,6 @@ use lambdaworks_stark::{
     },
     starks::proof::options::{ProofOptions, SecurityLevel},
 };
-use std::time::Duration;
 
 pub mod functions;
 
@@ -28,8 +27,6 @@ fn cairo_benches(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
-    group.measurement_time(Duration::from_secs(30));
-
     run_cairo_bench(
         &mut group,
         "fibonacci/500",
@@ -80,6 +77,7 @@ fn run_cairo_bench_with_security_level(
     let proof_options = ProofOptions::new_secure(security_level, 3);
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+    println!("Generated main trace with {} rows", main_trace.n_rows());
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| {
