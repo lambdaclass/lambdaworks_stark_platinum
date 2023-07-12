@@ -53,7 +53,6 @@ metal = ["lambdaworks-math/metal"]
 [[bench]]
 name = "criterion_giza"
 harness = false
-metal = ["lambdaworks-math/metal"]
 
 [profile.release]
 lto = true
