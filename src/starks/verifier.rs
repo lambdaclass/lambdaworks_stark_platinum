@@ -296,14 +296,8 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         .fold(
             FieldElement::zero(),
             |acc, (((eval, degree), except), (alpha, beta))| {
-                if except == &0 {
-                    acc + &denominator * eval * (alpha * &degree_adjustments[degree - 1] + beta)
-                } else {
-                    acc + &denominator
-                        * eval
-                        * (alpha * &degree_adjustments[degree - 1] + beta)
-                        * &exemption[except - 1]
-                }
+                let except = except.checked_sub(1).map(|i| &exemption[i]).unwrap_or(&1);
+                acc + &denominator * eval * (alpha * &degree_adjustments[degree - 1] + beta) * except
             },
         );
 
