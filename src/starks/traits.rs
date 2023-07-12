@@ -99,7 +99,7 @@ pub trait AIR: Clone {
         &self,
         root: &FieldElement<Self::Field>,
     ) -> Vec<Polynomial<FieldElement<Self::Field>>> {
-        //let trace_length = self.trace_length();
+        
         let x = Polynomial::new_monomial(FieldElement::one(), 1);
 
         let max = self
@@ -111,8 +111,8 @@ pub trait AIR: Clone {
         (1..=*max)
             .map(|index| {
                 (1..=index).fold(
-                    (Polynomial::new_monomial(FieldElement::one(), 0), root.clone()),
-                    |acc, k| (acc.0 * (&x - acc.1), acc.1 * root),
+                    Polynomial::new_monomial(FieldElement::one(), 0),
+                    |acc, k| acc * (&x - root.pow(k)),
                 )
             })
             .collect()
