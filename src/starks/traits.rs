@@ -99,7 +99,6 @@ pub trait AIR: Clone {
         &self,
         root: &FieldElement<Self::Field>,
     ) -> Vec<Polynomial<FieldElement<Self::Field>>> {
-        
         let x = Polynomial::new_monomial(FieldElement::one(), 1);
 
         let max = self
