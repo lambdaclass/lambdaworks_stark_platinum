@@ -12,7 +12,7 @@ use crate::starks::{
     utils::{deserialize_proof, serialize_proof},
 };
 
-use std::mem;
+use core::mem;
 
 #[derive(Debug, Clone)]
 pub struct DeepPolynomialOpenings<F: IsFFTField> {
@@ -90,28 +90,32 @@ where
         (lde_composition_poly_proof, bytes) = deserialize_proof(bytes)?;
 
         let felt_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
         bytes = &bytes[8..];
 
         let lde_composition_poly_even_evaluation = FieldElement::from_bytes_be(
-            bytes[..felt_len]
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
 
         let lde_composition_poly_odd_evaluation = FieldElement::from_bytes_be(
-            bytes[..felt_len]
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            bytes
+                .get(..felt_len)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
 
         let lde_trace_merkle_proofs_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
@@ -125,7 +129,9 @@ where
         }
 
         let lde_trace_evaluations_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
@@ -134,9 +140,9 @@ where
         let mut lde_trace_evaluations = vec![];
         for _ in 0..lde_trace_evaluations_len {
             let evaluation = FieldElement::from_bytes_be(
-                bytes[..felt_len]
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+                bytes
+                    .get(..felt_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             lde_trace_evaluations.push(evaluation);
@@ -272,7 +278,9 @@ where
 
         bytes = &bytes[trace_ood_frame_evaluations_len..];
 
-        let composition_poly_root = bytes[..32]
+        let composition_poly_root = bytes
+            .get(..32)
+            .ok_or(DeserializationError::InvalidAmountOfBytes)?
             .try_into()
             .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
 
@@ -356,9 +364,9 @@ where
             bytes = &bytes[8..];
 
             let query = FriDecommitment::deserialize(
-                bytes[..query_len]
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+                bytes
+                    .get(..query_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
 
             bytes = &bytes[query_len..];
@@ -400,10 +408,15 @@ where
         }
 
         // deserialize nonce
-        let start_nonce = bytes.len() - std::mem::size_of::<u64>();
+        let start_nonce = bytes
+            .len()
+            .checked_sub(core::mem::size_of::<u64>())
+            .ok_or(DeserializationError::InvalidAmountOfBytes)?;
 
         let nonce = u64::from_be_bytes(
-            bytes[start_nonce..]
+            bytes
+                .get(start_nonce..)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
