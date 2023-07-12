@@ -16,14 +16,18 @@ pub fn deserialize_proof(bytes: &[u8]) -> Result<(Proof<Commitment>, &[u8]), Des
     let mut bytes = bytes;
     let mut merkle_path = vec![];
     let merkle_path_len = usize::from_be_bytes(
-        bytes[..8]
+        bytes
+            .get(..8)
+            .ok_or(DeserializationError::InvalidAmountOfBytes)?
             .try_into()
             .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
     );
     bytes = &bytes[8..];
 
     for _ in 0..merkle_path_len {
-        let commitment = bytes[..32]
+        let commitment = bytes
+            .get(..32)
+            .ok_or(DeserializationError::InvalidAmountOfBytes)?
             .try_into()
             .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
         merkle_path.push(commitment);

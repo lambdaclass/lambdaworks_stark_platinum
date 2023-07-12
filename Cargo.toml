@@ -46,13 +46,23 @@ harness = false
 metal = ["lambdaworks-math/metal"]
 
 [[bench]]
+name = "criterion_prover_70k"
+harness = false
+metal = ["lambdaworks-math/metal"]
+
+[[bench]]
 name = "criterion_verifier"
 harness = false
 metal = ["lambdaworks-math/metal"]
 
 [[bench]]
+name = "criterion_verifier_70k"
+harness = false
+
+[[bench]]
 name = "criterion_giza"
 harness = false
+
 
 [profile.release]
 lto = true

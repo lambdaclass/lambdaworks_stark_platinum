@@ -1,5 +1,6 @@
 use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
+    SamplingMode,
 };
 use lambdaworks_stark::{
     cairo::{
@@ -11,7 +12,7 @@ use lambdaworks_stark::{
 
 pub mod functions;
 
-fn cairo_benches(c: &mut Criterion) {
+fn fibo_70k_bench(c: &mut Criterion) {
     #[cfg(feature = "parallel")]
     {
         let num_threads: usize = std::env::var("NUM_THREADS")
@@ -26,16 +27,12 @@ fn cairo_benches(c: &mut Criterion) {
     };
 
     let mut group = c.benchmark_group("CAIRO");
+    group.sampling_mode(SamplingMode::Flat);
     group.sample_size(10);
     run_cairo_bench(
         &mut group,
-        "fibonacci/500",
-        &cairo0_program_path("fibonacci_500.json"),
-    );
-    run_cairo_bench(
-        &mut group,
-        "fibonacci/1000",
-        &cairo0_program_path("fibonacci_1000.json"),
+        "fibonacci/70000",
+        &cairo0_program_path("fibonacci_70000.json"),
     );
 }
 
@@ -51,7 +48,6 @@ fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, pr
     let proof_options = ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
-    println!("Generated main trace with {} rows", main_trace.n_rows());
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| {
@@ -60,5 +56,5 @@ fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, pr
     });
 }
 
-criterion_group!(benches, cairo_benches);
+criterion_group!(benches, fibo_70k_bench);
 criterion_main!(benches);

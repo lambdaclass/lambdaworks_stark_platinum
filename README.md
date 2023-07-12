@@ -125,3 +125,17 @@ Be sure to build the docker image if you don't want to install the `cairo-lang` 
 ```
 make docker_build_cairo_compiler
 ```
+
+## Running fuzzers
+To run a fuzzer, simply use 
+
+```
+make fuzzer <name of the fuzzer>
+```
+
+if you don´t have the tools for fuzzing installed use
+
+```
+make fuzzer_tools
+```
+
