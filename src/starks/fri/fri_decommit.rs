@@ -94,7 +94,7 @@ where
             let evaluation = FieldElement::<F>::from_bytes_be(
                 bytes
                     .get(..felt_len)
-                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             layers_evaluations_sym.push(evaluation);
@@ -114,7 +114,7 @@ where
             let evaluation = FieldElement::<F>::from_bytes_be(
                 bytes
                     .get(..felt_len)
-                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             layers_evaluations.push(evaluation);

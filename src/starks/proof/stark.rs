@@ -101,14 +101,14 @@ where
         let lde_composition_poly_even_evaluation = FieldElement::from_bytes_be(
             bytes
                 .get(..felt_len)
-                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
 
         let lde_composition_poly_odd_evaluation = FieldElement::from_bytes_be(
             bytes
                 .get(..felt_len)
-                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
 
@@ -142,7 +142,7 @@ where
             let evaluation = FieldElement::from_bytes_be(
                 bytes
                     .get(..felt_len)
-                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             lde_trace_evaluations.push(evaluation);
