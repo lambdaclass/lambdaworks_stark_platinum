@@ -34,14 +34,17 @@ fn cairo_benches(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
+    let proof_options = options::ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
 
     run_lambdaworks_bench(
         &mut group,
+        &proof_options,
         "lambdaworks/fibonacci/1000",
         &cairo0_program_path("fibonacci_1000.json"),
     );
     run_giza_bench(
         &mut group,
+        &proof_options,
         "giza/fibonacci/1000",
         &cairo0_program_path("fibonacci_1000.json"),
         &cairo0_program_path("fibonacci_1000.trace"),
@@ -50,11 +53,13 @@ fn cairo_benches(c: &mut Criterion) {
 
     run_lambdaworks_bench(
         &mut group,
+        &proof_options,
         "lambdaworks/fibonacci/10000",
         &cairo0_program_path("fibonacci_10000.json"),
     );
     run_giza_bench(
         &mut group,
+        &proof_options,
         "giza/fibonacci/10000",
         &cairo0_program_path("fibonacci_10000.json"),
         &cairo0_program_path("fibonacci_10000.trace"),
@@ -73,17 +78,17 @@ fn cairo0_program_path(program_name: &str) -> String {
 #[cfg(feature = "giza")]
 fn run_lambdaworks_bench(
     group: &mut BenchmarkGroup<'_, WallTime>,
+    proof_options: &options::ProofOptions,
     benchname: &str,
     program_path: &str,
 ) {
     let program_content = std::fs::read(program_path).unwrap();
-    let proof_options = options::ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| {
-            black_box(generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap())
+            black_box(generate_cairo_proof(&main_trace, &pub_inputs, proof_options).unwrap())
         });
     });
 }
@@ -91,12 +96,12 @@ fn run_lambdaworks_bench(
 #[cfg(feature = "giza")]
 fn run_giza_bench(
     group: &mut BenchmarkGroup<'_, WallTime>,
+    proof_options: &options::ProofOptions,
     benchname: &str,
     program_path: &str,
     trace_path: &str,
     memory_path: &str,
 ) {
-    let proof_options = options::ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
     let proof_options = giza_prover::ProofOptions::with_proof_options(
         Some(proof_options.fri_number_of_queries),
         Some(proof_options.blowup_factor as usize),
