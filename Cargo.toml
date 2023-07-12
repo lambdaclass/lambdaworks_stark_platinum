@@ -47,7 +47,7 @@ harness = false
 metal = ["lambdaworks-math/metal"]
 
 [[bench]]
-name = "criterion_verifier_70k"
+name = "criterion_prover_security"
 harness = false
 metal = ["lambdaworks-math/metal"]
 
@@ -57,7 +57,7 @@ harness = false
 metal = ["lambdaworks-math/metal"]
 
 [[bench]]
-name = "criterion_prover_security"
+name = "criterion_verifier_70k"
 harness = false
 metal = ["lambdaworks-math/metal"]
 
