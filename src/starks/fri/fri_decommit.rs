@@ -95,8 +95,6 @@ where
                 bytes
                     .get(..felt_len)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             layers_evaluations_sym.push(evaluation);
@@ -117,8 +115,6 @@ where
                 bytes
                     .get(..felt_len)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             layers_evaluations.push(evaluation);

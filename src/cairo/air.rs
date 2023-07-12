@@ -293,40 +293,30 @@ impl Deserializable for PublicInputs {
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
         let ap_init = FE::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
         let fp_init = FE::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
         let pc_final = FE::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
         let ap_final = FE::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
 
@@ -424,16 +414,12 @@ impl Deserializable for PublicInputs {
                 bytes
                     .get(..felt_len)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             let value = FE::from_bytes_be(
                 bytes
                     .get(..felt_len)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             public_memory.insert(address, value);

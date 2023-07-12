@@ -12,7 +12,7 @@ use crate::starks::{
     utils::{deserialize_proof, serialize_proof},
 };
 
-use std::{mem, ops::Sub};
+use core::mem;
 
 #[derive(Debug, Clone)]
 pub struct DeepPolynomialOpenings<F: IsFFTField> {
@@ -102,8 +102,6 @@ where
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
 
@@ -111,8 +109,6 @@ where
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
 
@@ -147,8 +143,6 @@ where
                 bytes
                     .get(..felt_len)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             lde_trace_evaluations.push(evaluation);
