@@ -42,7 +42,10 @@ coverage_parallel: $(COMPILED_CAIRO0_PROGRAMS)
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
 
-benchmarks: $(COMPILED_CAIRO0_PROGRAMS)
+benchmarks_sequential: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench
+
+benchmarks_parallel: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel
 
 build_metal:
@@ -90,3 +93,9 @@ clean:
 	rm -f $(CAIRO0_PROGRAMS_DIR)/*.trace
 	rm -f $(CAIRO0_PROGRAMS_DIR)/*.memory
 
+CUDAFUZZER = deserialize
+fuzzer:
+		cargo +nightly fuzz run $(CUDAFUZZER)
+		
+fuzzer_tools: 
+		cargo install cargo-fuzz

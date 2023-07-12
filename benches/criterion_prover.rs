@@ -8,20 +8,25 @@ use lambdaworks_stark::{
     },
     starks::proof::options::{ProofOptions, SecurityLevel},
 };
-use std::time::Duration;
 
 pub mod functions;
 
 fn cairo_benches(c: &mut Criterion) {
     #[cfg(feature = "parallel")]
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(8)
-        .build_global()
-        .unwrap();
+    {
+        let num_threads: usize = std::env::var("NUM_THREADS")
+            .unwrap_or("8".to_string())
+            .parse()
+            .unwrap();
+        println!("Running benchmarks using {} threads", num_threads);
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads)
+            .build_global()
+            .unwrap();
+    };
 
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
-    group.measurement_time(Duration::from_secs(30));
     run_cairo_bench(
         &mut group,
         "fibonacci/500",
@@ -46,6 +51,7 @@ fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, pr
     let proof_options = ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+    println!("Generated main trace with {} rows", main_trace.n_rows());
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| {
