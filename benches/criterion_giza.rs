@@ -27,19 +27,31 @@ fn cairo_benches(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("CAIRO");
     group.sample_size(10);
-    run_cairo_bench(
+
+    run_lambdaworks_bench(
         &mut group,
-        "fibonacci/500",
-        &cairo0_program_path("fibonacci_500.json"),
-        &cairo0_program_path("fibonacci_500.trace"),
-        &cairo0_program_path("fibonacci_500.memory"),
+        "lambdaworks/fibonacci/1000",
+        &cairo0_program_path("fibonacci_1000.json"),
     );
-    run_cairo_bench(
+    run_giza_bench(
         &mut group,
-        "fibonacci/1000",
+        "giza/fibonacci/1000",
         &cairo0_program_path("fibonacci_1000.json"),
         &cairo0_program_path("fibonacci_1000.trace"),
         &cairo0_program_path("fibonacci_1000.memory"),
+    );
+
+    run_lambdaworks_bench(
+        &mut group,
+        "lambdaworks/fibonacci/10000",
+        &cairo0_program_path("fibonacci_10000.json"),
+    );
+    run_giza_bench(
+        &mut group,
+        "giza/fibonacci/10000",
+        &cairo0_program_path("fibonacci_10000.json"),
+        &cairo0_program_path("fibonacci_10000.trace"),
+        &cairo0_program_path("fibonacci_10000.memory"),
     );
 }
 
@@ -50,21 +62,10 @@ fn cairo0_program_path(program_name: &str) -> String {
     program_base_path + program_name
 }
 
-fn run_cairo_bench(
-    group: &mut BenchmarkGroup<'_, WallTime>,
-    benchname: &str,
-    program_path: &str,
-    trace_path: &str,
-    memory_path: &str,
-) {
-    // run_lambdaworks_bench(program_path, group, benchname);
-    run_giza_bench(program_path, trace_path, memory_path, group, benchname);
-}
-
 fn run_lambdaworks_bench(
-    program_path: &str,
     group: &mut BenchmarkGroup<'_, WallTime>,
     benchname: &str,
+    program_path: &str,
 ) {
     let program_content = std::fs::read(program_path).unwrap();
     let proof_options = options::ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
@@ -79,11 +80,11 @@ fn run_lambdaworks_bench(
 }
 
 fn run_giza_bench(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    benchname: &str,
     program_path: &str,
     trace_path: &str,
     memory_path: &str,
-    group: &mut BenchmarkGroup<'_, WallTime>,
-    benchname: &str,
 ) {
     let proof_options = options::ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
     let proof_options = giza_prover::ProofOptions::with_proof_options(
