@@ -287,7 +287,7 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
             challenges.z.pow(degree_adjustment)
         })
         .collect::<Vec<FieldElement<F>>>();
-
+    let unity = &FieldElement::one();
     let transition_c_i_evaluations_sum = transition_ood_frame_evaluations
         .iter()
         .zip(&air.context().transition_degrees)
@@ -296,8 +296,14 @@ fn step_2_verify_claimed_composition_polynomial<F: IsFFTField, A: AIR<Field = F>
         .fold(
             FieldElement::zero(),
             |acc, (((eval, degree), except), (alpha, beta))| {
-                let except = except.checked_sub(1).map(|i| &exemption[i]).unwrap_or(&1);
-                acc + &denominator * eval * (alpha * &degree_adjustments[degree - 1] + beta) * except
+                let except = except
+                    .checked_sub(1)
+                    .map(|i| &exemption[i])
+                    .unwrap_or(unity);
+                acc + &denominator
+                    * eval
+                    * (alpha * &degree_adjustments[degree - 1] + beta)
+                    * except
             },
         );
 
