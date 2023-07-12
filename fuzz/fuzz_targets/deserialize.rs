@@ -7,6 +7,6 @@ use lambdaworks_math::traits::{Deserializable, Serializable};
 
 fuzz_target!(|data: Vec<u8>| {
     
-    let proof = StarkProof::<Stark252PrimeField>::deserialize(&data).unwrap();
+    let proof = StarkProof::<Stark252PrimeField>::deserialize(&data);
 
 });
