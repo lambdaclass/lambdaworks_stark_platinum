@@ -46,6 +46,16 @@ name = "criterion_verifier"
 harness = false
 metal = ["lambdaworks-math/metal"]
 
+[[bench]]
+name = "criterion_prover_security"
+harness = false
+metal = ["lambdaworks-math/metal"]
+
+[[bench]]
+name = "criterion_verifier_security"
+harness = false
+metal = ["lambdaworks-math/metal"]
+
 [profile.release]
 lto = true
 opt-level = 3

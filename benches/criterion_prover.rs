@@ -1,13 +1,8 @@
 use criterion::{
-    black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
+    criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use lambdaworks_stark::{
-    cairo::{
-        air::generate_cairo_proof,
-        runner::run::{generate_prover_args, CairoVersion},
-    },
-    starks::proof::options::{ProofOptions, SecurityLevel},
-};
+use functions::bench::run_cairo_bench_with_security_level;
+use lambdaworks_stark::starks::proof::options::SecurityLevel;
 
 pub mod functions;
 
@@ -49,41 +44,10 @@ fn cairo0_program_path(program_name: &str) -> String {
 fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
     run_cairo_bench_with_security_level(
         group,
-        &format!("80_bits/{benchname}"),
-        program_path,
-        SecurityLevel::Provable80Bits,
-    );
-    run_cairo_bench_with_security_level(
-        group,
-        &format!("100_bits/{benchname}"),
-        program_path,
-        SecurityLevel::Provable100Bits,
-    );
-    run_cairo_bench_with_security_level(
-        group,
-        &format!("128_bits/{benchname}"),
+        benchname,
         program_path,
         SecurityLevel::Provable128Bits,
     );
-}
-
-fn run_cairo_bench_with_security_level(
-    group: &mut BenchmarkGroup<'_, WallTime>,
-    benchname: &str,
-    program_path: &str,
-    security_level: SecurityLevel,
-) {
-    let program_content = std::fs::read(program_path).unwrap();
-    let proof_options = ProofOptions::new_secure(security_level, 3);
-    let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
-    println!("Generated main trace with {} rows", main_trace.n_rows());
-
-    group.bench_function(benchname, |bench| {
-        bench.iter(|| {
-            black_box(generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap())
-        });
-    });
 }
 
 criterion_group!(benches, cairo_benches);

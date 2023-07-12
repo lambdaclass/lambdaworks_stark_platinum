@@ -48,7 +48,13 @@ fn run_verifier_bench(
 ) {
     run_verifier_bench_with_security_level(
         group,
-        benchname,
+        &format!("80_bits/{benchname}"),
+        program_path,
+        SecurityLevel::Provable80Bits,
+    );
+    run_verifier_bench_with_security_level(
+        group,
+        &format!("128_bits/{benchname}"),
         program_path,
         SecurityLevel::Provable128Bits,
     );

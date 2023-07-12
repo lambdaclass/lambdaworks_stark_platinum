@@ -43,9 +43,18 @@ clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
 
 benchmarks_sequential: $(COMPILED_CAIRO0_PROGRAMS)
-	cargo bench
+	cargo bench --bench criterion_prover
+	cargo bench --bench criterion_verifier
 
 benchmarks_parallel: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench -F parallel --bench criterion_prover
+	cargo bench -F parallel --bench criterion_verifier
+
+benchmarks_security: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench -F parallel --bench criterion_prover_security
+	cargo bench -F parallel --bench criterion_verifier_security
+
+benchmarks_all: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel
 
 build_metal:
