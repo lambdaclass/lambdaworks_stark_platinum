@@ -322,11 +322,19 @@ where
 {
     // verify FRI
     let two_inv = &FieldElement::from(2).inv();
+    let mut evaluation_point_inverse = challenges
+        .iotas
+        .iter()
+        .map(|iota| &domain.lde_roots_of_unity_coset[*iota])
+        .cloned()
+        .collect::<Vec<FieldElement<F>>>();
+    FieldElement::inplace_batch_inverse(&mut evaluation_point_inverse);
     proof
         .query_list
         .iter()
         .zip(&challenges.iotas)
-        .fold(true, |mut result, (proof_s, iota_s)| {
+        .zip(evaluation_point_inverse)
+        .fold(true, |mut result, ((proof_s, iota_s), eval)| {
             // this is done in constant time
             result &= verify_query_and_sym_openings(
                 proof,
@@ -334,6 +342,7 @@ where
                 *iota_s,
                 proof_s,
                 domain,
+                eval,
                 two_inv,
             );
             result
@@ -362,66 +371,67 @@ where
         .iotas
         .iter()
         .zip(&proof.deep_poly_openings)
+        .zip(&denom_inv)
         .enumerate()
-        .fold(true, |mut result, (i, (iota_n, deep_poly_opening))| {
-            let evaluations = vec![
-                deep_poly_opening
-                    .lde_composition_poly_even_evaluation
-                    .clone(),
-                deep_poly_opening
-                    .lde_composition_poly_odd_evaluation
-                    .clone(),
-            ];
+        .fold(
+            true,
+            |mut result, (i, ((iota_n, deep_poly_opening), denom_inv))| {
+                let evaluations = vec![
+                    deep_poly_opening
+                        .lde_composition_poly_even_evaluation
+                        .clone(),
+                    deep_poly_opening
+                        .lde_composition_poly_odd_evaluation
+                        .clone(),
+                ];
 
-            // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
-            result &= deep_poly_opening
-                .lde_composition_poly_proof
-                .verify::<BatchedMerkleTreeBackend<F>>(
-                    &proof.composition_poly_root,
-                    *iota_n,
-                    &evaluations,
+                // Verify opening Open(H₁(D_LDE, 𝜐₀) and Open(H₂(D_LDE, 𝜐₀),
+                result &= deep_poly_opening
+                    .lde_composition_poly_proof
+                    .verify::<BatchedMerkleTreeBackend<F>>(
+                        &proof.composition_poly_root,
+                        *iota_n,
+                        &evaluations,
+                    );
+
+                let num_main_columns =
+                    air.context().trace_columns - air.number_auxiliary_rap_columns();
+                let lde_trace_evaluations = vec![
+                    deep_poly_opening.lde_trace_evaluations[..num_main_columns].to_vec(),
+                    deep_poly_opening.lde_trace_evaluations[num_main_columns..].to_vec(),
+                ];
+
+                // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
+                proof
+                    .lde_trace_merkle_roots
+                    .iter()
+                    .zip(&deep_poly_opening.lde_trace_merkle_proofs)
+                    .zip(lde_trace_evaluations)
+                    .fold(result, |acc, ((merkle_root, merkle_proof), evaluation)| {
+                        acc & merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
+                            merkle_root,
+                            *iota_n,
+                            &evaluation,
+                        )
+                    });
+
+                // DEEP consistency check
+                // Verify that Deep(x) is constructed correctly
+                let mut divisors = (0..proof.trace_ood_frame_evaluations.num_rows())
+                    .map(|row_idx| {
+                        &domain.lde_roots_of_unity_coset[*iota_n]
+                            - &challenges.z * primitive_root.pow(row_idx as u64)
+                    })
+                    .collect::<Vec<FieldElement<F>>>();
+                FieldElement::inplace_batch_inverse(&mut divisors);
+                let deep_poly_evaluation = reconstruct_deep_composition_poly_evaluation(
+                    proof, challenges, denom_inv, &divisors, i,
                 );
 
-            let num_main_columns = air.context().trace_columns - air.number_auxiliary_rap_columns();
-            let lde_trace_evaluations = vec![
-                deep_poly_opening.lde_trace_evaluations[..num_main_columns].to_vec(),
-                deep_poly_opening.lde_trace_evaluations[num_main_columns..].to_vec(),
-            ];
-
-            // Verify openings Open(tⱼ(D_LDE), 𝜐₀)
-            proof
-                .lde_trace_merkle_roots
-                .iter()
-                .zip(&deep_poly_opening.lde_trace_merkle_proofs)
-                .zip(lde_trace_evaluations)
-                .fold(result, |acc, ((merkle_root, merkle_proof), evaluation)| {
-                    acc & merkle_proof.verify::<BatchedMerkleTreeBackend<F>>(
-                        merkle_root,
-                        *iota_n,
-                        &evaluation,
-                    )
-                });
-
-            // DEEP consistency check
-            // Verify that Deep(x) is constructed correctly
-            let mut divisors = (0..proof.trace_ood_frame_evaluations.num_rows())
-                .map(|row_idx| {
-                    &domain.lde_roots_of_unity_coset[*iota_n]
-                        - &challenges.z * primitive_root.pow(row_idx as u64)
-                })
-                .collect::<Vec<FieldElement<F>>>();
-            FieldElement::inplace_batch_inverse(&mut divisors);
-            let deep_poly_evaluation = reconstruct_deep_composition_poly_evaluation(
-                proof,
-                challenges,
-                &denom_inv[i],
-                &divisors,
-                i,
-            );
-
-            let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
-            result & (deep_poly_claimed_evaluation == &deep_poly_evaluation)
-        })
+                let deep_poly_claimed_evaluation = &proof.query_list[i].layers_evaluations[0];
+                result & (deep_poly_claimed_evaluation == &deep_poly_evaluation)
+            },
+        )
 }
 
 fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
@@ -430,21 +440,19 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
     iota: usize,
     fri_decommitment: &FriDecommitment<F>,
     domain: &Domain<F>,
+    evaluation_point: FieldElement<F>,
     two_inv: &FieldElement<F>,
 ) -> bool
 where
     FieldElement<F>: ByteConversion,
 {
-    let evaluation_point = domain.lde_roots_of_unity_coset.get(iota).unwrap().clone();
     let fri_layers_merkle_roots = &proof.fri_layers_merkle_roots;
-    let mut evaluation_point_vec: Vec<FieldElement<F>> =
+    let evaluation_point_vec: Vec<FieldElement<F>> =
         core::iter::successors(Some(evaluation_point), |evaluation_point| {
             Some(evaluation_point.square())
         })
         .take(fri_layers_merkle_roots.len())
         .collect();
-
-    FieldElement::inplace_batch_inverse(&mut evaluation_point_vec);
 
     let mut v = fri_decommitment.layers_evaluations[0].clone();
     // For each fri layer merkle proof check:
