@@ -1,5 +1,6 @@
 # Starknet Stack Prover Lambdaworks
-Disclaimer: This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
+This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
+We expect to have something working in a good state by mid August 2023.
 
 ## Main building blocks
 
