@@ -5,7 +5,9 @@ use lambdaworks_math::{
 use lambdaworks_stark::{
     cairo::{
         air::{generate_cairo_proof, verify_cairo_proof, PublicInputs},
-        runner::run::{generate_prover_args, CairoVersion},
+        cairo_layout::CairoLayout,
+        execution_trace::build_main_trace,
+        runner::run::{build_pub_inputs, generate_prover_args, run_program, CairoVersion},
     },
     starks::proof::{
         options::{ProofOptions, SecurityLevel},
@@ -56,4 +58,32 @@ fn load_proof_and_pub_inputs(input_path: &str) -> (StarkProof<Stark252PrimeField
     let public_inputs = PublicInputs::deserialize(bytes).unwrap();
 
     (proof, public_inputs)
+}
+
+pub fn run_trace_bench(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    benchname: &str,
+    program_path: &str,
+) {
+    let program_content = std::fs::read(program_path).unwrap();
+
+    let (register_states, memory, program_size, range_check_builtin_range) = run_program(
+        None,
+        CairoLayout::Small,
+        &program_content,
+        &CairoVersion::V0,
+    )
+    .unwrap();
+
+    let mut pub_inputs = build_pub_inputs(
+        range_check_builtin_range,
+        &None,
+        &register_states,
+        &memory,
+        program_size,
+    );
+
+    group.bench_function(benchname, |bench| {
+        bench.iter(|| black_box(build_main_trace(&register_states, &memory, &mut pub_inputs)));
+    });
 }

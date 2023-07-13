@@ -2,7 +2,10 @@ use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
 use functions::{
-    execution::{run_cairo_bench_with_security_level, run_verifier_bench_with_security_level},
+    execution::{
+        run_cairo_bench_with_security_level, run_trace_bench,
+        run_verifier_bench_with_security_level,
+    },
     path::{cairo0_program_path, cairo0_proof_path},
 };
 use lambdaworks_stark::starks::proof::options::SecurityLevel;
@@ -69,27 +72,28 @@ fn run_table_bench(
     proof_path: &str,
     sec_proof_path: &str,
 ) {
+    run_trace_bench(group, &format!("trace/{benchname}"), program_path);
     run_cairo_bench_with_security_level(
         group,
-        &format!("/prover/80_bits/{benchname}"),
+        &format!("prover/80_bits/{benchname}"),
         program_path,
         SecurityLevel::Conjecturable80Bits,
     );
     run_verifier_bench_with_security_level(
         group,
-        &format!("/verifier/80_bits/{benchname}"),
+        &format!("verifier/80_bits/{benchname}"),
         proof_path,
         SecurityLevel::Conjecturable80Bits,
     );
     run_cairo_bench_with_security_level(
         group,
-        &format!("/prover/128_bits/{benchname}"),
+        &format!("prover/128_bits/{benchname}"),
         program_path,
         SecurityLevel::Provable128Bits,
     );
     run_verifier_bench_with_security_level(
         group,
-        &format!("/verifier/128_bits/{benchname}"),
+        &format!("verifier/128_bits/{benchname}"),
         sec_proof_path,
         SecurityLevel::Provable128Bits,
     );
