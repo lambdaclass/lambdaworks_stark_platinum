@@ -1,7 +1,7 @@
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use functions::bench::run_verifier_bench_with_security_level;
+use functions::execution::run_verifier_bench_with_security_level;
 
 use lambdaworks_stark::starks::proof::options::SecurityLevel;
 
@@ -26,11 +26,13 @@ fn verifier_benches(c: &mut Criterion) {
         &mut group,
         "fibonacci/500",
         &cairo0_proof_path("fibonacci_500.proof"),
+        &cairo0_proof_path("fibonacci_500_sec.proof"),
     );
     run_verifier_bench(
         &mut group,
         "fibonacci/1000",
         &cairo0_proof_path("fibonacci_1000.proof"),
+        &cairo0_proof_path("fibonacci_1000_sec.proof"),
     );
 }
 
@@ -44,18 +46,19 @@ fn cairo0_proof_path(program_name: &str) -> String {
 fn run_verifier_bench(
     group: &mut BenchmarkGroup<'_, WallTime>,
     benchname: &str,
-    program_path: &str,
+    proof_path: &str,
+    sec_proof_path: &str,
 ) {
     run_verifier_bench_with_security_level(
         group,
         &format!("80_bits/{benchname}"),
-        program_path,
+        proof_path,
         SecurityLevel::Provable80Bits,
     );
     run_verifier_bench_with_security_level(
         group,
         &format!("128_bits/{benchname}"),
-        program_path,
+        sec_proof_path,
         SecurityLevel::Provable128Bits,
     );
 }

@@ -1,7 +1,7 @@
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use functions::bench::run_verifier_bench_with_security_level;
+use functions::execution::run_verifier_bench_with_security_level;
 
 use lambdaworks_stark::starks::proof::options::SecurityLevel;
 
@@ -32,13 +32,6 @@ fn verifier_benches(c: &mut Criterion) {
         "fibonacci/1000",
         &cairo0_proof_path("fibonacci_1000.proof"),
     );
-}
-
-fn cairo0_proof_path(program_name: &str) -> String {
-    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const PROGRAM_BASE_REL_PATH: &str = "/benches/proofs/";
-    let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
-    program_base_path + program_name
 }
 
 fn run_verifier_bench(

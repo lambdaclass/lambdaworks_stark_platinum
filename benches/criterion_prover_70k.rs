@@ -1,7 +1,7 @@
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion, SamplingMode,
 };
-use functions::bench::run_cairo_bench_with_security_level;
+use functions::{execution::run_cairo_bench_with_security_level, path::cairo0_program_path};
 use lambdaworks_stark::starks::proof::options::SecurityLevel;
 
 pub mod functions;
@@ -28,13 +28,6 @@ fn fibo_70k_bench(c: &mut Criterion) {
         "fibonacci/70000",
         &cairo0_program_path("fibonacci_70000.json"),
     );
-}
-
-fn cairo0_program_path(program_name: &str) -> String {
-    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const PROGRAM_BASE_REL_PATH: &str = "/cairo_programs/cairo0/";
-    let program_base_path = CARGO_DIR.to_string() + PROGRAM_BASE_REL_PATH;
-    program_base_path + program_name
 }
 
 fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {

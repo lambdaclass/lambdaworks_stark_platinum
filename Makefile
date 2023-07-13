@@ -19,10 +19,10 @@ build:
 	cargo build --release
 
 prove: build
-	cargo run --release prove $(PROGRAM_PATH) $(PROOF_PATH)
+	cargo run --release prove $(PROGRAM_PATH) $(PROOF_PATH) -s
 
 verify: build
-	cargo run --release verify $(PROOF_PATH)
+	cargo run --release verify $(PROOF_PATH) -s
 
 run_all: build
 	cargo run --release prove_and_verify $(PROGRAM_PATH)
