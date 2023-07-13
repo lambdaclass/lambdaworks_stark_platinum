@@ -1,7 +1,7 @@
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use functions::execution::run_verifier_bench_with_security_level;
+use functions::{execution::run_verifier_bench_with_security_level, path::cairo0_proof_path};
 
 use lambdaworks_stark::starks::proof::options::SecurityLevel;
 
