@@ -3,7 +3,7 @@ use criterion::{
 };
 use functions::{
     execution::{
-        run_cairo_bench_with_security_level, run_trace_bench,
+        run_cairo_bench_and_measure_proof, run_trace_bench,
         run_verifier_bench_with_security_level,
     },
     path::{cairo0_program_path, cairo0_proof_path},
@@ -73,7 +73,7 @@ fn run_table_bench(
     sec_proof_path: &str,
 ) {
     run_trace_bench(group, &format!("trace/{benchname}"), program_path);
-    run_cairo_bench_with_security_level(
+    run_cairo_bench_and_measure_proof(
         group,
         &format!("prover/80_bits/{benchname}"),
         program_path,
@@ -85,7 +85,7 @@ fn run_table_bench(
         proof_path,
         SecurityLevel::Conjecturable80Bits,
     );
-    run_cairo_bench_with_security_level(
+    run_cairo_bench_and_measure_proof(
         group,
         &format!("prover/128_bits/{benchname}"),
         program_path,
