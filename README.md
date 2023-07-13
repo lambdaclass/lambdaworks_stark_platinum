@@ -149,77 +149,114 @@ make benchmarks_table
 
 The results shown are from the execution of a Fibonacci program.
 
-First table has the results of the execution on a Apple M1 with 4 E and 4 P cores and 16 GB of RAM:
+First table has the results that are independent of the hardware used.
+
+| n   | Trace length | Trace time | Proof size 80 | Proof size 128 |
+|-----|--------------|------------|---------------|----------------|
+| 100 | 2^10         | 0.9 ms     | 270 KB        | 1.2 MB         |
+| 500 | 2^12         | 5.3 ms     | 335 KB        | 1.5 MB         |
+| 2k  | 2^14         | 24.7 ms    | 407 KB        | 1.8 MB         |
+| 5k  | 2^16         | 77.2 ms    | 488 KB        | 2.2 MB         |
+| 20k | 2^18         | 312 ms     | 576 KB        | 2.6 MB         |
+
+Second table has the results of the execution on an Apple M1 with 4 E and 4 P cores and 16 GB of RAM:
 
 <table>
     <tr>
-        <th rowspan="2">n</th>
         <th rowspan="2">Trace length</th>
-        <th rowspan="2">Trace time</th>
-        <th colspan="3" style="text-align:center">Conjecturable 80 bits</th>
-        <th colspan="3" style="text-align:center">Provable 128 bits</th>
+        <th colspan="2" style="text-align:center">Conjecturable 80 bits</th>
+        <th colspan="2" style="text-align:center">Provable 128 bits</th>
     </tr>
     <tr>
         <th>Prover time</th>
         <th>Verifier time</th>
-        <th>Proof size</th>
         <th>Prover time</th>
         <th>Verifier time</th>
-        <th>Proof size</th>
     </tr>
     <tr>
-        <td>100</td>
         <td>2^10</td>
-        <td>0.9 ms</td>
         <td>1.1 s</td>
         <td>3.1 ms</td>
-        <td>270 KB</td>
         <td>1.1 s</td>
         <td>10.2 ms</td>
-        <td>1.2 MB</td>
     </tr>
     <tr>
-        <td>500</td>
         <td>2^12</td>
-        <td>5.3 ms</td>
         <td>335.5 ms</td>
         <td>7.6 ms</td>
-        <td>335 KB</td>
         <td>336.4 ms</td>
         <td>16.3 ms</td>
-        <td>1.5 MB</td>
     </tr>
     <tr>
-        <td>2k</td>
         <td>2^14</td>
-        <td>24.7 ms</td>
         <td>1.41 s</td>
         <td>26.4 ms</td>
-        <td>407 KB</td>
         <td>1.42 s</td>
         <td>37 ms</td>
-        <td>1.8 MB</td>
     </tr>
     <tr>
-        <td>5k</td>
         <td>2^16</td>
-        <td>77.2 ms</td>
         <td>5.8 s</td>
         <td>108.8 ms</td>
-        <td>488 KB</td>
         <td>5.8 s</td>
         <td>122.2 ms</td>
-        <td>2.2 MB</td>
     </tr>
     <tr>
-        <td>20k</td>
         <td>2^18</td>
-        <td>312 ms</td>
         <td>24.3 s</td>
         <td>477.4 ms</td>
-        <td>576 KB</td>
         <td>24.3 s</td>
         <td>493.1 ms</td>
-        <td>2.6 MB</td>
+    </tr>
+</table>
+
+Third table has the results of the execution on an Intel Xeon Platinum with 4 cores and 16 GB of RAM:
+
+<table>
+     <tr>
+        <th rowspan="2">Trace length</th>
+        <th colspan="2" style="text-align:center">Conjecturable 80 bits</th>
+        <th colspan="2" style="text-align:center">Provable 128 bits</th>
+    </tr>
+    <tr>
+        <th>Prover time</th>
+        <th>Verifier time</th>
+        <th>Prover time</th>
+        <th>Verifier time</th>
+    </tr>
+    <tr>
+        <td>2^10</td>
+        <td>2.5 s</td>
+        <td>6.3 ms</td>
+        <td>2.5 s</td>
+        <td>22.4 ms</td>
+    </tr>
+    <tr>
+        <td>2^12</td>
+        <td>709 ms</td>
+        <td>13.3 ms</td>
+        <td>710.5 ms</td>
+        <td>33.4 ms</td>
+    </tr>
+    <tr>
+        <td>2^14</td>
+        <td>3 s</td>
+        <td>41.1 ms</td>
+        <td>3 s</td>
+        <td>65.8 ms</td>
+    </tr>
+    <tr>
+        <td>2^16</td>
+        <td>12.2 s</td>
+        <td>160.6 ms</td>
+        <td>12.2 s</td>
+        <td>190.3 ms</td>
+    </tr>
+    <tr>
+        <td>2^18</td>
+        <td>50.5 s</td>
+        <td>692.9 ms</td>
+        <td>50.5 s</td>
+        <td>728.8 ms</td>
     </tr>
 </table>
