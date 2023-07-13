@@ -146,3 +146,80 @@ To get the results of the table below, run
 ```
 make benchmarks_table
 ```
+
+The results shown are from the execution of a Fibonacci program.
+
+First table has the results of the execution on a Apple M1 with 4 E and 4 P cores and 16 GB of RAM:
+
+<table>
+    <tr>
+        <th rowspan="2">n</th>
+        <th rowspan="2">Trace length</th>
+        <th rowspan="2">Trace time</th>
+        <th colspan="3" style="text-align:center">Conjecturable 80 bits</th>
+        <th colspan="3" style="text-align:center">Provable 128 bits</th>
+    </tr>
+    <tr>
+        <th>Prover time</th>
+        <th>Verifier time</th>
+        <th>Proof size</th>
+        <th>Prover time</th>
+        <th>Verifier time</th>
+        <th>Proof size</th>
+    </tr>
+    <tr>
+        <td>100</td>
+        <td>2^10</td>
+        <td>0.9 ms</td>
+        <td>1.1 s</td>
+        <td>3.1 ms</td>
+        <td>270 KB</td>
+        <td>1.1 s</td>
+        <td>10.2 ms</td>
+        <td>1.2 MB</td>
+    </tr>
+    <tr>
+        <td>500</td>
+        <td>2^12</td>
+        <td>5.3 ms</td>
+        <td>335.5 ms</td>
+        <td>7.6 ms</td>
+        <td>335 KB</td>
+        <td>336.4 ms</td>
+        <td>16.3 ms</td>
+        <td>1.5 MB</td>
+    </tr>
+    <tr>
+        <td>2k</td>
+        <td>2^14</td>
+        <td>24.7 ms</td>
+        <td>1.41 s</td>
+        <td>26.4 ms</td>
+        <td>407 KB</td>
+        <td>1.42 s</td>
+        <td>37 ms</td>
+        <td>1.8 MB</td>
+    </tr>
+    <tr>
+        <td>5k</td>
+        <td>2^16</td>
+        <td>77.2 ms</td>
+        <td>5.8 s</td>
+        <td>108.8 ms</td>
+        <td>488 KB</td>
+        <td>5.8 s</td>
+        <td>122.2 ms</td>
+        <td>2.2 MB</td>
+    </tr>
+    <tr>
+        <td>20k</td>
+        <td>2^18</td>
+        <td>312 ms</td>
+        <td>24.3 s</td>
+        <td>477.4 ms</td>
+        <td>576 KB</td>
+        <td>24.3 s</td>
+        <td>493.1 ms</td>
+        <td>2.6 MB</td>
+    </tr>
+</table>
