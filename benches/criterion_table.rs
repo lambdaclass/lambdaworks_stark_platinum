@@ -3,8 +3,7 @@ use criterion::{
 };
 use functions::{
     execution::{
-        run_cairo_bench_and_measure_proof, run_trace_bench,
-        run_verifier_bench_with_security_level,
+        run_cairo_bench_and_measure_proof, run_trace_bench, run_verifier_bench_with_security_level,
     },
     path::{cairo0_program_path, cairo0_proof_path},
 };

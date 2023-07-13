@@ -139,3 +139,10 @@ if you don´t have the tools for fuzzing installed use
 make fuzzer_tools
 ```
 
+## Benchmarks
+
+To get the results of the table below, run
+
+```
+make benchmarks_table
+```

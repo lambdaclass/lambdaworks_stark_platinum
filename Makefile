@@ -54,6 +54,9 @@ benchmarks_security: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel --bench criterion_prover_security
 	cargo bench -F parallel --bench criterion_verifier_security
 
+benchmarks_table: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench -F parallel --bench criterion_table
+
 benchmarks_parallel_all: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel
 
