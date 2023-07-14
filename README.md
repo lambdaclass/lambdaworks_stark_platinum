@@ -151,21 +151,21 @@ The results shown are from the execution of a Fibonacci program.
 
 First table has the results that are independent of the hardware used.
 
-| n   | Trace length | Trace time | Proof size 80 | Proof size 128 |
-|-----|--------------|------------|---------------|----------------|
-| 100 | 2^10         | 0.9 ms     | 270 KB        | 1.2 MB         |
-| 500 | 2^12         | 5.3 ms     | 335 KB        | 1.5 MB         |
-| 2k  | 2^14         | 24.7 ms    | 407 KB        | 1.8 MB         |
-| 5k  | 2^16         | 77.2 ms    | 488 KB        | 2.2 MB         |
-| 20k | 2^18         | 312 ms     | 576 KB        | 2.6 MB         |
+| n   | Trace length | Trace time | Proof size 80 bit security | Proof size 128 bit security |
+|-----|--------------|------------|----------------------------|-----------------------------|
+| 100 | 2^10         | 0.9 ms     | 270 KB                     | 476 KB                      |
+| 500 | 2^12         | 5.3 ms     | 335 KB                     | 591 KB                      |
+| 2k  | 2^14         | 24.7 ms    | 407 KB                     | 719 KB                      |
+| 5k  | 2^16         | 77.2 ms    | 488 KB                     | 862 KB                      |
+| 20k | 2^18         | 312 ms     | 576 KB                     | 1 MB                        |
 
 Second table has the results of the execution on an Apple M1 with 4 E and 4 P cores and 16 GB of RAM:
 
 <table>
     <tr>
         <th rowspan="2">Trace length</th>
-        <th colspan="2" style="text-align:center">Conjecturable 80 bits</th>
-        <th colspan="2" style="text-align:center">Provable 128 bits</th>
+        <th colspan="2" style="text-align:center">80 bit security</th>
+        <th colspan="2" style="text-align:center">128 bit security</th>
     </tr>
     <tr>
         <th>Prover time</th>
@@ -178,35 +178,35 @@ Second table has the results of the execution on an Apple M1 with 4 E and 4 P co
         <td>1.1 s</td>
         <td>3.1 ms</td>
         <td>1.1 s</td>
-        <td>10.2 ms</td>
+        <td>4.7 ms</td>
     </tr>
     <tr>
         <td>2^12</td>
         <td>335.5 ms</td>
         <td>7.6 ms</td>
         <td>336.4 ms</td>
-        <td>16.3 ms</td>
+        <td>9.5 ms</td>
     </tr>
     <tr>
         <td>2^14</td>
         <td>1.41 s</td>
         <td>26.4 ms</td>
         <td>1.42 s</td>
-        <td>37 ms</td>
+        <td>29 ms</td>
     </tr>
     <tr>
         <td>2^16</td>
         <td>5.8 s</td>
         <td>108.8 ms</td>
         <td>5.8 s</td>
-        <td>122.2 ms</td>
+        <td>113.9 ms</td>
     </tr>
     <tr>
         <td>2^18</td>
         <td>24.3 s</td>
         <td>477.4 ms</td>
         <td>24.3 s</td>
-        <td>493.1 ms</td>
+        <td>481.7 ms</td>
     </tr>
 </table>
 
@@ -215,8 +215,8 @@ Third table has the results of the execution on an Intel Xeon Platinum with 4 co
 <table>
      <tr>
         <th rowspan="2">Trace length</th>
-        <th colspan="2" style="text-align:center">Conjecturable 80 bits</th>
-        <th colspan="2" style="text-align:center">Provable 128 bits</th>
+        <th colspan="2" style="text-align:center">80 bit security</th>
+        <th colspan="2" style="text-align:center">128 bit security</th>
     </tr>
     <tr>
         <th>Prover time</th>

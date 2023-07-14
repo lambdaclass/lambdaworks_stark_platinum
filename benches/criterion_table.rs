@@ -88,13 +88,13 @@ fn run_table_bench(
         group,
         &format!("prover/128_bits/{benchname}"),
         program_path,
-        SecurityLevel::Provable128Bits,
+        SecurityLevel::Conjecturable128Bits,
     );
     run_verifier_bench_with_security_level(
         group,
         &format!("verifier/128_bits/{benchname}"),
         sec_proof_path,
-        SecurityLevel::Provable128Bits,
+        SecurityLevel::Conjecturable128Bits,
     );
 }
 

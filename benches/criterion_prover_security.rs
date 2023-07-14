@@ -45,7 +45,7 @@ fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, pr
         group,
         &format!("128_bits/{benchname}"),
         program_path,
-        SecurityLevel::Provable128Bits,
+        SecurityLevel::Conjecturable128Bits,
     );
 }
 

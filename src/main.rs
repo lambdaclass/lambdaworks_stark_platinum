@@ -81,7 +81,7 @@ fn get_proof_options(arg: Option<&String>) -> Option<ProofOptions> {
             if arg == "-s" {
                 println!("Using secure proof options");
                 Some(ProofOptions::new_secure(
-                    SecurityLevel::Provable128Bits,
+                    SecurityLevel::Conjecturable128Bits,
                     default_coset_offset,
                 ))
             } else {

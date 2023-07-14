@@ -53,13 +53,13 @@ fn run_verifier_bench(
         group,
         &format!("80_bits/{benchname}"),
         proof_path,
-        SecurityLevel::Provable80Bits,
+        SecurityLevel::Conjecturable80Bits,
     );
     run_verifier_bench_with_security_level(
         group,
         &format!("128_bits/{benchname}"),
         sec_proof_path,
-        SecurityLevel::Provable128Bits,
+        SecurityLevel::Conjecturable128Bits,
     );
 }
 
