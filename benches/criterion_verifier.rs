@@ -43,7 +43,7 @@ fn run_verifier_bench(
         group,
         benchname,
         program_path,
-        SecurityLevel::Provable128Bits,
+        SecurityLevel::Conjecturable80Bits,
     );
 }
 

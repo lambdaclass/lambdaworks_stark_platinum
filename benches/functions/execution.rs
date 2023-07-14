@@ -77,7 +77,13 @@ pub fn run_verifier_bench_with_security_level(
     let (proof, pub_inputs) = load_proof_and_pub_inputs(program_path);
     let proof_options = ProofOptions::new_secure(security_level, 3);
     group.bench_function(benchname, |bench| {
-        bench.iter(|| black_box(verify_cairo_proof(&proof, &pub_inputs, &proof_options)));
+        bench.iter(|| {
+            black_box(assert!(verify_cairo_proof(
+                &proof,
+                &pub_inputs,
+                &proof_options
+            )))
+        });
     });
 }
 

@@ -27,7 +27,7 @@ fn verifier_benches(c: &mut Criterion) {
     run_verifier_bench(
         &mut group,
         "fibonacci/70000",
-        &cairo0_proof_path("fibonacci_70000.proof"),
+        &cairo0_proof_path("fibonacci_70000_sec.proof"),
     );
 }
 
@@ -40,7 +40,7 @@ fn run_verifier_bench(
         group,
         benchname,
         program_path,
-        SecurityLevel::Provable128Bits,
+        SecurityLevel::Conjecturable128Bits,
     );
 }
 
