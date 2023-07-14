@@ -150,21 +150,24 @@ make benchmarks_table
 
 The results shown are from the execution of a Fibonacci program.
 
+Bits of security are used to ensure that the proof satisfies a certain conjuecturable security level.
+
 First table has the results that are independent of the hardware used.
 
-| n   | Trace length | Trace time | Proof size 80 bit security | Proof size 128 bit security |
-|-----|--------------|------------|----------------------------|-----------------------------|
-| 100 | 2^10         | 0.9 ms     | 270 KB                     | 476 KB                      |
-| 500 | 2^12         | 5.3 ms     | 335 KB                     | 591 KB                      |
-| 2k  | 2^14         | 24.7 ms    | 407 KB                     | 719 KB                      |
-| 5k  | 2^16         | 77.2 ms    | 488 KB                     | 862 KB                      |
-| 20k | 2^18         | 312 ms     | 576 KB                     | 1 MB                        |
+| n   | Trace length | Proof size 80 bit security | Proof size 128 bit security |
+|-----|--------------|----------------------------|-----------------------------|
+| 100 | 2^10         | 270 KB                     | 476 KB                      |
+| 500 | 2^12         | 335 KB                     | 591 KB                      |
+| 2k  | 2^14         | 407 KB                     | 719 KB                      |
+| 5k  | 2^16         | 488 KB                     | 862 KB                      |
+| 20k | 2^18         | 576 KB                     | 1 MB                        |
 
 Second table has the results of the execution on an Apple M1 with 4 E and 4 P cores and 16 GB of RAM:
 
 <table>
     <tr>
         <th rowspan="2">Trace length</th>
+        <th rowspan="2">Trace time</th>
         <th colspan="2" style="text-align:center">80 bit security</th>
         <th colspan="2" style="text-align:center">128 bit security</th>
     </tr>
@@ -176,6 +179,7 @@ Second table has the results of the execution on an Apple M1 with 4 E and 4 P co
     </tr>
     <tr>
         <td>2^10</td>
+        <td>0.9 ms</td>
         <td>1.1 s</td>
         <td>3.1 ms</td>
         <td>1.1 s</td>
@@ -183,6 +187,7 @@ Second table has the results of the execution on an Apple M1 with 4 E and 4 P co
     </tr>
     <tr>
         <td>2^12</td>
+        <td>5.3 ms</td>
         <td>335.5 ms</td>
         <td>7.6 ms</td>
         <td>336.4 ms</td>
@@ -190,6 +195,7 @@ Second table has the results of the execution on an Apple M1 with 4 E and 4 P co
     </tr>
     <tr>
         <td>2^14</td>
+        <td>24.7 ms</td>
         <td>1.41 s</td>
         <td>26.4 ms</td>
         <td>1.42 s</td>
@@ -197,6 +203,7 @@ Second table has the results of the execution on an Apple M1 with 4 E and 4 P co
     </tr>
     <tr>
         <td>2^16</td>
+        <td>77.2 ms</td>
         <td>5.8 s</td>
         <td>108.8 ms</td>
         <td>5.8 s</td>
@@ -204,6 +211,7 @@ Second table has the results of the execution on an Apple M1 with 4 E and 4 P co
     </tr>
     <tr>
         <td>2^18</td>
+        <td>312 ms</td>
         <td>24.3 s</td>
         <td>477.4 ms</td>
         <td>24.3 s</td>
@@ -216,6 +224,7 @@ Third table has the results of the execution on an Intel Xeon Platinum with 4 co
 <table>
      <tr>
         <th rowspan="2">Trace length</th>
+        <th rowspan="2">Trace time</th>
         <th colspan="2" style="text-align:center">80 bit security</th>
         <th colspan="2" style="text-align:center">128 bit security</th>
     </tr>
@@ -227,37 +236,42 @@ Third table has the results of the execution on an Intel Xeon Platinum with 4 co
     </tr>
     <tr>
         <td>2^10</td>
+        <td>1.4 ms</td>
         <td>2.5 s</td>
         <td>6.3 ms</td>
         <td>2.5 s</td>
-        <td>22.4 ms</td>
+        <td>9.8 ms</td>
     </tr>
     <tr>
         <td>2^12</td>
+        <td>8 ms</td>
         <td>709 ms</td>
         <td>13.3 ms</td>
         <td>710.5 ms</td>
-        <td>33.4 ms</td>
+        <td>17.7 ms</td>
     </tr>
     <tr>
         <td>2^14</td>
+        <td>44.9 ms</td>
         <td>3 s</td>
         <td>41.1 ms</td>
         <td>3 s</td>
-        <td>65.8 ms</td>
+        <td>46.5 ms</td>
     </tr>
     <tr>
         <td>2^16</td>
+        <td>140.8 s</td>
         <td>12.2 s</td>
         <td>160.6 ms</td>
         <td>12.2 s</td>
-        <td>190.3 ms</td>
+        <td>168 ms</td>
     </tr>
     <tr>
         <td>2^18</td>
+        <td>700 ms</td>
         <td>50.5 s</td>
         <td>692.9 ms</td>
         <td>50.5 s</td>
-        <td>728.8 ms</td>
+        <td>702.6 ms</td>
     </tr>
 </table>
