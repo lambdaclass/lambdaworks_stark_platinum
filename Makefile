@@ -52,6 +52,10 @@ benchmarks_parallel: $(COMPILED_CAIRO0_PROGRAMS)
 benchmarks_parallel_all: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel
 
+# TODO: add trace and memory rules
+benchmarks_giza: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo +nightly bench --bench criterion_giza -F "parallel giza"
+
 build_metal:
 	cargo b --features metal --release
 

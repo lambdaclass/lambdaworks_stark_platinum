@@ -12,8 +12,8 @@ Cargo.lock
 **/proptest-regressions
 /output.txt
 flamegraph.svg
-proving_system/stark/src/cairo_run/program.memory
-proving_system/stark/src/cairo_run/program.trace
+**/*.trace
+**/*.memory
 
 **/.DS_Store
 **/*.swp
