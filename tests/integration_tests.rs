@@ -349,7 +349,6 @@ fn test_verifier_rejects_proof_with_different_security_params() {
 
     let proof_options_verifier = ProofOptions::new_secure(SecurityLevel::Conjecturable128Bits, 3);
 
-    assert!(!verify_cairo_proof(&proof, &pub_inputs, &proof_options_verifier));
     assert!(!verify_cairo_proof(
         &proof,
         &pub_inputs,
