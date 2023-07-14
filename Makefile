@@ -6,6 +6,8 @@ CAIRO0_PROGRAMS_DIR=cairo_programs/cairo0
 CAIRO0_PROGRAMS:=$(wildcard $(CAIRO0_PROGRAMS_DIR)/*.cairo)
 COMPILED_CAIRO0_PROGRAMS:=$(patsubst $(CAIRO0_PROGRAMS_DIR)/%.cairo, $(CAIRO0_PROGRAMS_DIR)/%.json, $(CAIRO0_PROGRAMS))
 
+TRACE_MEM_CAIRO0_PROGRAMS:=$(patsubst $(CAIRO0_PROGRAMS_DIR)/%.cairo, $(CAIRO0_PROGRAMS_DIR)/%.mem, $(CAIRO0_PROGRAMS))
+
 # Rule to compile Cairo programs for testing purposes.
 # If the `cairo-lang` toolchain is installed, programs will be compiled with it.
 # Otherwise, the cairo_compile docker image will be used
@@ -14,6 +16,12 @@ $(CAIRO0_PROGRAMS_DIR)/%.json: $(CAIRO0_PROGRAMS_DIR)/%.cairo
 	@echo "Compiling Cairo program..."
 	@cairo-compile --cairo_path="$(CAIRO0_PROGRAMS_DIR)" $< --output $@ 2> /dev/null || \
 	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-compile /pwd/$< > $@
+
+%.mem: %.json
+	@echo "Generating trace and memory for {$@}..."
+
+	@cairo-run --program "$(CAIRO0_PROGRAMS_DIR).json" $< --memory_file $@.mem --trace_file $@.trace 2> /dev/null || \
+	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-run --program /pwd/$< --memory_file /pwd/$@ --trace_file /pwd/$@.trace /pwd/$<
 
 build: 
 	cargo build --release
@@ -53,7 +61,7 @@ benchmarks_parallel_all: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel
 
 # TODO: add trace and memory rules
-benchmarks_giza: $(COMPILED_CAIRO0_PROGRAMS)
+benchmarks_giza: $(CAIRO0_PROGRAMS_DIR)/fibonacci_1000.mem $(CAIRO0_PROGRAMS_DIR)/fibonacci_10000.mem 
 	cargo +nightly bench --bench criterion_giza -F "parallel giza"
 
 build_metal:
@@ -99,7 +107,7 @@ compile_and_prove: target/release/lambdaworks-stark
 clean:
 	rm -f $(CAIRO0_PROGRAMS_DIR)/*.json
 	rm -f $(CAIRO0_PROGRAMS_DIR)/*.trace
-	rm -f $(CAIRO0_PROGRAMS_DIR)/*.memory
+	rm -f $(CAIRO0_PROGRAMS_DIR)/*.mem
 
 CUDAFUZZER = deserialize
 fuzzer:
