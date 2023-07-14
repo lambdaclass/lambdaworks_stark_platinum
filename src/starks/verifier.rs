@@ -543,6 +543,13 @@ where
     A: AIR<Field = F>,
     FieldElement<F>: ByteConversion,
 {
+
+    #[cfg(feature = "instruments")]
+    println!("- Started step 0: Verify security params");
+    if proof.query_list.len() < proof_options.fri_number_of_queries {
+        return false;
+    }
+
     #[cfg(feature = "instruments")]
     println!("- Started step 1: Recover challenges");
     #[cfg(feature = "instruments")]
