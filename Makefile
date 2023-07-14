@@ -19,9 +19,13 @@ $(CAIRO0_PROGRAMS_DIR)/%.json: $(CAIRO0_PROGRAMS_DIR)/%.cairo
 
 %.mem: %.json
 	@echo "Generating trace and memory for {$@}..."
-
 	@cairo-run --program "$(CAIRO0_PROGRAMS_DIR).json" $< --memory_file $@.mem --trace_file $@.trace 2> /dev/null || \
-	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-run --program /pwd/$< --memory_file /pwd/$@ --trace_file /pwd/$@.trace /pwd/$<
+	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-run --program /pwd/$< --memory_file /pwd/$@
+
+%.trace: %.json
+	@echo "Generating trace and memory for {$@}..."
+	@cairo-run --program "$(CAIRO0_PROGRAMS_DIR).json" $< --trace_file $@ 2> /dev/null || \
+	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-run --program /pwd/$< --trace_file /pwd/$@ 
 
 build: 
 	cargo build --release
@@ -61,7 +65,7 @@ benchmarks_parallel_all: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel
 
 # TODO: add trace and memory rules
-benchmarks_giza: $(CAIRO0_PROGRAMS_DIR)/fibonacci_1000.mem $(CAIRO0_PROGRAMS_DIR)/fibonacci_10000.mem 
+benchmarks_giza: $(CAIRO0_PROGRAMS_DIR)/fibonacci_1000.mem $(CAIRO0_PROGRAMS_DIR)/fibonacci_10000.mem $(CAIRO0_PROGRAMS_DIR)/fibonacci_1000.trace $(CAIRO0_PROGRAMS_DIR)/fibonacci_10000.trace
 	cargo +nightly bench --bench criterion_giza -F "parallel giza"
 
 build_metal:
