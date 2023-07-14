@@ -62,7 +62,6 @@ benchmarks_parallel: $(COMPILED_CAIRO0_PROGRAMS)
 benchmarks_parallel_all: $(COMPILED_CAIRO0_PROGRAMS)
 	cargo bench -F parallel
 
-# TODO: add trace and memory rules
 benchmarks_giza: $(CAIRO0_PROGRAMS_DIR)/fibonacci_1000.mem $(CAIRO0_PROGRAMS_DIR)/fibonacci_10000.mem $(CAIRO0_PROGRAMS_DIR)/fibonacci_1000.trace $(CAIRO0_PROGRAMS_DIR)/fibonacci_10000.trace
 	cargo +nightly bench --bench criterion_giza -F "parallel giza"
 
