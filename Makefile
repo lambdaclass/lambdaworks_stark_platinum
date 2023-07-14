@@ -24,7 +24,7 @@ $(CAIRO0_PROGRAMS_DIR)/%.json: $(CAIRO0_PROGRAMS_DIR)/%.cairo
 
 %.trace: %.json
 	@echo "Generating trace and memory for {$@}..."
-	@cairo-run --program "$(CAIRO0_PROGRAMS_DIR).json" $< --trace_file $@ 2> /dev/null || \
+	@cairo-run --program $< --trace_file $@ 2> /dev/null || \
 	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-run --program /pwd/$< --trace_file /pwd/$@ 
 
 build: 
