@@ -337,7 +337,6 @@ fn test_verifier_rejects_proof_with_changed_output() {
     assert!(!verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }
 
-
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_security_params() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
@@ -350,5 +349,9 @@ fn test_verifier_rejects_proof_with_different_security_params() {
 
     let proof_options_verifier = ProofOptions::new_secure(SecurityLevel::Conjecturable128Bits, 3);
 
-    assert!(!verify_cairo_proof(&proof, &pub_inputs, &proof_options_verifier));
+    assert!(!verify_cairo_proof(
+        &proof,
+        &pub_inputs,
+        &proof_options_verifier
+    ));
 }
