@@ -452,6 +452,7 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
     two_inv: &FieldElement<F>,
 ) -> bool
 where
+    F: IsField + IsFFTField, 
     FieldElement<F>: ByteConversion,
 {
     // First, we check that the last polynomial gives the correct commitment to it:

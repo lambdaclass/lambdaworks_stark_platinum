@@ -2,7 +2,6 @@ use lambdaworks_crypto::merkle_tree::proof::Proof;
 use lambdaworks_math::{
     errors::DeserializationError,
     field::{element::FieldElement, traits::IsFFTField},
-    polynomial::Polynomial,
     traits::{ByteConversion, Deserializable, Serializable},
 };
 
@@ -345,14 +344,45 @@ where
         }
 
         // TODO: implement deserialization for fri_last_poly
-
-        let fri_last_poly = FieldElement::from_bytes_be(
+        let last_poly_len = usize::from_be_bytes(
             bytes
-                .get(..felt_len)
-                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
-        )?;
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
 
-        bytes = &bytes[felt_len..];
+        let mut fri_last_poly = vec![];
+
+        for _ in 0..last_poly_len {
+            let coeff_len = usize::from_be_bytes(
+                bytes
+                    .get(..8)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            );
+
+            bytes = &bytes[8..];
+
+            let coeff = FieldElement::from_bytes_be(
+                bytes
+                    .get(..coeff_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
+            )?;
+
+            bytes = &bytes[coeff_len..];
+
+            fri_last_poly.push(coeff);
+        }
+
+        let last_poly_root = bytes
+                .get(..32)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
+
+        bytes = &bytes[32..];
 
         // TODO: implement deserialization for last_root
 
