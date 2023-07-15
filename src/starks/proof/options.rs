@@ -1,7 +1,7 @@
 use lambdaworks_math::field::traits::IsPrimeField;
 
 use super::errors::InsecureOptionError;
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 pub enum SecurityLevel {
     Conjecturable80Bits,
