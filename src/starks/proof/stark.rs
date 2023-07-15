@@ -3,6 +3,7 @@ use lambdaworks_math::{
     errors::DeserializationError,
     field::{element::FieldElement, traits::IsFFTField},
     traits::{ByteConversion, Deserializable, Serializable},
+    polynomial::Polynomial,
 };
 
 use crate::starks::{
@@ -41,7 +42,7 @@ pub struct StarkProof<F: IsFFTField> {
     // [pₖ]
     pub fri_layers_merkle_roots: Vec<Commitment>,
     // pₙ
-    pub fri_last_value: FieldElement<F>,
+    pub fri_last_poly: Polynomial<FieldElement<F>>,
     // Open(p₀(D₀), 𝜐ₛ), Opwn(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
     pub query_list: Vec<FriDecommitment<F>>,
     // Open(H₁(D_LDE, 𝜐₀), Open(H₂(D_LDE, 𝜐₀), Open(tⱼ(D_LDE), 𝜐₀)
@@ -194,7 +195,7 @@ where
             bytes.extend(commitment);
         }
 
-        bytes.extend(self.fri_last_value.to_bytes_be());
+        bytes.extend(self.fri_last_poly.to_bytes_be());
 
         bytes.extend(self.query_list.len().to_be_bytes());
         for query in &self.query_list {
@@ -333,7 +334,7 @@ where
             bytes = &bytes[32..];
         }
 
-        let fri_last_value = FieldElement::from_bytes_be(
+        let fri_last_poly = FieldElement::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?,
@@ -429,7 +430,7 @@ where
             composition_poly_even_ood_evaluation,
             composition_poly_odd_ood_evaluation,
             fri_layers_merkle_roots,
-            fri_last_value,
+            fri_last_poly,
             query_list,
             deep_poly_openings,
             nonce,
@@ -572,7 +573,7 @@ mod test {
             composition_poly_even_ood_evaluation in some_felt(),
             composition_poly_odd_ood_evaluation in some_felt(),
             fri_layers_merkle_roots in commitment_vec(),
-            fri_last_value in some_felt(),
+            fri_last_poly in some_poly(),
             query_list in fri_decommitment_vec(),
             deep_poly_openings in deep_polynomial_openings_vec()
 
@@ -585,7 +586,7 @@ mod test {
                 composition_poly_even_ood_evaluation,
                 composition_poly_odd_ood_evaluation,
                 fri_layers_merkle_roots,
-                fri_last_value,
+                fri_last_poly,
                 query_list,
                 deep_poly_openings,
                 nonce: 0
@@ -649,7 +650,7 @@ mod test {
                 stark_proof.fri_layers_merkle_roots,
                 deserialized.fri_layers_merkle_roots
             );
-            prop_assert_eq!(stark_proof.fri_last_value, deserialized.fri_last_value);
+            prop_assert_eq!(stark_proof.fri_last_poly, deserialized.fri_last_poly);
 
             for (a, b) in stark_proof
                 .query_list
