@@ -27,7 +27,7 @@ pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     coset_offset: &FieldElement<F>,
     domain_size: usize,
     max_degree: u32,
-) -> (Polynomial<FieldElement<F>>, Commitment, Vec<FriLayer<F>>)
+) -> (Vec<FieldElement<F>>, Commitment, Vec<FriLayer<F>>)
 where
     FieldElement<F>: ByteConversion,
 {
@@ -68,7 +68,7 @@ where
     // >>>> Send value: pₙ
     transcript.append(&last_tree.root);
 
-    (last_poly, last_tree.root, fri_layer_list)
+    (last_poly.coefficients, last_tree.root, fri_layer_list)
 }
 
 pub fn fri_query_phase<F, A, T>(

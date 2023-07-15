@@ -75,7 +75,7 @@ struct Round3<F: IsFFTField> {
 }
 
 struct Round4<F: IsFFTField> {
-    fri_last_poly: Polynomial<FieldElement<F>>,
+    fri_last_poly: Vec<FieldElement<F>>,
     fri_last_poly_root: Commitment,
     fri_layers_merkle_roots: Vec<Commitment>,
     deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,

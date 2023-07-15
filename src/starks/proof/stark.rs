@@ -42,7 +42,7 @@ pub struct StarkProof<F: IsFFTField> {
     // [pₖ]
     pub fri_layers_merkle_roots: Vec<Commitment>,
     // pₙ
-    pub fri_last_poly: Polynomial<FieldElement<F>>,
+    pub fri_last_poly: Vec<FieldElement<F>>,
     // last root 
     pub last_poly_root: Commitment,
     // Open(p₀(D₀), 𝜐ₛ), Opwn(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
@@ -197,8 +197,8 @@ where
             bytes.extend(commitment);
         }
 
-        bytes.extend(self.fri_last_poly.coefficients.len().to_be_bytes());
-        for coefficient in &self.fri_last_poly.coefficients {
+        bytes.extend(self.fri_last_poly.len().to_be_bytes());
+        for coefficient in &self.fri_last_poly {
             let coefficient_bytes = coefficient.to_bytes_be();
             bytes.extend(coefficient_bytes.len().to_be_bytes());
             bytes.extend(coefficient_bytes);
@@ -344,6 +344,8 @@ where
             bytes = &bytes[32..];
         }
 
+        // TODO: implement deserialization for fri_last_poly
+
         let fri_last_poly = FieldElement::from_bytes_be(
             bytes
                 .get(..felt_len)
@@ -351,6 +353,8 @@ where
         )?;
 
         bytes = &bytes[felt_len..];
+
+        // TODO: implement deserialization for last_root
 
         let query_list_len = usize::from_be_bytes(
             bytes
@@ -441,7 +445,7 @@ where
             composition_poly_odd_ood_evaluation,
             fri_layers_merkle_roots,
             fri_last_poly,
-            fri_last_poly_root,
+            last_poly_root,
             query_list,
             deep_poly_openings,
             nonce,
@@ -584,7 +588,7 @@ mod test {
             composition_poly_even_ood_evaluation in some_felt(),
             composition_poly_odd_ood_evaluation in some_felt(),
             fri_layers_merkle_roots in commitment_vec(),
-            fri_last_poly in some_felt_vec(),
+            fri_last_poly in field_vec(),
             last_poly_root in some_commitment(),
             query_list in fri_decommitment_vec(),
             deep_poly_openings in deep_polynomial_openings_vec()

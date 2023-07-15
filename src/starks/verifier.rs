@@ -18,6 +18,7 @@ use lambdaworks_math::{
         traits::{IsFFTField, IsField},
     },
     traits::ByteConversion,
+    polynomial::Polynomial,
 };
 
 use super::{
@@ -454,8 +455,9 @@ where
     FieldElement<F>: ByteConversion,
 {
     // First, we check that the last polynomial gives the correct commitment to it:
-    let root_from_last_poly: Commitment = MerkleTree::build(&proof.fri_last_poly.coefficients).root;
+    let root_from_last_poly: Commitment = MerkleTree::build(&proof.fri_last_poly).root;
     let check = root_from_last_poly == proof.last_poly_root;
+    let last_poly = Polynomial::new(&proof.fri_last_poly);
     
     let fri_layers_merkle_roots = &proof.fri_layers_merkle_roots;
     let evaluation_point_vec: Vec<FieldElement<F>> =
@@ -522,7 +524,7 @@ where
                     result & (v == *next_layer_evaluation) & auth_point & auth_sym
                 } else {
                     result
-                        & (v == proof.fri_last_poly.evaluate(&evaluation_point_inv.inv()))
+                        & (v == last_poly.evaluate(&evaluation_point_inv.inv()))
                         & auth_point
                         & auth_sym
                 }
