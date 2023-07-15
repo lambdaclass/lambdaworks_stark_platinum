@@ -8,6 +8,8 @@ use lambdaworks_math::{
     },
     traits::{ByteConversion, Deserializable, Serializable},
 };
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::{
     starks::{
@@ -153,7 +155,7 @@ pub const MEM_A_TRACE_OFFSET: usize = 19;
 // index.
 const BUILTIN_OFFSET: usize = 9;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MemorySegment {
     RangeCheck,
     Output,
@@ -161,7 +163,7 @@ pub enum MemorySegment {
 
 pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PublicInputs {
     pub pc_init: FE,
     pub ap_init: FE,
@@ -1479,8 +1481,8 @@ mod test {
         fn test_public_inputs_serialization(
             public_inputs in some_public_inputs(),
         ){
-            let serialized = public_inputs.serialize();
-            let deserialized = PublicInputs::deserialize(&serialized).unwrap();
+            let serialized = Serializable::serialize(&public_inputs);
+            let deserialized: PublicInputs = Deserializable::deserialize(&serialized).unwrap();
             prop_assert_eq!(public_inputs.pc_init, deserialized.pc_init);
             prop_assert_eq!(public_inputs.ap_init, deserialized.ap_init);
             prop_assert_eq!(public_inputs.fp_init, deserialized.fp_init);
