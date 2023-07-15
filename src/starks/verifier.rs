@@ -21,7 +21,7 @@ use lambdaworks_math::{
 };
 
 use super::{
-    config::{BatchedMerkleTreeBackend, FriMerkleTreeBackend},
+    config::{BatchedMerkleTreeBackend, FriMerkleTreeBackend, Commitment},
     domain::Domain,
     fri::fri_decommit::FriDecommitment,
     grinding::hash_transcript_with_int_and_get_leading_zeros,
@@ -174,9 +174,8 @@ where
             transcript_to_field(transcript)
         })
         .collect::<Vec<FieldElement<F>>>();
-    let final_root = MerkleTree::build(&proof.fri_last_poly.coefficients).root;
     // <<<< Receive value: pₙ
-    transcript.append(&final_root);
+    transcript.append(&proof.last_poly_root);
 
     // Receive grinding value
     // 1) Receive challenge from the transcript
@@ -454,6 +453,10 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
 where
     FieldElement<F>: ByteConversion,
 {
+    // First, we check that the last polynomial gives the correct commitment to it:
+    let root_from_last_poly: Commitment = MerkleTree::build(&proof.fri_last_poly.coefficients).root;
+    let check = root_from_last_poly == proof.last_poly_root;
+    
     let fri_layers_merkle_roots = &proof.fri_layers_merkle_roots;
     let evaluation_point_vec: Vec<FieldElement<F>> =
         core::iter::successors(Some(evaluation_point), |evaluation_point| {
@@ -485,7 +488,7 @@ where
         .zip(&fri_decommitment.layers_evaluations_sym)
         .zip(evaluation_point_vec)
         .fold(
-            true,
+            check,
             |result,
              (
                 (((((k, merkle_root), auth_path), evaluation), auth_path_sym), evaluation_sym),
@@ -518,7 +521,10 @@ where
                     let next_layer_evaluation = &fri_decommitment.layers_evaluations[k + 1];
                     result & (v == *next_layer_evaluation) & auth_point & auth_sym
                 } else {
-                    result & (v == proof.fri_last_poly.evaluate(&evaluation_point_inv.inv())) & auth_point & auth_sym
+                    result
+                        & (v == proof.fri_last_poly.evaluate(&evaluation_point_inv.inv()))
+                        & auth_point
+                        & auth_sym
                 }
             },
         )

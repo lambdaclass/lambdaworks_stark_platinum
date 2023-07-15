@@ -180,7 +180,7 @@ mod tests {
             fri_number_of_queries,
             coset_offset,
             grinding_factor,
-            max_degree_fri, 
+            max_degree_fri,
         } = ProofOptions::new_secure(SecurityLevel::Conjecturable128Bits, 1);
 
         let u64_options = ProofOptions::new_with_checked_security::<F17>(
@@ -211,7 +211,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             128,
-            max_degree_fri,
+            0_u32,
         );
 
         assert!(secure_options.is_ok());
@@ -233,7 +233,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             128,
-            max_degree_fri: 0_u32,
+            0_u32,
         );
 
         assert!(matches!(
@@ -258,7 +258,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             100,
-            max_degree_fri,
+            0_u32,
         );
 
         assert!(secure_options.is_ok());
@@ -280,7 +280,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             80,
-            max_degree_fri,
+            0_u32,
         );
 
         assert!(secure_options.is_ok());

@@ -2,8 +2,8 @@ use lambdaworks_crypto::merkle_tree::proof::Proof;
 use lambdaworks_math::{
     errors::DeserializationError,
     field::{element::FieldElement, traits::IsFFTField},
-    traits::{ByteConversion, Deserializable, Serializable},
     polynomial::Polynomial,
+    traits::{ByteConversion, Deserializable, Serializable},
 };
 
 use crate::starks::{
@@ -43,6 +43,8 @@ pub struct StarkProof<F: IsFFTField> {
     pub fri_layers_merkle_roots: Vec<Commitment>,
     // pₙ
     pub fri_last_poly: Polynomial<FieldElement<F>>,
+    // last root 
+    pub last_poly_root: Commitment,
     // Open(p₀(D₀), 𝜐ₛ), Opwn(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
     pub query_list: Vec<FriDecommitment<F>>,
     // Open(H₁(D_LDE, 𝜐₀), Open(H₂(D_LDE, 𝜐₀), Open(tⱼ(D_LDE), 𝜐₀)
@@ -195,7 +197,15 @@ where
             bytes.extend(commitment);
         }
 
-        bytes.extend(self.fri_last_poly.to_bytes_be());
+        bytes.extend(self.fri_last_poly.coefficients.len().to_be_bytes());
+        for coefficient in &self.fri_last_poly.coefficients {
+            let coefficient_bytes = coefficient.to_bytes_be();
+            bytes.extend(coefficient_bytes.len().to_be_bytes());
+            bytes.extend(coefficient_bytes);
+        }
+
+        bytes.extend(self.last_poly_root.len().to_be_bytes());
+        bytes.extend(self.last_poly_root);
 
         bytes.extend(self.query_list.len().to_be_bytes());
         for query in &self.query_list {
@@ -431,6 +441,7 @@ where
             composition_poly_odd_ood_evaluation,
             fri_layers_merkle_roots,
             fri_last_poly,
+            fri_last_poly_root,
             query_list,
             deep_poly_openings,
             nonce,
@@ -573,7 +584,8 @@ mod test {
             composition_poly_even_ood_evaluation in some_felt(),
             composition_poly_odd_ood_evaluation in some_felt(),
             fri_layers_merkle_roots in commitment_vec(),
-            fri_last_poly in some_poly(),
+            fri_last_poly in some_felt_vec(),
+            last_poly_root in some_commitment(),
             query_list in fri_decommitment_vec(),
             deep_poly_openings in deep_polynomial_openings_vec()
 
@@ -587,6 +599,7 @@ mod test {
                 composition_poly_odd_ood_evaluation,
                 fri_layers_merkle_roots,
                 fri_last_poly,
+                last_poly_root,
                 query_list,
                 deep_poly_openings,
                 nonce: 0

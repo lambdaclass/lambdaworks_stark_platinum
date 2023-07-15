@@ -2,6 +2,9 @@ pub mod fri_commitment;
 pub mod fri_decommit;
 mod fri_functions;
 
+use crate::starks::config::FriMerkleTree;
+use crate::starks::config::Commitment;
+
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::traits::{IsFFTField, IsField};
 use lambdaworks_math::traits::ByteConversion;
@@ -9,7 +12,6 @@ pub use lambdaworks_math::{
     field::{element::FieldElement, fields::u64_prime_field::U64PrimeField},
     polynomial::Polynomial,
 };
-use crate::starks::config::FriMerkleTree;
 
 use self::fri_commitment::FriLayer;
 use self::fri_decommit::FriDecommitment;
@@ -25,7 +27,7 @@ pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     coset_offset: &FieldElement<F>,
     domain_size: usize,
     max_degree: u32,
-) -> (Polynomial<FieldElement<F>>, Vec<FriLayer<F>>)
+) -> (Polynomial<FieldElement<F>>, Commitment, Vec<FriLayer<F>>)
 where
     FieldElement<F>: ByteConversion,
 {
@@ -66,7 +68,7 @@ where
     // >>>> Send value: pₙ
     transcript.append(&last_tree.root);
 
-    (last_poly, fri_layer_list)
+    (last_poly, last_tree.root, fri_layer_list)
 }
 
 pub fn fri_query_phase<F, A, T>(
