@@ -42,7 +42,7 @@ pub struct StarkProof<F: IsFFTField> {
     pub fri_layers_merkle_roots: Vec<Commitment>,
     // pₙ
     pub fri_last_poly: Vec<FieldElement<F>>,
-    // last root 
+    // last root
     pub last_poly_root: Commitment,
     // Open(p₀(D₀), 𝜐ₛ), Opwn(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
     pub query_list: Vec<FriDecommitment<F>>,
@@ -377,10 +377,10 @@ where
         }
 
         let last_poly_root = bytes
-                .get(..32)
-                .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
+            .get(..32)
+            .ok_or(DeserializationError::InvalidAmountOfBytes)?
+            .try_into()
+            .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
 
         bytes = &bytes[32..];
 

@@ -376,7 +376,6 @@ where
         transcript,
         &coset_offset,
         domain_size,
-        max_degree_fri,
     );
 
     // grinding: generate nonce and append it to the transcript

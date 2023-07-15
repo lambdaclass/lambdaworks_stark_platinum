@@ -2,8 +2,8 @@ pub mod fri_commitment;
 pub mod fri_decommit;
 mod fri_functions;
 
-use crate::starks::config::FriMerkleTree;
 use crate::starks::config::Commitment;
+use crate::starks::config::FriMerkleTree;
 
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::field::traits::{IsFFTField, IsField};
@@ -26,7 +26,6 @@ pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     transcript: &mut T,
     coset_offset: &FieldElement<F>,
     domain_size: usize,
-    max_degree: u32,
 ) -> (Vec<FieldElement<F>>, Commitment, Vec<FriLayer<F>>)
 where
     FieldElement<F>: ByteConversion,

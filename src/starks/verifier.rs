@@ -7,8 +7,6 @@ use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::MerkleTree};
 use log::error;
 
-use crate::starks::config::FriMerkleTree;
-
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
 
@@ -17,12 +15,12 @@ use lambdaworks_math::{
         element::FieldElement,
         traits::{IsFFTField, IsField},
     },
-    traits::ByteConversion,
     polynomial::Polynomial,
+    traits::ByteConversion,
 };
 
 use super::{
-    config::{BatchedMerkleTreeBackend, FriMerkleTreeBackend, Commitment},
+    config::{BatchedMerkleTreeBackend, Commitment, FriMerkleTreeBackend},
     domain::Domain,
     fri::fri_decommit::FriDecommitment,
     grinding::hash_transcript_with_int_and_get_leading_zeros,
@@ -452,14 +450,15 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
     two_inv: &FieldElement<F>,
 ) -> bool
 where
-    F: IsField + IsFFTField, 
+    F: IsField + IsFFTField,
     FieldElement<F>: ByteConversion,
 {
     // First, we check that the last polynomial gives the correct commitment to it:
-    let root_from_last_poly: Commitment = MerkleTree::build(&proof.fri_last_poly).root;
+    let root_from_last_poly: Commitment =
+        MerkleTree::<FriMerkleTreeBackend<F>>::build(&proof.fri_last_poly).root;
     let check = root_from_last_poly == proof.last_poly_root;
     let last_poly = Polynomial::new(&proof.fri_last_poly);
-    
+
     let fri_layers_merkle_roots = &proof.fri_layers_merkle_roots;
     let evaluation_point_vec: Vec<FieldElement<F>> =
         core::iter::successors(Some(evaluation_point), |evaluation_point| {
@@ -525,7 +524,8 @@ where
                     result & (v == *next_layer_evaluation) & auth_point & auth_sym
                 } else {
                     result
-                        & (v == last_poly.evaluate(&evaluation_point_inv.inv()))
+                        & (v == last_poly
+                            .evaluate(&domain.lde_roots_of_unity_coset[iota].pow((1_u64) >> k)))
                         & auth_point
                         & auth_sym
                 }
@@ -598,6 +598,11 @@ where
     let grinding_factor = air.context().proof_options.grinding_factor;
     if challenges.leading_zeros_count < grinding_factor {
         error!("Grinding factor not satisfied");
+        return false;
+    }
+
+    if proof.fri_last_poly.len() > (air.context().proof_options.max_degree_fri - 1) as usize {
+        error!("Polynomial exceeds maximum degree");
         return false;
     }
 
