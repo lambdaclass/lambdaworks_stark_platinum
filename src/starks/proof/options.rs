@@ -23,6 +23,7 @@ pub struct ProofOptions {
     pub fri_number_of_queries: usize,
     pub coset_offset: u64,
     pub grinding_factor: u8,
+    pub max_degree_fri: u32,
 }
 
 impl ProofOptions {
@@ -39,36 +40,42 @@ impl ProofOptions {
                 fri_number_of_queries: 31,
                 coset_offset,
                 grinding_factor: 20,
+                max_degree_fri: 0,
             },
             SecurityLevel::Conjecturable100Bits => ProofOptions {
                 blowup_factor: 4,
                 fri_number_of_queries: 41,
                 coset_offset,
                 grinding_factor: 20,
+                max_degree_fri: 0,
             },
             SecurityLevel::Conjecturable128Bits => ProofOptions {
                 blowup_factor: 4,
                 fri_number_of_queries: 55,
                 coset_offset,
                 grinding_factor: 20,
+                max_degree_fri: 0,
             },
             SecurityLevel::Provable80Bits => ProofOptions {
                 blowup_factor: 4,
                 fri_number_of_queries: 80,
                 coset_offset,
                 grinding_factor: 20,
+                max_degree_fri: 0,
             },
             SecurityLevel::Provable100Bits => ProofOptions {
                 blowup_factor: 4,
                 fri_number_of_queries: 104,
                 coset_offset,
                 grinding_factor: 20,
+                max_degree_fri: 0,
             },
             SecurityLevel::Provable128Bits => ProofOptions {
                 blowup_factor: 4,
                 fri_number_of_queries: 140,
                 coset_offset,
                 grinding_factor: 20,
+                max_degree_fri: 0,
             },
         }
     }
@@ -80,6 +87,7 @@ impl ProofOptions {
         coset_offset: u64,
         grinding_factor: u8,
         security_target: u8,
+        max_degree_fri: u32,
     ) -> Result<Self, InsecureOptionError> {
         Self::check_field_security::<F>(security_target)?;
 
@@ -96,6 +104,7 @@ impl ProofOptions {
             fri_number_of_queries,
             coset_offset,
             grinding_factor,
+            max_degree_fri,
         })
     }
 
@@ -108,6 +117,7 @@ impl ProofOptions {
         coset_offset: u64,
         grinding_factor: u8,
         security_target: u8,
+        max_degree_fri: u32,
     ) -> Result<Self, InsecureOptionError> {
         Self::check_field_security::<F>(security_target)?;
 
@@ -124,6 +134,7 @@ impl ProofOptions {
             fri_number_of_queries,
             coset_offset,
             grinding_factor,
+            max_degree_fri,
         })
     }
 
@@ -147,6 +158,7 @@ impl ProofOptions {
             fri_number_of_queries: 3,
             coset_offset: 3,
             grinding_factor: 1,
+            max_degree_fri: 0,
         }
     }
 }
@@ -168,6 +180,7 @@ mod tests {
             fri_number_of_queries,
             coset_offset,
             grinding_factor,
+            max_degree_fri, 
         } = ProofOptions::new_secure(SecurityLevel::Conjecturable128Bits, 1);
 
         let u64_options = ProofOptions::new_with_checked_security::<F17>(
@@ -176,6 +189,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             128,
+            max_degree_fri,
         );
 
         assert!(matches!(u64_options, Err(InsecureOptionError::FieldSize)));
@@ -188,6 +202,7 @@ mod tests {
             fri_number_of_queries,
             coset_offset,
             grinding_factor,
+            max_degree_fri: u32,
         } = ProofOptions::new_secure(SecurityLevel::Conjecturable128Bits, 1);
 
         let secure_options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
@@ -196,6 +211,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             128,
+            max_degree_fri,
         );
 
         assert!(secure_options.is_ok());
@@ -208,6 +224,7 @@ mod tests {
             fri_number_of_queries,
             coset_offset,
             grinding_factor,
+            max_degree_fri: u32,
         } = ProofOptions::new_secure(SecurityLevel::Conjecturable128Bits, 1);
 
         let insecure_options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
@@ -216,6 +233,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             128,
+            max_degree_fri: 0_u32,
         );
 
         assert!(matches!(
@@ -231,6 +249,7 @@ mod tests {
             fri_number_of_queries,
             coset_offset,
             grinding_factor,
+            max_degree_fri: u32,
         } = ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 1);
 
         let secure_options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
@@ -239,6 +258,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             100,
+            max_degree_fri,
         );
 
         assert!(secure_options.is_ok());
@@ -251,6 +271,7 @@ mod tests {
             fri_number_of_queries,
             coset_offset,
             grinding_factor,
+            max_degree_fri: u64,
         } = ProofOptions::new_secure(SecurityLevel::Conjecturable80Bits, 1);
 
         let secure_options = ProofOptions::new_with_checked_security::<Stark252PrimeField>(
@@ -259,6 +280,7 @@ mod tests {
             coset_offset,
             grinding_factor,
             80,
+            max_degree_fri,
         );
 
         assert!(secure_options.is_ok());

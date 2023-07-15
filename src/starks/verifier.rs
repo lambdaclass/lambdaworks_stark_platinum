@@ -4,8 +4,10 @@ use std::time::Instant;
 //use itertools::multizip;
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::MerkleTree};
 use log::error;
+
+use crate::starks::config::FriMerkleTree;
 
 #[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
@@ -172,9 +174,9 @@ where
             transcript_to_field(transcript)
         })
         .collect::<Vec<FieldElement<F>>>();
-
+    let final_root = MerkleTree::build(&proof.fri_last_poly.coefficients).root;
     // <<<< Receive value: pₙ
-    transcript.append(&proof.fri_last_value.to_bytes_be());
+    transcript.append(&final_root);
 
     // Receive grinding value
     // 1) Receive challenge from the transcript
@@ -516,7 +518,7 @@ where
                     let next_layer_evaluation = &fri_decommitment.layers_evaluations[k + 1];
                     result & (v == *next_layer_evaluation) & auth_point & auth_sym
                 } else {
-                    result & (v == proof.fri_last_value) & auth_point & auth_sym
+                    result & (v == proof.fri_last_poly.evaluate(&evaluation_point_inv.inv())) & auth_point & auth_sym
                 }
             },
         )

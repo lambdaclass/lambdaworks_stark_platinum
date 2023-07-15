@@ -61,6 +61,7 @@ fn test_prove_fib17() {
         fri_number_of_queries: 7,
         coset_offset: 3,
         grinding_factor: 1,
+        max_degree_fri: 0,
     };
 
     let pub_inputs = FibonacciPublicInputs {

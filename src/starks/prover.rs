@@ -75,7 +75,7 @@ struct Round3<F: IsFFTField> {
 }
 
 struct Round4<F: IsFFTField> {
-    fri_last_value: FieldElement<F>,
+    fri_last_poly: Polynomial<FieldElement<F>>,
     fri_layers_merkle_roots: Vec<Commitment>,
     deep_poly_openings: Vec<DeepPolynomialOpenings<F>>,
     query_list: Vec<FriDecommitment<F>>,
@@ -367,14 +367,15 @@ where
     );
 
     let domain_size = domain.lde_roots_of_unity_coset.len();
-
+    let max_degree_fri = air.context().proof_options.max_degree_fri;
     // FRI commit and query phases
-    let (fri_last_value, fri_layers) = fri_commit_phase(
-        domain.root_order as usize,
+    let (fri_last_poly, fri_layers) = fri_commit_phase(
+        (domain.root_order - max_degree_fri.trailing_zeros()) as usize,
         deep_composition_poly,
         transcript,
         &coset_offset,
         domain_size,
+        max_degree_fri,
     );
 
     // grinding: generate nonce and append it to the transcript
@@ -395,7 +396,7 @@ where
         open_deep_composition_poly(domain, round_1_result, round_2_result, &iotas);
 
     Round4 {
-        fri_last_value,
+        fri_last_poly,
         fri_layers_merkle_roots,
         deep_poly_openings,
         query_list,
@@ -753,7 +754,7 @@ where
         // [pₖ]
         fri_layers_merkle_roots: round_4_result.fri_layers_merkle_roots,
         // pₙ
-        fri_last_value: round_4_result.fri_last_value,
+        fri_last_poly: round_4_result.fri_last_poly,
         // Open(p₀(D₀), 𝜐ₛ), Open(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
         query_list: round_4_result.query_list,
         // Open(H₁(D_LDE, 𝜐₀), Open(H₂(D_LDE, 𝜐₀), Open(tⱼ(D_LDE), 𝜐₀)
@@ -801,6 +802,7 @@ mod tests {
             fri_number_of_queries: 1,
             coset_offset,
             grinding_factor,
+            max_degree_fri: 0,
         };
 
         let domain = Domain::new(&simple_fibonacci::FibonacciAIR::new(
