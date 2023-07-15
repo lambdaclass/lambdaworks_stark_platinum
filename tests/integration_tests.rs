@@ -1,9 +1,12 @@
 use std::ops::Range;
 
-use lambdaworks_math::{field::fields::{
-    fft_friendly::stark_252_prime_field::Stark252PrimeField as F,
-    u64_prime_field::{F17, FE17},
-}, traits::{Serializable, Deserializable}};
+use lambdaworks_math::{
+    field::fields::{
+        fft_friendly::stark_252_prime_field::Stark252PrimeField as F,
+        u64_prime_field::{F17, FE17},
+    },
+    traits::{Deserializable, Serializable},
+};
 use lambdaworks_stark::{
     cairo::{
         air::{
@@ -119,7 +122,13 @@ fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) 
     let program_content = std::fs::read(file_path).unwrap();
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, output_range).unwrap();
+
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
+
+    //println!("Proof bytes");
+    //println!("{:?}", proof.serialize());
+    println!("Pub inputs bytes");
+    println!("{:?}", pub_inputs.serialize());
 
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }
@@ -157,9 +166,7 @@ fn test_prove_cairo_fibonacci_1000() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_1000.json"), &None);
 }
 
-
 #[cfg_attr(feature = "metal", ignore)]
-
 #[test_log::test]
 fn test_prove_cairo_fibonacci_casm() {
     test_prove_cairo1_program(&cairo1_program_path("fibonacci_cairo1.casm"));
@@ -178,7 +185,6 @@ fn test_prove_cairo_lt_comparison() {
 }
 
 #[cfg_attr(feature = "metal", ignore)]
-
 #[test_log::test]
 fn test_prove_cairo_compare_lesser_array() {
     test_prove_cairo_program(&cairo0_program_path("compare_lesser_array.json"), &None);
@@ -325,7 +331,6 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 }
 
 #[test_log::test]
-
 
 fn test_verifier_rejects_proof_with_changed_output() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
