@@ -16,12 +16,12 @@ $(CAIRO0_PROGRAMS_DIR)/%.json: $(CAIRO0_PROGRAMS_DIR)/%.cairo
 	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-compile /pwd/$< > $@
 
 %.mem: %.json
-	@echo "Generating trace and memory ..."
-	@cairo-run --program $< --memory_file $@.mem --trace_file $@.trace 2> /dev/null || \
+	@echo "Generating memory ..."
+	@cairo-run --program $< --memory_file $@ 2> /dev/null || \
 	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-run --program /pwd/$< --memory_file /pwd/$@
 
 %.trace: %.json
-	@echo "Generating trace and memory ..."
+	@echo "Generating trace ..."
 	@cairo-run --program $< --trace_file $@ 2> /dev/null || \
 	docker run --rm -v $(ROOT_DIR)/$(CAIRO0_PROGRAMS_DIR):/pwd/$(CAIRO0_PROGRAMS_DIR) cairo cairo-run --program /pwd/$< --trace_file /pwd/$@ 
 
