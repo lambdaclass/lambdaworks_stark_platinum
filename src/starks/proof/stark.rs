@@ -167,7 +167,8 @@ where
         let mut bytes = vec![];
 
         // Serialize trace length
-        bytes.extend(self.trace_length.to_be_bytes());
+        let trace_length_u32 = self.trace_length as u32;
+        bytes.extend(trace_length_u32.to_be_bytes());
 
         bytes.extend(self.lde_trace_merkle_roots.len().to_be_bytes());
         for commitment in &self.lde_trace_merkle_roots {

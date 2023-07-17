@@ -100,7 +100,8 @@ where
         for felt in &self.data {
             bytes.extend(felt.to_bytes_be());
         }
-        bytes.extend(self.row_width.to_be_bytes());
+        let row_width_u32 = self.row_width as u32;
+        bytes.extend(row_width_u32.to_be_bytes());
         bytes
     }
 }
