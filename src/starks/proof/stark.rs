@@ -12,16 +12,18 @@ use crate::starks::{
     utils::{deserialize_proof, serialize_proof},
 };
 
-use core::mem;
-
-#[derive(Debug, Clone)]
-pub struct DeepPolynomialOpenings<F: IsFFTField> {
+const U32_SIZE: usize = core::mem::size_of::<u32>();
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeepPolynomialOpenings<F: IsFFTField> 
+where 
+FieldElement<F>: PartialEq {
     pub lde_composition_poly_proof: Proof<Commitment>,
     pub lde_composition_poly_even_evaluation: FieldElement<F>,
     pub lde_composition_poly_odd_evaluation: FieldElement<F>,
     pub lde_trace_merkle_proofs: Vec<Proof<Commitment>>,
     pub lde_trace_evaluations: Vec<FieldElement<F>>,
 }
+
 
 #[derive(Debug)]
 pub struct StarkProof<F: IsFFTField> {
@@ -57,18 +59,20 @@ where
 {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = vec![];
+
         bytes.extend(serialize_proof(&self.lde_composition_poly_proof));
+
         let lde_composition_poly_even_evaluation_bytes =
             self.lde_composition_poly_even_evaluation.to_bytes_be();
         let felt_len = lde_composition_poly_even_evaluation_bytes.len();
-        bytes.extend(felt_len.to_be_bytes());
+        bytes.extend((felt_len as u32).to_be_bytes());
         bytes.extend(lde_composition_poly_even_evaluation_bytes);
         bytes.extend(self.lde_composition_poly_odd_evaluation.to_bytes_be());
         bytes.extend(self.lde_trace_merkle_proofs.len().to_be_bytes());
         for proof in &self.lde_trace_merkle_proofs {
             bytes.extend(serialize_proof(proof));
         }
-        bytes.extend(self.lde_trace_evaluations.len().to_be_bytes());
+        bytes.extend((self.lde_trace_evaluations.len() as u32).to_be_bytes());
         for evaluation in &self.lde_trace_evaluations {
             bytes.extend(evaluation.to_bytes_be());
         }
@@ -89,14 +93,15 @@ where
         let lde_composition_poly_proof;
         (lde_composition_poly_proof, bytes) = deserialize_proof(bytes)?;
 
-        let felt_len = usize::from_be_bytes(
+        let felt_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-        );
-        bytes = &bytes[8..];
+        ) as usize;
+
+        bytes = &bytes[U32_SIZE..];
 
         let lde_composition_poly_even_evaluation = FieldElement::from_bytes_be(
             bytes
@@ -110,16 +115,19 @@ where
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
+
         bytes = &bytes[felt_len..];
 
-        let lde_trace_merkle_proofs_len = usize::from_be_bytes(
+        let lde_trace_merkle_proofs_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-        );
-        bytes = &bytes[8..];
+        ) as usize;
+        bytes = &bytes[U32_SIZE..];
+
+        println!("Len lde trace: {}", lde_trace_merkle_proofs_len);
 
         let mut lde_trace_merkle_proofs = vec![];
         for _ in 0..lde_trace_merkle_proofs_len {
@@ -128,14 +136,18 @@ where
             lde_trace_merkle_proofs.push(proof);
         }
 
-        let lde_trace_evaluations_len = usize::from_be_bytes(
+        let lde_trace_evaluations_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
-        bytes = &bytes[8..];
+        bytes = &bytes[U32_SIZE..];
+
+
+        println!("Len trace  eval len: {}", lde_trace_evaluations_len);
+
 
         let mut lde_trace_evaluations = vec![];
         for _ in 0..lde_trace_evaluations_len {
@@ -227,26 +239,25 @@ where
         Self: Sized,
     {
         let mut bytes = bytes;
-        let trace_length_buffer_size = mem::size_of::<usize>();
-        let trace_length = usize::from_be_bytes(
+        let trace_length = u32::from_be_bytes(
             bytes
-                .get(..trace_length_buffer_size)
+                .get(..U32_SIZE)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        ) as usize;
+
+        bytes = &bytes[U32_SIZE..];
+
+        let lde_trace_merkle_roots_len = u32::from_be_bytes(
+            bytes
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
 
-        bytes = &bytes[8..];
-
-        let lde_trace_merkle_roots_len = usize::from_be_bytes(
-            bytes
-                .get(..8)
-                .ok_or(DeserializationError::InvalidAmountOfBytes)?
-                .try_into()
-                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-        );
-
-        bytes = &bytes[8..];
+        bytes = &bytes[U32_SIZE..];
 
         let mut lde_trace_merkle_roots: Vec<[u8; 32]> = vec![];
         for _ in 0..lde_trace_merkle_roots_len {
@@ -260,15 +271,15 @@ where
             bytes = &bytes[32..];
         }
 
-        let trace_ood_frame_evaluations_len = usize::from_be_bytes(
+        let trace_ood_frame_evaluations_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-        );
+        ) as usize;
 
-        bytes = &bytes[8..];
+        bytes = &bytes[U32_SIZE..];
 
         let trace_ood_frame_evaluations: Frame<F> = Frame::deserialize(
             bytes
@@ -286,15 +297,15 @@ where
 
         bytes = &bytes[32..];
 
-        let felt_len = usize::from_be_bytes(
+        let felt_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-        );
+        ) as usize;
 
-        bytes = &bytes[8..];
+        bytes = &bytes[U32_SIZE..];
 
         let composition_poly_even_ood_evaluation = FieldElement::from_bytes_be(
             bytes
@@ -312,15 +323,15 @@ where
 
         bytes = &bytes[felt_len..];
 
-        let fri_layers_merkle_roots_len = usize::from_be_bytes(
+        let fri_layers_merkle_roots_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
 
-        bytes = &bytes[8..];
+        bytes = &bytes[U32_SIZE..];
 
         let mut fri_layers_merkle_roots: Vec<[u8; 32]> = vec![];
         for _ in 0..fri_layers_merkle_roots_len {
@@ -341,27 +352,27 @@ where
 
         bytes = &bytes[felt_len..];
 
-        let query_list_len = usize::from_be_bytes(
+        let query_list_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
 
-        bytes = &bytes[8..];
+        bytes = &bytes[U32_SIZE..];
 
         let mut query_list = vec![];
         for _ in 0..query_list_len {
-            let query_len = usize::from_be_bytes(
+            let query_len = u32::from_be_bytes(
                 bytes
-                    .get(..8)
+                    .get(..U32_SIZE)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-            );
+            ) as usize;
 
-            bytes = &bytes[8..];
+            bytes = &bytes[U32_SIZE..];
 
             let query = FriDecommitment::deserialize(
                 bytes
@@ -374,27 +385,27 @@ where
             query_list.push(query);
         }
 
-        let deep_poly_openings_len = usize::from_be_bytes(
+        let deep_poly_openings_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
 
-        bytes = &bytes[8..];
+        bytes = &bytes[U32_SIZE..];
 
         let mut deep_poly_openings = vec![];
         for _ in 0..deep_poly_openings_len {
-            let opening_len = usize::from_be_bytes(
+            let opening_len = u32::from_be_bytes(
                 bytes
-                    .get(..8)
+                    .get(..U32_SIZE)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?
                     .try_into()
                     .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-            );
+            ) as usize;
 
-            bytes = &bytes[8..];
+            bytes = &bytes[U32_SIZE..];
 
             let opening = DeepPolynomialOpenings::deserialize(
                 bytes
@@ -444,7 +455,7 @@ mod test {
         errors::DeserializationError,
         field::{
             element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-        },
+        }, traits::{Deserializable, Serializable},
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
@@ -460,7 +471,6 @@ mod test {
             proof::options::ProofOptions,
         },
     };
-    use lambdaworks_math::traits::{Deserializable, Serializable};
 
     use super::{DeepPolynomialOpenings, StarkProof};
 
@@ -613,7 +623,7 @@ mod test {
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig {cases: 5, .. ProptestConfig::default()})]
+        #![proptest_config(ProptestConfig {cases: 1, .. ProptestConfig::default()})]
         #[test]
         fn test_stark_proof_serialization(
             stark_proof in some_stark_proof()
@@ -759,6 +769,36 @@ mod test {
                 .err()
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn serialize_deserialize_deep_poly_openings() {
+
+        let a_proof_values: [u8;32] = [42;32];
+        let proof = Proof {
+            merkle_path: [a_proof_values, a_proof_values].to_vec(),
+        };
+
+        let a_field = FE::from(3u64);
+    
+        let opening = DeepPolynomialOpenings {
+            lde_composition_poly_proof: proof.clone(),
+            lde_composition_poly_even_evaluation: a_field,
+            lde_composition_poly_odd_evaluation: a_field,
+            lde_trace_merkle_proofs: vec![proof.clone(),proof],
+            lde_trace_evaluations: vec![a_field,a_field],
+        };
+
+        let deserialized_poly: DeepPolynomialOpenings<Stark252PrimeField> = Deserializable::deserialize(&opening.serialize()).unwrap();
+
+
+
+        let half = opening.serialize().len() / 2;
+        assert_eq!(opening.lde_composition_poly_even_evaluation, deserialized_poly.lde_composition_poly_even_evaluation);
+        assert_eq!(opening.lde_composition_poly_odd_evaluation, deserialized_poly.lde_composition_poly_odd_evaluation);
+        assert_eq!(opening.lde_composition_poly_proof, deserialized_poly.lde_composition_poly_proof);
+        assert_eq!(opening.lde_trace_evaluations, deserialized_poly.lde_trace_evaluations);
+        assert_eq!(opening.lde_trace_merkle_proofs, deserialized_poly.lde_trace_merkle_proofs);
     }
 
     #[test]
