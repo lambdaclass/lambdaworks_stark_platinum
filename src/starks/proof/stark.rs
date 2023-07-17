@@ -11,10 +11,11 @@ use crate::starks::{
     fri::fri_decommit::FriDecommitment,
     utils::{deserialize_proof, serialize_proof},
 };
+use serde::Serialize;
 
 use core::mem;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DeepPolynomialOpenings<F: IsFFTField> {
     pub lde_composition_poly_proof: Proof<Commitment>,
     pub lde_composition_poly_even_evaluation: FieldElement<F>,
@@ -23,7 +24,7 @@ pub struct DeepPolynomialOpenings<F: IsFFTField> {
     pub lde_trace_evaluations: Vec<FieldElement<F>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct StarkProof<F: IsFFTField> {
     // Length of the execution trace
     pub trace_length: usize,

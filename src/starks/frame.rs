@@ -4,10 +4,11 @@ use lambdaworks_math::{
     polynomial::Polynomial,
     traits::{ByteConversion, Deserializable, Serializable},
 };
+use serde::Serialize;
 
 use super::trace::TraceTable;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Frame<F: IsFFTField> {
     // Vector of rows
     data: Vec<FieldElement<F>>,

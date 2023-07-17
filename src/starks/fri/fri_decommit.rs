@@ -1,15 +1,15 @@
+use crate::starks::config::Commitment;
+use crate::starks::utils::{deserialize_proof, serialize_proof};
 pub use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_crypto::merkle_tree::proof::Proof;
 use lambdaworks_math::errors::DeserializationError;
 use lambdaworks_math::field::element::FieldElement;
-use lambdaworks_math::field::traits::IsField;
+use lambdaworks_math::field::traits::IsPrimeField;
 use lambdaworks_math::traits::{ByteConversion, Deserializable, Serializable};
+use serde::Serialize;
 
-use crate::starks::config::Commitment;
-use crate::starks::utils::{deserialize_proof, serialize_proof};
-
-#[derive(Debug, Clone)]
-pub struct FriDecommitment<F: IsField> {
+#[derive(Debug, Clone, Serialize)]
+pub struct FriDecommitment<F: IsPrimeField> {
     pub layers_auth_paths_sym: Vec<Proof<Commitment>>,
     pub layers_evaluations_sym: Vec<FieldElement<F>>,
     pub layers_auth_paths: Vec<Proof<Commitment>>,
@@ -18,7 +18,7 @@ pub struct FriDecommitment<F: IsField> {
 
 impl<F> Serializable for FriDecommitment<F>
 where
-    F: IsField,
+    F: IsPrimeField,
     FieldElement<F>: ByteConversion,
 {
     fn serialize(&self) -> Vec<u8> {
@@ -47,7 +47,7 @@ where
 
 impl<F> Deserializable for FriDecommitment<F>
 where
-    F: IsField,
+    F: IsPrimeField,
     FieldElement<F>: ByteConversion,
 {
     fn deserialize(bytes: &[u8]) -> Result<Self, DeserializationError>
