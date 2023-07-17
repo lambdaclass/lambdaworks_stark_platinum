@@ -35,6 +35,7 @@ test-log = { version = "0.2.11", features = ["log"] }
 assert_matches = "1.5.0"
 rstest = "0.17.0"
 rand = "0.8.5"
+wasm-bindgen-test = "0.3.0"
 
 [target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dev-dependencies]
 proptest = "1.2.0"
