@@ -384,21 +384,20 @@ where
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 #[cfg(test)]
-mod test {
+mod prop_test {
     use lambdaworks_crypto::merkle_tree::proof::Proof;
     use lambdaworks_math::field::{
         element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
-    use crate::{
-        starks::{
-            config::{Commitment, COMMITMENT_SIZE},
-            frame::Frame,
-            fri::fri_decommit::FriDecommitment,
-            proof::options::ProofOptions,
-        },
+    use crate::starks::{
+        config::{Commitment, COMMITMENT_SIZE},
+        frame::Frame,
+        fri::fri_decommit::FriDecommitment,
+        proof::options::ProofOptions,
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
 

@@ -150,8 +150,9 @@ where
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 #[cfg(test)]
-mod tests {
+mod prop_test {
     use lambdaworks_math::field::{
         element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
     };

@@ -1177,7 +1177,6 @@ mod test {
         cairo::runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
         starks::{debug::validate_trace, domain::Domain},
     };
-    use proptest::{prelude::*, prop_compose, proptest};
 
     use super::*;
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -1439,6 +1438,17 @@ mod test {
             ]
         );
     }
+}
+
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+#[cfg(test)]
+mod prop_test {
+    use lambdaworks_math::traits::{Deserializable, Serializable};
+    use proptest::{prelude::*, prop_compose, proptest};
+
+    use crate::FE;
+
+    use super::{MemorySegment, MemorySegmentMap, PublicInputs};
 
     prop_compose! {
         fn some_felt()(base in any::<u64>(), exponent in any::<u128>()) -> FE {
