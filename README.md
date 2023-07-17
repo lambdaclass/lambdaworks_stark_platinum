@@ -9,6 +9,8 @@ We expect to have something working in a good state by mid August 2023.
 
 To be added:
 
+-  Add parameters for proving and verifying in the CLI / (Public inputs should be serialized and deserialized)
+-  Add Cairo compilation inside Rust, to prove and verify Cairo1/Cairo2 from the .cairo file, instead of the .casm file
 -  Add last constraint of Range Check Built In
 -  Add more parallelization
 -  Benchmarks and optimizations for Graviton
