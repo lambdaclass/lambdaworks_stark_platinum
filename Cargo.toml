@@ -62,7 +62,7 @@ harness = false
 [[bench]]
 name = "criterion_giza"
 harness = false
-
+required-features = ["giza"]
 
 [profile.release]
 lto = true

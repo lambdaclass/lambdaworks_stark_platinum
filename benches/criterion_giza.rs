@@ -1,7 +1,5 @@
-#[cfg(feature = "giza")]
 use criterion::{black_box, measurement::WallTime, BenchmarkGroup};
 use criterion::{criterion_group, criterion_main, Criterion};
-#[cfg(feature = "giza")]
 use lambdaworks_stark::{
     cairo::{
         air::generate_cairo_proof,
@@ -9,15 +7,8 @@ use lambdaworks_stark::{
     },
     starks::proof::options::{self, SecurityLevel},
 };
-#[cfg(feature = "giza")]
 pub mod functions;
 
-#[cfg(not(feature = "giza"))]
-fn cairo_benches(_: &mut Criterion) {
-    println!("Enable giza feature to run giza benchmarks");
-}
-
-#[cfg(feature = "giza")]
 fn cairo_benches(c: &mut Criterion) {
     #[cfg(feature = "parallel")]
     {
@@ -67,7 +58,6 @@ fn cairo_benches(c: &mut Criterion) {
     );
 }
 
-#[cfg(feature = "giza")]
 fn cairo0_program_path(program_name: &str) -> String {
     const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
     const PROGRAM_BASE_REL_PATH: &str = "/cairo_programs/cairo0/";
@@ -75,7 +65,6 @@ fn cairo0_program_path(program_name: &str) -> String {
     program_base_path + program_name
 }
 
-#[cfg(feature = "giza")]
 fn run_lambdaworks_bench(
     group: &mut BenchmarkGroup<'_, WallTime>,
     proof_options: &options::ProofOptions,
@@ -93,7 +82,6 @@ fn run_lambdaworks_bench(
     });
 }
 
-#[cfg(feature = "giza")]
 fn run_giza_bench(
     group: &mut BenchmarkGroup<'_, WallTime>,
     proof_options: &options::ProofOptions,
