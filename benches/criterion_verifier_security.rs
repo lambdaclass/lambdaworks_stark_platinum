@@ -1,10 +1,11 @@
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use functions::execution::run_verifier_bench_with_security_level;
 
+use criterion_utils::utils::run_verifier_bench_with_security_level;
 use lambdaworks_stark::starks::proof::options::SecurityLevel;
 
+pub mod criterion_utils;
 pub mod functions;
 
 fn verifier_benches(c: &mut Criterion) {

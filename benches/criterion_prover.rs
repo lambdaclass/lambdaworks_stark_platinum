@@ -1,9 +1,11 @@
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use functions::{execution::run_cairo_bench_with_security_level, path::cairo0_program_path};
+use criterion_utils::utils::run_cairo_bench_with_security_level;
+use functions::path::cairo0_program_path;
 use lambdaworks_stark::starks::proof::options::SecurityLevel;
 
+pub mod criterion_utils;
 pub mod functions;
 
 fn cairo_benches(c: &mut Criterion) {

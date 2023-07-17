@@ -154,13 +154,13 @@ Bits of security are used to ensure that the proof satisfies a certain conjuectu
 
 First table has the results that are independent of the hardware used.
 
-| n   | Trace length | Proof size 80 bit security | Proof size 128 bit security |
-|-----|--------------|----------------------------|-----------------------------|
-| 100 | 2^10         | 270 KB                     | 476 KB                      |
-| 500 | 2^12         | 335 KB                     | 591 KB                      |
-| 2k  | 2^14         | 407 KB                     | 719 KB                      |
-| 5k  | 2^16         | 488 KB                     | 862 KB                      |
-| 20k | 2^18         | 576 KB                     | 1 MB                        |
+| n   | Trace length | Prover RAM | Proof size 80 bit security | Proof size 128 bit security |
+|-----|--------------|------------|----------------------------|-----------------------------|
+| 100 | 2^10         | 18.5 MB    | 270 KB                     | 476 KB                      |
+| 500 | 2^12         | 75.5 MB    | 335 KB                     | 591 KB                      |
+| 2k  | 2^14         | 302.1 MB   | 407 KB                     | 719 KB                      |
+| 5k  | 2^16         | 1.2 GB     | 488 KB                     | 862 KB                      |
+| 20k | 2^18         | 4.7 GB     | 576 KB                     | 1 MB                        |
 
 Second table has the results of the execution on an Apple M1 with 4 E and 4 P cores and 16 GB of RAM:
 

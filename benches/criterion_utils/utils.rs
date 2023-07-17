@@ -8,16 +8,15 @@ use lambdaworks_stark::{
         air::{generate_cairo_proof, verify_cairo_proof, PublicInputs},
         cairo_layout::CairoLayout,
         execution_trace::build_main_trace,
-        runner::run::{build_pub_inputs, generate_prover_args, run_program, CairoVersion},
+        runner::run::{build_pub_inputs, run_program, CairoVersion},
     },
-    starks::{
-        proof::{
-            options::{ProofOptions, SecurityLevel},
-            stark::StarkProof,
-        },
-        trace::TraceTable,
+    starks::proof::{
+        options::{ProofOptions, SecurityLevel},
+        stark::StarkProof,
     },
 };
+
+use crate::functions::stark::generate_prover_args_with_options;
 
 pub fn run_cairo_bench_with_security_level(
     group: &mut BenchmarkGroup<'_, WallTime>,
@@ -43,6 +42,7 @@ pub fn run_cairo_bench_and_measure_proof(
 ) {
     let (proof_options, main_trace, pub_inputs) =
         generate_prover_args_with_options(program_path, security_level);
+
     let proof_size = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options)
         .unwrap()
         .serialize()
@@ -55,17 +55,6 @@ pub fn run_cairo_bench_and_measure_proof(
             black_box(generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap())
         });
     });
-}
-
-fn generate_prover_args_with_options(
-    program_path: &str,
-    security_level: SecurityLevel,
-) -> (ProofOptions, TraceTable<Stark252PrimeField>, PublicInputs) {
-    let program_content = std::fs::read(program_path).unwrap();
-    let proof_options = ProofOptions::new_secure(security_level, 3);
-    let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
-    (proof_options, main_trace, pub_inputs)
 }
 
 pub fn run_verifier_bench_with_security_level(
