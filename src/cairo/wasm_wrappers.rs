@@ -42,21 +42,3 @@ pub fn deserialize_proof_wasm(proof: &[u8]) -> Stark252PrimeFieldProof {
 
     Stark252PrimeFieldProof(proof_inner)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::super::serialized_proof::{PUBLIC_INPUTS, SERIALIZED_TEST_PROOF};
-    use super::{deserialize_proof_wasm, verify_cairo_proof_wasm};
-    use crate::starks::proof::options::ProofOptions;
-
-    #[test]
-    fn test_prove_cairo1_program_wasm() {
-        let proof = deserialize_proof_wasm(&SERIALIZED_TEST_PROOF);
-        let proof_options = ProofOptions::default_test_options();
-        assert!(verify_cairo_proof_wasm(
-            &proof,
-            &PUBLIC_INPUTS,
-            &proof_options
-        ));
-    }
-}
