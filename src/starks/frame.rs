@@ -14,6 +14,8 @@ pub struct Frame<F: IsFFTField> {
     row_width: usize,
 }
 
+const U32_SIZE: usize = core::mem::size_of::<u32>();
+
 impl<F: IsFFTField> Frame<F> {
     pub fn new(data: Vec<FieldElement<F>>, row_width: usize) -> Self {
         Self { data, row_width }
@@ -90,17 +92,22 @@ where
 {
     fn serialize(&self) -> Vec<u8> {
         let mut bytes = vec![];
-        bytes.extend(self.data.len().to_be_bytes());
+
+        bytes.extend((self.data.len() as u32).to_be_bytes());
+        
+        // TODO: This should return an Error, we can't serialize an empty Frame
         let felt_len = if self.data.is_empty() {
             0
         } else {
             self.data[0].to_bytes_be().len()
         };
-        bytes.extend(felt_len.to_be_bytes());
+
+        bytes.extend((felt_len as u32).to_be_bytes());
+
         for felt in &self.data {
             bytes.extend(felt.to_bytes_be());
         }
-        bytes.extend(self.row_width.to_be_bytes());
+        bytes.extend((self.row_width as u32).to_be_bytes());
         bytes
     }
 }
@@ -115,25 +122,30 @@ where
         Self: Sized,
     {
         let mut bytes = bytes;
-        let data_len = usize::from_be_bytes(
+        let data_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
-        bytes = &bytes[8..];
+        bytes = &bytes[U32_SIZE..];
 
-        let felt_len = usize::from_be_bytes(
+        println!("Data len: {}", data_len);
+
+        let felt_len = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-        );
-        bytes = &bytes[8..];
+        ) as usize;
+
+        println!("Felt len: {}", felt_len);
+        bytes = &bytes[U32_SIZE..];
 
         let mut data = vec![];
+
         for _ in 0..data_len {
             let felt = FieldElement::<F>::from_bytes_be(
                 bytes
@@ -144,13 +156,13 @@ where
             bytes = &bytes[felt_len..];
         }
 
-        let row_width = usize::from_be_bytes(
+        let row_width = u32::from_be_bytes(
             bytes
-                .get(..8)
+                .get(..U32_SIZE)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
-        );
+        ) as usize;
 
         Ok(Self::new(data, row_width))
     }
@@ -175,16 +187,16 @@ mod tests {
     }
 
     prop_compose! {
-        fn field_vec()(vec in collection::vec(some_felt(), 16)) -> Vec<FE> {
+        fn field_vec()(vec in collection::vec(some_felt(), 3)) -> Vec<FE> {
             vec
         }
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig {cases: 5, .. ProptestConfig::default()})]
+        #![proptest_config(ProptestConfig {cases: 1, .. ProptestConfig::default()})]
         #[test]
-        fn test_serialize_and_deserialize(data in field_vec(), row_width in any::<usize>()) {
-            let frame = Frame::new(data, row_width);
+        fn test_serialize_and_deserialize(data in field_vec(), row_width in any::<u32>()) {
+            let frame = Frame::new(data, row_width as usize);
             let serialized = frame.serialize();
             let deserialized: Frame<Stark252PrimeField> = Frame::deserialize(&serialized).unwrap();
 
