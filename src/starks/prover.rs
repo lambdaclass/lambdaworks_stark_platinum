@@ -555,9 +555,12 @@ where
                 round_2_result.lde_composition_poly_odd_evaluations[index].clone();
 
             // Trace polynomials openings
-            let lde_trace_merkle_proofs = round_1_result
-                .lde_trace_merkle_trees
-                .iter()
+            #[cfg(feature = "parallel")]
+            let merkle_trees_iter = round_1_result.lde_trace_merkle_trees.par_iter();
+            #[cfg(not(feature = "parallel"))]
+            let merkle_trees_iter = round_1_result.lde_trace_merkle_trees.iter();
+
+            let lde_trace_merkle_proofs = merkle_trees_iter
                 .map(|tree| tree.get_proof_by_pos(index).unwrap())
                 .collect();
 
