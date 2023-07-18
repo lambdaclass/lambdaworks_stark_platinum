@@ -14,16 +14,16 @@ use crate::starks::{
 
 const U32_SIZE: usize = core::mem::size_of::<u32>();
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DeepPolynomialOpenings<F: IsFFTField> 
-where 
-FieldElement<F>: PartialEq {
+pub struct DeepPolynomialOpenings<F: IsFFTField>
+where
+    FieldElement<F>: PartialEq,
+{
     pub lde_composition_poly_proof: Proof<Commitment>,
     pub lde_composition_poly_even_evaluation: FieldElement<F>,
     pub lde_composition_poly_odd_evaluation: FieldElement<F>,
     pub lde_trace_merkle_proofs: Vec<Proof<Commitment>>,
     pub lde_trace_evaluations: Vec<FieldElement<F>>,
 }
-
 
 #[derive(Debug)]
 pub struct StarkProof<F: IsFFTField> {
@@ -68,7 +68,7 @@ where
         bytes.extend((felt_len as u32).to_be_bytes());
         bytes.extend(lde_composition_poly_even_evaluation_bytes);
         bytes.extend(self.lde_composition_poly_odd_evaluation.to_bytes_be());
-        bytes.extend(self.lde_trace_merkle_proofs.len().to_be_bytes());
+        bytes.extend((self.lde_trace_merkle_proofs.len() as u32).to_be_bytes());
         for proof in &self.lde_trace_merkle_proofs {
             bytes.extend(serialize_proof(proof));
         }
@@ -145,9 +145,7 @@ where
         );
         bytes = &bytes[U32_SIZE..];
 
-
         println!("Len trace  eval len: {}", lde_trace_evaluations_len);
-
 
         let mut lde_trace_evaluations = vec![];
         for _ in 0..lde_trace_evaluations_len {
@@ -179,46 +177,42 @@ where
         let mut bytes = vec![];
 
         // Serialize trace length
-        bytes.extend(self.trace_length.to_be_bytes());
+        bytes.extend((self.trace_length as u32).to_be_bytes());
 
-        bytes.extend(self.lde_trace_merkle_roots.len().to_be_bytes());
+        bytes.extend((self.lde_trace_merkle_roots.len() as u32).to_be_bytes());
         for commitment in &self.lde_trace_merkle_roots {
             bytes.extend(commitment);
         }
         let trace_ood_frame_evaluations_bytes = self.trace_ood_frame_evaluations.serialize();
-        bytes.extend(trace_ood_frame_evaluations_bytes.len().to_be_bytes());
+        bytes.extend((trace_ood_frame_evaluations_bytes.len() as u32).to_be_bytes());
         bytes.extend(trace_ood_frame_evaluations_bytes);
 
         bytes.extend(self.composition_poly_root);
 
         let composition_poly_even_ood_evaluation_bytes =
             self.composition_poly_even_ood_evaluation.to_bytes_be();
-        bytes.extend(
-            composition_poly_even_ood_evaluation_bytes
-                .len()
-                .to_be_bytes(),
-        );
+        bytes.extend((composition_poly_even_ood_evaluation_bytes.len() as u32).to_be_bytes());
         bytes.extend(composition_poly_even_ood_evaluation_bytes);
         bytes.extend(self.composition_poly_odd_ood_evaluation.to_bytes_be());
 
-        bytes.extend(self.fri_layers_merkle_roots.len().to_be_bytes());
+        bytes.extend((self.fri_layers_merkle_roots.len() as u32).to_be_bytes());
         for commitment in &self.fri_layers_merkle_roots {
             bytes.extend(commitment);
         }
 
         bytes.extend(self.fri_last_value.to_bytes_be());
 
-        bytes.extend(self.query_list.len().to_be_bytes());
+        bytes.extend((self.query_list.len() as u32).to_be_bytes());
         for query in &self.query_list {
             let query_bytes = query.serialize();
-            bytes.extend(query_bytes.len().to_be_bytes());
+            bytes.extend((query_bytes.len() as u32).to_be_bytes());
             bytes.extend(query_bytes);
         }
 
-        bytes.extend(self.deep_poly_openings.len().to_be_bytes());
+        bytes.extend((self.deep_poly_openings.len() as u32).to_be_bytes());
         for opening in &self.deep_poly_openings {
             let opening_bytes = opening.serialize();
-            bytes.extend(opening_bytes.len().to_be_bytes());
+            bytes.extend((opening_bytes.len() as u32).to_be_bytes());
             bytes.extend(opening_bytes);
         }
 
@@ -247,6 +241,8 @@ where
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         ) as usize;
 
+        println!("TRACE LENGTH: {}", trace_length);
+
         bytes = &bytes[U32_SIZE..];
 
         let lde_trace_merkle_roots_len = u32::from_be_bytes(
@@ -256,6 +252,7 @@ where
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
+        println!("LDE TRACE MERKLE ROOTS LEN: {}", lde_trace_merkle_roots_len);
 
         bytes = &bytes[U32_SIZE..];
 
@@ -278,6 +275,11 @@ where
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         ) as usize;
+
+        println!(
+            "TRACE OOD EVALUATIONS LEN: {}",
+            trace_ood_frame_evaluations_len
+        );
 
         bytes = &bytes[U32_SIZE..];
 
@@ -455,7 +457,8 @@ mod test {
         errors::DeserializationError,
         field::{
             element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-        }, traits::{Deserializable, Serializable},
+        },
+        traits::{Deserializable, Serializable},
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
@@ -562,14 +565,14 @@ mod test {
     }
 
     prop_compose! {
-        fn some_frame()(data in field_vec(), row_width in any::<usize>()) -> Frame<Stark252PrimeField> {
-            Frame::new(data, row_width)
+        fn some_frame()(data in field_vec(), row_width in any::<u32>()) -> Frame<Stark252PrimeField> {
+            Frame::new(data, row_width as usize)
         }
     }
 
     prop_compose! {
-        fn some_usize()(len in any::<usize>()) -> usize {
-            len
+        fn some_usize()(len in any::<u32>()) -> usize {
+            len as usize
         }
     }
 
@@ -728,6 +731,15 @@ mod test {
         let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
         let proof_bytes = proof.serialize();
 
+        println!("TRACE LENGTH - ORIGINAL: {}", proof.trace_length);
+
+        println!(
+            "FRAME TRACE EVALUATIONS LEN: {}",
+            proof.trace_ood_frame_evaluations.data.len()
+        );
+
+        println!("LDE TRACE MERKLE ROOTS: {:?}", proof.lde_trace_merkle_roots);
+
         // The trace and original proof are dropped to show that they are decoupled from
         // the verifying process.
         drop(main_trace);
@@ -773,32 +785,49 @@ mod test {
 
     #[test]
     fn serialize_deserialize_deep_poly_openings() {
-
-        let a_proof_values: [u8;32] = [42;32];
+        let a_proof_values: [u8; 32] = [42; 32];
         let proof = Proof {
             merkle_path: [a_proof_values, a_proof_values].to_vec(),
         };
 
         let a_field = FE::from(3u64);
-    
+
         let opening = DeepPolynomialOpenings {
             lde_composition_poly_proof: proof.clone(),
             lde_composition_poly_even_evaluation: a_field,
             lde_composition_poly_odd_evaluation: a_field,
-            lde_trace_merkle_proofs: vec![proof.clone(),proof],
-            lde_trace_evaluations: vec![a_field,a_field],
+            lde_trace_merkle_proofs: vec![proof.clone(), proof],
+            lde_trace_evaluations: vec![a_field, a_field],
         };
 
-        let deserialized_poly: DeepPolynomialOpenings<Stark252PrimeField> = Deserializable::deserialize(&opening.serialize()).unwrap();
+        let deserialized_poly: DeepPolynomialOpenings<Stark252PrimeField> =
+            Deserializable::deserialize(&opening.serialize()).unwrap();
 
-
-
-        let half = opening.serialize().len() / 2;
-        assert_eq!(opening.lde_composition_poly_even_evaluation, deserialized_poly.lde_composition_poly_even_evaluation);
-        assert_eq!(opening.lde_composition_poly_odd_evaluation, deserialized_poly.lde_composition_poly_odd_evaluation);
-        assert_eq!(opening.lde_composition_poly_proof, deserialized_poly.lde_composition_poly_proof);
-        assert_eq!(opening.lde_trace_evaluations, deserialized_poly.lde_trace_evaluations);
-        assert_eq!(opening.lde_trace_merkle_proofs, deserialized_poly.lde_trace_merkle_proofs);
+        assert_eq!(
+            opening.lde_composition_poly_even_evaluation,
+            deserialized_poly.lde_composition_poly_even_evaluation,
+        );
+        println!("FIRST PASSED");
+        assert_eq!(
+            opening.lde_composition_poly_odd_evaluation,
+            deserialized_poly.lde_composition_poly_odd_evaluation
+        );
+        println!("SECOND PASSED");
+        assert_eq!(
+            opening.lde_composition_poly_proof,
+            deserialized_poly.lde_composition_poly_proof
+        );
+        println!("THIRD PASSED");
+        assert_eq!(
+            opening.lde_trace_evaluations,
+            deserialized_poly.lde_trace_evaluations
+        );
+        println!("FOURTH PASSED");
+        assert_eq!(
+            opening.lde_trace_merkle_proofs,
+            deserialized_poly.lde_trace_merkle_proofs
+        );
+        println!("ALL PASSED");
     }
 
     #[test]

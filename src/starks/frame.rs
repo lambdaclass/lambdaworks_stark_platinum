@@ -10,7 +10,7 @@ use super::trace::TraceTable;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Frame<F: IsFFTField> {
     // Vector of rows
-    data: Vec<FieldElement<F>>,
+    pub data: Vec<FieldElement<F>>,
     row_width: usize,
 }
 
@@ -94,12 +94,12 @@ where
         let mut bytes = vec![];
 
         bytes.extend((self.data.len() as u32).to_be_bytes());
-        
+
         // TODO: This should return an Error, we can't serialize an empty Frame
         let felt_len = if self.data.is_empty() {
-            0
+            0_u32
         } else {
-            self.data[0].to_bytes_be().len()
+            self.data[0].to_bytes_be().len() as u32
         };
 
         bytes.extend((felt_len as u32).to_be_bytes());
