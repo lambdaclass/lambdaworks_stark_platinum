@@ -464,8 +464,7 @@ where
                     trace_terms_gammas,
                     trace_frame_evaluations,
                     transition_offsets,
-                    z,
-                    primitive_root,
+                    (z, primitive_root),
                 )
             },
         )
