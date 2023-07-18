@@ -102,7 +102,7 @@ where
             self.data[0].to_bytes_be().len() as u32
         };
 
-        bytes.extend((felt_len as u32).to_be_bytes());
+        bytes.extend(felt_len.to_be_bytes());
 
         for felt in &self.data {
             bytes.extend(felt.to_bytes_be());
