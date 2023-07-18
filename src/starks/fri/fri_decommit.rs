@@ -6,9 +6,8 @@ use lambdaworks_math::errors::DeserializationError;
 use lambdaworks_math::field::element::FieldElement;
 use lambdaworks_math::field::traits::IsPrimeField;
 use lambdaworks_math::traits::{ByteConversion, Deserializable, Serializable};
-use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct FriDecommitment<F: IsPrimeField> {
     pub layers_auth_paths_sym: Vec<Proof<Commitment>>,
     pub layers_evaluations_sym: Vec<FieldElement<F>>,

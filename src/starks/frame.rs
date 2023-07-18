@@ -1,14 +1,12 @@
+use super::trace::TraceTable;
 use lambdaworks_math::{
     errors::DeserializationError,
     field::{element::FieldElement, traits::IsFFTField},
     polynomial::Polynomial,
     traits::{ByteConversion, Deserializable, Serializable},
 };
-use serde::Serialize;
 
-use super::trace::TraceTable;
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Frame<F: IsFFTField> {
     // Vector of rows
     data: Vec<FieldElement<F>>,
