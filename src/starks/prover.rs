@@ -457,28 +457,16 @@ where
         .fold(
             || Polynomial::zero(),
             |trace_terms, (i, t_j)| {
-                let i_times_trace_frame_evaluation = i * trace_frame_length;
-                let iter_trace_gammas = trace_terms_gammas
-                    .iter()
-                    .skip(i_times_trace_frame_evaluation);
-                let trace_int = trace_frame_evaluations
-                    .iter()
-                    .zip(transition_offsets)
-                    .zip(iter_trace_gammas)
-                    .fold(
-                        Polynomial::zero(),
-                        |trace_agg, ((eval, offset), trace_gamma)| {
-                            // @@@ we can avoid this clone
-                            let t_j_z = &eval[i];
-                            // @@@ this can be pre-computed
-                            let z_shifted = z * primitive_root.pow(*offset);
-                            let mut poly = t_j - t_j_z;
-                            poly.ruffini_division_inplace(&z_shifted);
-                            trace_agg + poly * trace_gamma
-                        },
-                    );
-
-                trace_terms + trace_int
+                compute_trace_term(
+                    &trace_terms,
+                    (i, t_j),
+                    trace_frame_length,
+                    trace_terms_gammas,
+                    trace_frame_evaluations,
+                    transition_offsets,
+                    z,
+                    primitive_root,
+                )
             },
         )
         .reduce(|| Polynomial::zero(), |a, b| a + b);
@@ -489,31 +477,55 @@ where
             .iter()
             .enumerate()
             .fold(Polynomial::zero(), |trace_terms, (i, t_j)| {
-                let i_times_trace_frame_evaluation = i * trace_frame_length;
-                let iter_trace_gammas = trace_terms_gammas
-                    .iter()
-                    .skip(i_times_trace_frame_evaluation);
-                let trace_int = trace_frame_evaluations
-                    .iter()
-                    .zip(transition_offsets)
-                    .zip(iter_trace_gammas)
-                    .fold(
-                        Polynomial::zero(),
-                        |trace_agg, ((eval, offset), trace_gamma)| {
-                            // @@@ we can avoid this clone
-                            let t_j_z = &eval[i];
-                            // @@@ this can be pre-computed
-                            let z_shifted = z * primitive_root.pow(*offset);
-                            let mut poly = t_j - t_j_z;
-                            poly.ruffini_division_inplace(&z_shifted);
-                            trace_agg + poly * trace_gamma
-                        },
-                    );
-
-                trace_terms + trace_int
+                compute_trace_term(
+                    &trace_terms,
+                    (i, t_j),
+                    trace_frame_length,
+                    trace_terms_gammas,
+                    trace_frame_evaluations,
+                    transition_offsets,
+                    (z, primitive_root),
+                )
             });
 
     h_1_term + h_2_term + trace_term
+}
+
+fn compute_trace_term<F>(
+    trace_terms: &Polynomial<FieldElement<F>>,
+    (i, t_j): (usize, &Polynomial<FieldElement<F>>),
+    trace_frame_length: usize,
+    trace_terms_gammas: &[FieldElement<F>],
+    trace_frame_evaluations: &[Vec<FieldElement<F>>],
+    transition_offsets: &[usize],
+    (z, primitive_root): (&FieldElement<F>, &FieldElement<F>),
+) -> Polynomial<FieldElement<F>>
+where
+    F: IsFFTField,
+    FieldElement<F>: ByteConversion + Send + Sync,
+{
+    let i_times_trace_frame_evaluation = i * trace_frame_length;
+    let iter_trace_gammas = trace_terms_gammas
+        .iter()
+        .skip(i_times_trace_frame_evaluation);
+    let trace_int = trace_frame_evaluations
+        .iter()
+        .zip(transition_offsets)
+        .zip(iter_trace_gammas)
+        .fold(
+            Polynomial::zero(),
+            |trace_agg, ((eval, offset), trace_gamma)| {
+                // @@@ we can avoid this clone
+                let t_j_z = &eval[i];
+                // @@@ this can be pre-computed
+                let z_shifted = z * primitive_root.pow(*offset);
+                let mut poly = t_j - t_j_z;
+                poly.ruffini_division_inplace(&z_shifted);
+                trace_agg + poly * trace_gamma
+            },
+        );
+
+    trace_terms + trace_int
 }
 
 fn open_deep_composition_poly<F: IsFFTField, A: AIR<Field = F>>(
