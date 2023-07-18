@@ -101,7 +101,13 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                     .collect::<Vec<FieldElement<F>>>()
             })
             .collect::<Vec<Vec<FieldElement<F>>>>();
-        let boundary_evaluation = (0..domain.lde_roots_of_unity_coset.len())
+
+        #[cfg(feature = "parallel")]
+        let boundary_eval_iter = (0..domain.lde_roots_of_unity_coset.len()).into_par_iter();
+        #[cfg(not(feature = "parallel"))]
+        let boundary_eval_iter = 0..domain.lde_roots_of_unity_coset.len();
+
+        let boundary_evaluation = boundary_eval_iter
             .zip(&d_adjustment_power)
             .map(|(i, d)| {
                 (0..number_of_b_constraints)
