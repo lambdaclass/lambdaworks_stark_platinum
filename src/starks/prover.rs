@@ -17,7 +17,7 @@ use lambdaworks_math::{
 use log::info;
 
 #[cfg(feature = "parallel")]
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 //use crate::starks::constraints::boundary::BoundaryConstraint;
 #[cfg(debug_assertions)]
@@ -338,7 +338,7 @@ fn round_4_compute_and_run_fri_on_the_deep_composition_polynomial<
     transcript: &mut T,
 ) -> Round4<F>
 where
-    FieldElement<F>: ByteConversion,
+    FieldElement<F>: ByteConversion + Send + Sync,
 {
     let coset_offset_u64 = air.context().proof_options.coset_offset;
     let coset_offset = FieldElement::<F>::from(coset_offset_u64);
@@ -420,7 +420,7 @@ fn compute_deep_composition_poly<A, F>(
 where
     A: AIR,
     F: IsFFTField,
-    FieldElement<F>: ByteConversion,
+    FieldElement<F>: ByteConversion + Send + Sync,
 {
     // Compute composition polynomial terms of the deep composition polynomial.
     let h_1 = &round_2_result.composition_poly_even;
@@ -449,6 +449,41 @@ where
 
     // @@@ this could be const
     let trace_frame_length = trace_frame_evaluations.len();
+
+    #[cfg(feature = "parallel")]
+    let trace_term = trace_polys
+        .par_iter()
+        .enumerate()
+        .fold(
+            || Polynomial::zero(),
+            |trace_terms, (i, t_j)| {
+                let i_times_trace_frame_evaluation = i * trace_frame_length;
+                let iter_trace_gammas = trace_terms_gammas
+                    .iter()
+                    .skip(i_times_trace_frame_evaluation);
+                let trace_int = trace_frame_evaluations
+                    .iter()
+                    .zip(transition_offsets)
+                    .zip(iter_trace_gammas)
+                    .fold(
+                        Polynomial::zero(),
+                        |trace_agg, ((eval, offset), trace_gamma)| {
+                            // @@@ we can avoid this clone
+                            let t_j_z = &eval[i];
+                            // @@@ this can be pre-computed
+                            let z_shifted = z * primitive_root.pow(*offset);
+                            let mut poly = t_j - t_j_z;
+                            poly.ruffini_division_inplace(&z_shifted);
+                            trace_agg + poly * trace_gamma
+                        },
+                    );
+
+                trace_terms + trace_int
+            },
+        )
+        .reduce(|| Polynomial::zero(), |a, b| a + b);
+
+    #[cfg(not(feature = "parallel"))]
     let trace_term =
         trace_polys
             .iter()
