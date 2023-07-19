@@ -29,7 +29,6 @@ use lambdaworks_stark::{
             simple_fibonacci::{self, FibonacciAIR, FibonacciPublicInputs},
         },
         proof::options::{ProofOptions, SecurityLevel},
-        proof::{options::ProofOptions, stark::StarkProof},
         prover::prove,
         trace::TraceTable,
         verifier::verify,
