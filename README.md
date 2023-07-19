@@ -1,5 +1,6 @@
-# Lambdaworks Cairo Prover
-Disclaimer: This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
+# Starknet Stack Prover Lambdaworks
+This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
+We expect to have something working in a good state by mid August 2023.
 
 ## Main building blocks
 
@@ -125,3 +126,17 @@ Be sure to build the docker image if you don't want to install the `cairo-lang` 
 ```
 make docker_build_cairo_compiler
 ```
+
+## Running fuzzers
+To run a fuzzer, simply use 
+
+```
+make fuzzer <name of the fuzzer>
+```
+
+if you don´t have the tools for fuzzing installed use
+
+```
+make fuzzer_tools
+```
+

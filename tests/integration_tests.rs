@@ -28,6 +28,7 @@ use lambdaworks_stark::{
             quadratic_air::{self, QuadraticAIR, QuadraticPublicInputs},
             simple_fibonacci::{self, FibonacciAIR, FibonacciPublicInputs},
         },
+        proof::options::{ProofOptions, SecurityLevel},
         proof::{options::ProofOptions, stark::StarkProof},
         prover::prove,
         trace::TraceTable,
@@ -365,4 +366,23 @@ fn test_verifier_rejects_proof_with_changed_output() {
     let malicious_trace = TraceTable::new_from_cols(&malicious_trace_columns);
     let proof = generate_cairo_proof(&malicious_trace, &pub_inputs, &proof_options).unwrap();
     assert!(!verify_cairo_proof(&proof, &pub_inputs, &proof_options));
+}
+
+#[test_log::test]
+fn test_verifier_rejects_proof_with_different_security_params() {
+    let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
+    let (main_trace, pub_inputs) =
+        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+
+    let proof_options_prover = ProofOptions::new_secure(SecurityLevel::Conjecturable80Bits, 3);
+
+    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options_prover).unwrap();
+
+    let proof_options_verifier = ProofOptions::new_secure(SecurityLevel::Conjecturable128Bits, 3);
+
+    assert!(!verify_cairo_proof(
+        &proof,
+        &pub_inputs,
+        &proof_options_verifier
+    ));
 }

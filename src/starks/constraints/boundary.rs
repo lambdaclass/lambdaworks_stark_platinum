@@ -68,17 +68,26 @@ impl<F: IsField> BoundaryConstraints<F> {
             .collect()
     }
 
+    pub fn cols_for_boundary(&self) -> Vec<usize> {
+        self.constraints
+            .iter()
+            .unique_by(|elem| elem.col)
+            .map(|v| v.col)
+            .collect()
+    }
+
     /// Given the primitive root of some domain, returns the domain values corresponding
     /// to the steps where the boundary conditions hold. This is useful when interpolating
     /// the boundary conditions, since we must know the x values
     pub fn generate_roots_of_unity(
         &self,
         primitive_root: &FieldElement<F>,
-        count_cols_trace: usize,
+        cols_trace: &[usize],
     ) -> Vec<Vec<FieldElement<F>>> {
-        (0..count_cols_trace)
+        cols_trace
+            .iter()
             .map(|i| {
-                self.steps(i)
+                self.steps(*i)
                     .into_iter()
                     .map(|s| primitive_root.pow(s))
                     .collect::<Vec<FieldElement<F>>>()
@@ -88,12 +97,13 @@ impl<F: IsField> BoundaryConstraints<F> {
 
     /// For every trace column, give all the values the trace must be equal to in
     /// the steps where the boundary constraints hold
-    pub fn values(&self, n_trace_columns: usize) -> Vec<Vec<FieldElement<F>>> {
-        (0..n_trace_columns)
+    pub fn values(&self, cols_trace: &[usize]) -> Vec<Vec<FieldElement<F>>> {
+        cols_trace
+            .iter()
             .map(|i| {
                 self.constraints
                     .iter()
-                    .filter(|c| c.col == i)
+                    .filter(|c| c.col == *i)
                     .map(|c| c.value.clone())
                     .collect()
             })

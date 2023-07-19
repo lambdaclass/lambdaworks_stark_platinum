@@ -16,7 +16,6 @@ where
     F: IsField,
     FieldElement<F>: ByteConversion,
 {
-    pub poly: Polynomial<FieldElement<F>>,
     pub evaluation: Vec<FieldElement<F>>,
     pub merkle_tree: FriMerkleTree<F>,
     pub coset_offset: FieldElement<F>,
@@ -29,7 +28,7 @@ where
     FieldElement<F>: ByteConversion,
 {
     pub fn new(
-        poly: Polynomial<FieldElement<F>>,
+        poly: &Polynomial<FieldElement<F>>,
         coset_offset: &FieldElement<F>,
         domain_size: usize,
     ) -> Self {
@@ -40,7 +39,6 @@ where
         let merkle_tree = FriMerkleTree::build(&evaluation);
 
         Self {
-            poly,
             evaluation,
             merkle_tree,
             coset_offset: coset_offset.clone(),

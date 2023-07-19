@@ -1,3 +1,4 @@
+use super::trace::TraceTable;
 use lambdaworks_math::{
     errors::DeserializationError,
     field::{element::FieldElement, traits::IsFFTField},
@@ -5,9 +6,7 @@ use lambdaworks_math::{
     traits::{ByteConversion, Deserializable, Serializable},
 };
 
-use super::trace::TraceTable;
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Frame<F: IsFFTField> {
     // Vector of rows
     data: Vec<FieldElement<F>>,
@@ -116,14 +115,18 @@ where
     {
         let mut bytes = bytes;
         let data_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
         bytes = &bytes[8..];
 
         let felt_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
@@ -132,16 +135,18 @@ where
         let mut data = vec![];
         for _ in 0..data_len {
             let felt = FieldElement::<F>::from_bytes_be(
-                bytes[..felt_len]
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+                bytes
+                    .get(..felt_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
             data.push(felt);
             bytes = &bytes[felt_len..];
         }
 
         let row_width = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );

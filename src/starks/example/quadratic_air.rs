@@ -48,6 +48,7 @@ where
             transition_exemptions: vec![1],
             transition_offsets: vec![0, 1],
             num_transition_constraints: 1,
+            num_transition_exemptions: 1,
         };
 
         Self {

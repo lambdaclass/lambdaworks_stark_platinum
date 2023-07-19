@@ -7,8 +7,11 @@ rust-version = "1.66"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", branch = "serialize-aux" }
-lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", branch = "serialize-aux" }
+rand = "0.8.5"
+lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "9d3cde6", features = [
+    "lambdaworks-serde",
+] }
+lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "9d3cde6" }
 thiserror = "1.0"
 log = "0.4.17"
 sha3 = "0.10.6"
@@ -22,12 +25,18 @@ cairo-lang-starknet = { version = "2.0", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
 num-integer = { version = "0.1.45", optional = true }
-# Parallelization crates
-rayon = { version = "1.7.0", optional = true }
+
+
 wasm-bindgen = "0.2"
-serde-wasm-bindgen = "0.5"
 
 [dev-dependencies]
+rayon = { version = "1.7.0", optional = true }
+# Parallelization crates
+serde-wasm-bindgen = "0.5"
+giza-core = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
+giza-prover = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
+giza-runner = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
+serde = { version = "1.0", features = ["derive"] }
 hex = "0.4.3"
 criterion = { version = "0.4", default-features = false }
 env_logger = "*"
@@ -42,8 +51,6 @@ web-sys = { version = "0.3.64", features = ['console'] }
 proptest = "1.2.0"
 
 [features]
-default = ["cairo"]
-test_fiat_shamir = []
 cairo = [
     "bincode",
     "serde_json",
@@ -51,9 +58,12 @@ cairo = [
     "cairo-vm",
     "cairo-lang-starknet",
 ]
-instruments = [] # This enables timing prints in prover and verifier
 metal = ["lambdaworks-math/metal"]
+default = ["cairo"]
+test_fiat_shamir = []
+instruments = [] # This enables timing prints in prover and verifier
 parallel = ["dep:rayon"]
+giza = ["dep:giza-core", "dep:giza-prover", "dep:giza-runner"]
 
 [[bench]]
 name = "criterion_prover"
@@ -61,9 +71,23 @@ harness = false
 metal = ["lambdaworks-math/metal"]
 
 [[bench]]
+name = "criterion_prover_70k"
+harness = false
+metal = ["lambdaworks-math/metal"]
+
+[[bench]]
 name = "criterion_verifier"
 harness = false
 metal = ["lambdaworks-math/metal"]
+
+[[bench]]
+name = "criterion_verifier_70k"
+harness = false
+
+[[bench]]
+name = "criterion_giza"
+harness = false
+
 
 [profile.release]
 lto = true

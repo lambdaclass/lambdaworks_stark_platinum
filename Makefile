@@ -42,6 +42,23 @@ coverage_parallel: $(COMPILED_CAIRO0_PROGRAMS)
 clippy:
 	cargo clippy --workspace --all-targets -- -D warnings
 
+benchmarks_sequential: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench
+
+benchmarks_parallel: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench -F parallel --bench criterion_prover
+	cargo bench -F parallel --bench criterion_verifier
+
+benchmarks_parallel_all: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo bench -F parallel
+
+# TODO: add trace and memory rules
+setup_giza_mac:
+	rustup toolchain install nightly-2023-06-19-aarch64-apple-darwin
+
+benchmarks_giza: $(COMPILED_CAIRO0_PROGRAMS)
+	cargo +nightly-2023-06-19 bench --bench criterion_giza -F "parallel giza"
+
 build_metal:
 	cargo b --features metal --release
 
@@ -87,3 +104,9 @@ clean:
 	rm -f $(CAIRO0_PROGRAMS_DIR)/*.trace
 	rm -f $(CAIRO0_PROGRAMS_DIR)/*.memory
 
+CUDAFUZZER = deserialize
+fuzzer:
+		cargo +nightly fuzz run $(CUDAFUZZER)
+		
+fuzzer_tools: 
+		cargo install cargo-fuzz
