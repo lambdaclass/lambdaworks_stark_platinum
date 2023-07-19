@@ -1,6 +1,7 @@
-use std::{iter, ops::Range};
+use std::{collections::HashMap, iter, ops::Range};
 
 use crate::{cairo::air::*, starks::trace::TraceTable, FE};
+use itertools::multizip;
 use lambdaworks_math::{
     field::{
         element::FieldElement,
@@ -35,6 +36,7 @@ pub const MEMORY_COLUMNS: [usize; 8] = [
 ];
 
 pub const ADDR_COLUMNS: [usize; 4] = [FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR];
+pub const VAL_COLUMNS: [usize; 4] = [FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1];
 
 // MAIN TRACE LAYOUT
 // -----------------------------------------------------------------------------------------
@@ -59,7 +61,11 @@ pub fn build_main_trace(
     memory: &mut CairoMemory,
     public_input: &mut PublicInputs,
 ) -> TraceTable<Stark252PrimeField> {
-    let mut main_trace = build_cairo_execution_trace(register_states, memory, public_input);
+    let public_memory = &mut public_input.public_memory;
+    set_last_inst_as_infinite_loop(register_states, memory, public_memory);
+
+    let mut main_trace =
+        build_cairo_execution_trace(register_states, memory, &public_input.memory_segments);
 
     let mut address_cols = main_trace
         .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
@@ -71,13 +77,13 @@ pub fn build_main_trace(
     public_input.range_check_max = Some(rc_max);
     fill_rc_holes(&mut main_trace, rc_holes);
 
-    let mut memory_holes = get_memory_holes(&address_cols, public_input.public_memory.len());
+    let mut memory_holes = get_memory_holes(&address_cols, public_memory.len());
 
     if !memory_holes.is_empty() {
-        fill_memory_holes(&mut main_trace, &mut memory_holes);
+        fill_memory_holes(&mut main_trace, public_memory, &mut memory_holes);
     }
 
-    add_pub_memory_dummy_accesses(&mut main_trace, public_input.public_memory.len());
+    add_pub_memory_dummy_accesses(&mut main_trace, public_memory.len());
 
     let trace_len_next_power_of_two = main_trace.n_rows().next_power_of_two();
     let padding = trace_len_next_power_of_two - main_trace.n_rows();
@@ -86,38 +92,32 @@ pub fn build_main_trace(
     main_trace
 }
 
+/// Overwrites last instruction so that the program ends with an infinite loop
+fn set_last_inst_as_infinite_loop(
+    register_states: &RegisterStates,
+    memory: &mut CairoMemory,
+    public_memory: &mut HashMap<FE, FE>,
+) {
+    let last_state_pc = register_states.rows.last().unwrap().pc;
+    let last_state_pc_addr = FE::from(last_state_pc);
+    let infinite_loop_inst = FE::from_hex("010780017fff7fff").unwrap();
+    memory.data.insert(last_state_pc, infinite_loop_inst);
+    memory.data.insert(last_state_pc + 1, FE::zero());
+    public_memory.insert(last_state_pc_addr, infinite_loop_inst);
+    public_memory.insert(last_state_pc_addr + FE::one(), FE::zero());
+}
+
 /// Artificial `(0, 0)` dummy memory accesses must be added for the public memory.
 /// See section 9.8 of the Cairo whitepaper.
 fn add_pub_memory_dummy_accesses<F: IsFFTField>(
     main_trace: &mut TraceTable<F>,
     pub_memory_len: usize,
 ) {
-    pad_with_last_row_and_zeros(main_trace, (pub_memory_len >> 2) + 1, &MEMORY_COLUMNS)
+    pad_with_last_row(main_trace, (pub_memory_len >> 2) + 1)
 }
 
 fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usize) {
     let last_row = trace.last_row().to_vec();
-    let mut pad: Vec<_> = std::iter::repeat(&last_row)
-        .take(number_rows)
-        .flatten()
-        .cloned()
-        .collect();
-    trace.table.append(&mut pad);
-}
-
-/// Pads trace with its last row, with the exception of the columns specified in
-/// `zero_pad_columns`, where the pad is done with zeros.
-/// If the last row is [2, 1, 4, 1] and the zero pad columns are [0, 1], then the
-/// padding will be [0, 0, 4, 1].
-fn pad_with_last_row_and_zeros<F: IsFFTField>(
-    trace: &mut TraceTable<F>,
-    number_rows: usize,
-    zero_pad_columns: &[usize],
-) {
-    let mut last_row = trace.last_row().to_vec();
-    for exemption_column in zero_pad_columns.iter() {
-        last_row[*exemption_column] = FieldElement::zero();
-    }
     let mut pad: Vec<_> = std::iter::repeat(&last_row)
         .take(number_rows)
         .flatten()
@@ -174,13 +174,14 @@ where
 
 /// Fills holes found in the range-checked columns.
 fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldElement<F>>) {
-    let zeros_left = vec![FieldElement::zero(); OFF_DST];
-    let zeros_right = vec![FieldElement::zero(); trace.n_cols - OFF_OP1 - 1];
+    let last_row = trace.last_row();
+    let last_row_left = last_row[..OFF_DST].to_vec();
+    let last_row_right = last_row[OFF_OP1..].to_vec();
 
     for i in (0..holes.len()).step_by(3) {
-        trace.table.append(&mut zeros_left.clone());
+        trace.table.append(&mut last_row_left.clone());
         trace.table.append(&mut holes[i..(i + 3)].to_vec());
-        trace.table.append(&mut zeros_right.clone());
+        trace.table.append(&mut last_row_right.clone());
     }
 }
 
@@ -221,10 +222,14 @@ fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
     memory_holes
 }
 
-/// Fill memory holes in each address column of the trace with the missing address, depending on the
+/// Fills memory holes in each address column of the trace with the missing address, depending on the
 /// trace column. If the trace column refers to memory addresses, it will be filled with the missing
 /// addresses.
-fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut [FE]) {
+fn fill_memory_holes(
+    trace: &mut TraceTable<Stark252PrimeField>,
+    public_memory: &mut HashMap<FE, FE>,
+    memory_holes: &mut [FE],
+) {
     let last_row = trace.last_row().to_vec();
 
     // This number represents the amount of times we have to pad to fill the memory
@@ -238,15 +243,19 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
 
     let padding_row_iter = iter::repeat(last_row).take(padding_size);
     let addr_columns_iter = iter::repeat(ADDR_COLUMNS).take(padding_size);
+    let val_columns_iter = iter::repeat(VAL_COLUMNS).take(padding_size);
     let mut memory_holes_iter = memory_holes.iter();
 
-    for (addr_cols, mut padding_row) in iter::zip(addr_columns_iter, padding_row_iter) {
+    for (addr_cols, val_cols, mut padding_row) in
+        multizip((addr_columns_iter, val_columns_iter, padding_row_iter))
+    {
         // The particular placement of the holes in each column is not important,
         // the only thing that matters is that the addresses are put somewhere in the address
         // columns.
-        addr_cols.iter().for_each(|a_col| {
+        addr_cols.iter().zip(val_cols).for_each(|(a_col, v_col)| {
             if let Some(hole) = memory_holes_iter.next() {
                 padding_row[*a_col] = *hole;
+                public_memory.insert(*hole, padding_row[v_col]);
             }
         });
 
@@ -260,15 +269,10 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
 /// obtained from the Cairo VM, this is why this function is needed.
 pub fn build_cairo_execution_trace(
     raw_trace: &RegisterStates,
-    memory: &mut CairoMemory,
-    public_inputs: &PublicInputs,
+    memory: &CairoMemory,
+    memory_segments: &MemorySegmentMap,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
-
-    // Overwrite last instruction so that the program ends with an infinite loop
-    let last_state_pc = raw_trace.rows.last().unwrap().pc;
-    let infinite_loop_inst = FE::from_hex("10780017fff7fff").unwrap();
-    memory.data.insert(last_state_pc, infinite_loop_inst);
 
     // Instruction flags and offsets are decoded from the raw instructions and represented
     // by the CairoInstructionFlags and InstructionOffsets as an intermediate representation
@@ -350,10 +354,7 @@ pub fn build_cairo_execution_trace(
     trace_cols.push(mul);
     trace_cols.push(selector);
 
-    if let Some(range_check_builtin_range) = public_inputs
-        .memory_segments
-        .get(&MemorySegment::RangeCheck)
-    {
+    if let Some(range_check_builtin_range) = memory_segments.get(&MemorySegment::RangeCheck) {
         add_rc_builtin_columns(&mut trace_cols, range_check_builtin_range.clone(), memory);
     }
 
@@ -678,7 +679,7 @@ mod test {
         */
 
         let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
-        let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
+        let (register_states, mut memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
             &program_content,
@@ -691,7 +692,8 @@ mod test {
             program_size,
             &MemorySegmentMap::new(),
         );
-        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
+        let execution_trace =
+            build_cairo_execution_trace(&register_states, &mut memory, &pub_inputs.memory_segments);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&vec![
@@ -795,7 +797,7 @@ mod test {
         */
 
         let program_content = std::fs::read(cairo0_program_path("call_func.json")).unwrap();
-        let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
+        let (register_states, mut memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
             &program_content,
@@ -810,7 +812,8 @@ mod test {
             &MemorySegmentMap::new(),
         );
 
-        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
+        let execution_trace =
+            build_cairo_execution_trace(&register_states, &mut memory, &pub_inputs.memory_segments);
 
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&[
