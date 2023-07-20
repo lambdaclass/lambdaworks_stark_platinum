@@ -8,6 +8,7 @@ use lambdaworks_math::{
     },
     traits::{ByteConversion, Deserializable, Serializable},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{
     starks::{
@@ -182,6 +183,57 @@ pub struct PublicInputs {
     pub num_steps: usize, // number of execution steps
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PublicInputsString {
+    pub pc_init: String,
+    pub ap_init: String,
+    pub fp_init: String,
+    pub pc_final: String,
+    pub ap_final: String,
+    pub range_check_min: Option<u16>,
+    pub range_check_max: Option<u16>,
+    pub memory_segments: HashMap<String, (u64, u64)>, // each range is represented as a pair of u64
+    pub public_memory: HashMap<String, String>,       // FE -> String conversion
+    pub num_steps: usize,
+}
+
+pub fn convert_public_inputs_to_string(inputs: PublicInputs) -> PublicInputsString {
+    let pc_init = inputs.pc_init.representative().to_string();
+    let ap_init = inputs.ap_init.representative().to_string();
+    let fp_init = inputs.fp_init.representative().to_string();
+    let pc_final = inputs.pc_final.representative().to_string();
+    let ap_final = inputs.ap_final.representative().to_string();
+
+    let memory_segments: HashMap<String, (u64, u64)> = inputs
+        .memory_segments
+        .iter()
+        .map(|(k, v)| (format!("{:?}", k), (v.start, v.end)))
+        .collect();
+
+    let public_memory: HashMap<String, String> = inputs
+        .public_memory
+        .iter()
+        .map(|(k, v)| {
+            (
+                k.representative().to_string(),
+                v.representative().to_string(),
+            )
+        })
+        .collect();
+
+    PublicInputsString {
+        pc_init,
+        ap_init,
+        fp_init,
+        pc_final,
+        ap_final,
+        range_check_min: inputs.range_check_min,
+        range_check_max: inputs.range_check_max,
+        memory_segments,
+        public_memory,
+        num_steps: inputs.num_steps,
+    }
+}
 impl PublicInputs {
     /// Creates a Public Input from register states and memory
     /// - In the future we should use the output of the Cairo Runner. This is not currently supported in Cairo RS
@@ -454,6 +506,27 @@ pub struct CairoAIR {
     pub trace_length: usize,
     pub pub_inputs: PublicInputs,
     has_rc_builtin: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CairoAIRString {
+    pub context: AirContext,
+    pub trace_length: usize,
+    pub pub_inputs: PublicInputsString,
+    has_rc_builtin: bool,
+}
+
+pub fn convert_cairo_air_to_string(air: CairoAIR) -> CairoAIRString {
+    let context = air.context;
+    let trace_length = air.trace_length;
+    let pub_inputs = convert_public_inputs_to_string(air.pub_inputs);
+    let has_rc_builtin = air.has_rc_builtin;
+    CairoAIRString {
+        context,
+        trace_length,
+        pub_inputs,
+        has_rc_builtin,
+    }
 }
 
 impl CairoAIR {
@@ -894,6 +967,8 @@ fn compute_instr_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prime
     constraints[INST] =
         (&curr[OFF_DST]) + b16 * (&curr[OFF_OP0]) + b32 * (&curr[OFF_OP1]) + b48 * f0_squiggle
             - &curr[FRAME_INST];
+    dbg!(f0_squiggle.representative().to_string());
+    dbg!(constraints[INST].representative().to_string());
 }
 
 fn compute_operand_constraints(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
@@ -921,6 +996,10 @@ fn compute_operand_constraints(constraints: &mut [FE], frame: &Frame<Stark252Pri
         + (&one - &curr[F_OP_1_VAL] - &curr[F_OP_1_AP] - &curr[F_OP_1_FP]) * &curr[FRAME_OP0]
         + (&curr[OFF_OP1] - &b15)
         - &curr[FRAME_OP1_ADDR];
+
+    dbg!(constraints[DST_ADDR].representative().to_string());
+    dbg!(constraints[OP0_ADDR].representative().to_string());
+    dbg!(constraints[OP1_ADDR].representative().to_string());
 }
 
 fn compute_register_constraints(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
@@ -956,6 +1035,13 @@ fn compute_register_constraints(constraints: &mut [FE], frame: &Frame<Stark252Pr
 
     constraints[T0] = &curr[F_PC_JNZ] * &curr[FRAME_DST] - &curr[FRAME_T0];
     constraints[T1] = &curr[FRAME_T0] * &curr[FRAME_RES] - &curr[FRAME_T1];
+
+    dbg!(constraints[NEXT_AP].representative().to_string());
+    dbg!(constraints[NEXT_FP].representative().to_string());
+    dbg!(constraints[NEXT_PC_1].representative().to_string());
+    dbg!(constraints[NEXT_PC_2].representative().to_string());
+    dbg!(constraints[T0].representative().to_string());
+    dbg!(constraints[T1].representative().to_string());
 }
 
 fn compute_opcode_constraints(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
@@ -975,6 +1061,12 @@ fn compute_opcode_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prim
         &curr[F_OPC_CALL] * (&curr[FRAME_OP0] - (&curr[FRAME_PC] + frame_inst_size(curr)));
 
     constraints[ASSERT_EQ] = &curr[F_OPC_AEQ] * (&curr[FRAME_DST] - &curr[FRAME_RES]);
+
+    dbg!(constraints[MUL_1].representative().to_string());
+    dbg!(constraints[MUL_2].representative().to_string());
+    dbg!(constraints[CALL_1].representative().to_string());
+    dbg!(constraints[CALL_2].representative().to_string());
+    dbg!(constraints[ASSERT_EQ].representative().to_string());
 }
 
 fn enforce_selector(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
@@ -992,12 +1084,18 @@ fn memory_is_increasing(
     let curr = frame.get_row(0);
     let next = frame.get_row(1);
     let one = FieldElement::one();
-
+    dbg!(builtin_offset);
     constraints[MEMORY_INCREASING_0] = (&curr[MEMORY_ADDR_SORTED_0 - builtin_offset]
         - &curr[MEMORY_ADDR_SORTED_1 - builtin_offset])
         * (&curr[MEMORY_ADDR_SORTED_1 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_0 - builtin_offset]
             - &one);
+    dbg!(constraints[MEMORY_INCREASING_0]
+        .clone()
+        .representative()
+        .to_string());
+    dbg!(&curr[MEMORY_ADDR_SORTED_0].representative().to_string());
+    dbg!(&curr[MEMORY_ADDR_SORTED_1].representative().to_string());
 
     constraints[MEMORY_INCREASING_1] = (&curr[MEMORY_ADDR_SORTED_1 - builtin_offset]
         - &curr[MEMORY_ADDR_SORTED_2 - builtin_offset])
@@ -1040,6 +1138,34 @@ fn memory_is_increasing(
         * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
             - &one);
+    dbg!(constraints[MEMORY_INCREASING_0]
+        .clone()
+        .representative()
+        .to_string());
+    dbg!(constraints[MEMORY_INCREASING_0]
+        .representative()
+        .to_string());
+    dbg!(constraints[MEMORY_INCREASING_1]
+        .representative()
+        .to_string());
+    dbg!(constraints[MEMORY_INCREASING_2]
+        .representative()
+        .to_string());
+    dbg!(constraints[MEMORY_INCREASING_3]
+        .representative()
+        .to_string());
+    dbg!(constraints[MEMORY_CONSISTENCY_0]
+        .representative()
+        .to_string());
+    dbg!(constraints[MEMORY_CONSISTENCY_1]
+        .representative()
+        .to_string());
+    dbg!(constraints[MEMORY_CONSISTENCY_2]
+        .representative()
+        .to_string());
+    dbg!(constraints[MEMORY_CONSISTENCY_3]
+        .representative()
+        .to_string());
 }
 
 fn permutation_argument(
