@@ -125,10 +125,14 @@ fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) 
 
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
 
+    let ret_vec_proof = serde_cbor::to_vec(&proof).unwrap();
+    println!("Proof bytes cbor:");
+    println!("{:?}", ret_vec_proof);
+
     //println!("Proof bytes");
     //println!("{:?}", proof.serialize());
-    println!("Pub inputs bytes");
-    println!("{:?}", pub_inputs.serialize());
+    //println!("Pub inputs bytes");
+    //println!("{:?}", pub_inputs.serialize());
 
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }
