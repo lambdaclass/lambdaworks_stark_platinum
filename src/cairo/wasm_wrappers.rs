@@ -32,13 +32,12 @@ pub fn verify_cairo_proof_wasm(
     pub_input_serialized: &[u8],
     proof_options: &ProofOptions,
 ) -> bool {
-    let pub_input: PublicInputs = Deserializable::deserialize(pub_input_serialized).unwrap();
+    let pub_input: PublicInputs = serde_cbor::from_slice(pub_input_serialized).unwrap();
     verify::<Stark252PrimeField, CairoAIR>(&proof.0, &pub_input, proof_options)
 }
 
 #[wasm_bindgen]
 pub fn deserialize_proof_wasm(proof: &[u8]) -> Stark252PrimeFieldProof {
-    let proof_inner: StarkProof<Stark252PrimeField> = Deserializable::deserialize(proof).unwrap();
-
+    let proof_inner: StarkProof<Stark252PrimeField> = serde_cbor::from_slice(proof).unwrap();
     Stark252PrimeFieldProof(proof_inner)
 }
