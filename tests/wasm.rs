@@ -1,6 +1,6 @@
 use lambdaworks_stark::{
     cairo::{
-        serialized_proof::{PUBLIC_INPUTS, SERIALIZED_TEST_PROOF},
+        serialized::{PUBLIC_INPUTS, SERIALIZED_TEST_PROOF},
         wasm_wrappers::{deserialize_proof_wasm, verify_cairo_proof_wasm},
     },
     starks::proof::options::ProofOptions,
