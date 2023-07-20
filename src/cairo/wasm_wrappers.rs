@@ -41,3 +41,13 @@ pub fn deserialize_proof_wasm(proof: &[u8]) -> Stark252PrimeFieldProof {
     let proof_inner: StarkProof<Stark252PrimeField> = serde_cbor::from_slice(proof).unwrap();
     Stark252PrimeFieldProof(proof_inner)
 }
+
+#[wasm_bindgen]
+pub fn new_proof_options(blowup_factor: u8, fri_number_of_queries: usize, coset_offset: usize, grinding_factor: u8) -> ProofOptions {
+    ProofOptions{
+        blowup_factor,
+        fri_number_of_queries,
+        coset_offset: coset_offset as u64,
+        grinding_factor
+    }
+}
