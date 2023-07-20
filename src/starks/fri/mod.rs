@@ -15,7 +15,7 @@ use self::fri_decommit::FriDecommitment;
 use self::fri_functions::fold_polynomial;
 
 use super::traits::AIR;
-use super::transcript::{transcript_to_field, transcript_to_usize};
+use super::transcript::{transcript_to_field, transcript_to_u32};
 
 pub fn fri_commit_phase<F: IsField + IsFFTField, T: Transcript>(
     number_layers: usize,
@@ -86,7 +86,7 @@ where
     if !fri_layers.is_empty() {
         let number_of_queries = air.options().fri_number_of_queries;
         let iotas = (0..number_of_queries)
-            .map(|_| transcript_to_usize(transcript) % domain_size)
+            .map(|_| (transcript_to_u32(transcript) as usize) % domain_size)
             .collect::<Vec<usize>>();
         let query_list = iotas
             .iter()

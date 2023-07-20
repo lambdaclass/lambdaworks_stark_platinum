@@ -25,7 +25,7 @@ use super::{
     grinding::hash_transcript_with_int_and_get_leading_zeros,
     proof::{options::ProofOptions, stark::StarkProof},
     traits::AIR,
-    transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize},
+    transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_u32},
 };
 
 #[cfg(feature = "test_fiat_shamir")]
@@ -186,9 +186,15 @@ where
 
     // FRI query phase
     // <<<< Send challenges 𝜄ₛ (iota_s)
-    let iota_max = 2_usize.pow(domain.lde_root_order);
-    let iotas = (0..air.options().fri_number_of_queries)
-        .map(|_| transcript_to_usize(transcript) % iota_max)
+    let iota_max: usize = 2_usize.pow(domain.lde_root_order);
+
+    //println!("iota_max: {}", iota_max);
+
+    //let iota_max_debug = format!("iota_max {}", iota_max);
+    //web_sys::console::log_1(&iota_max_debug.into());
+
+    let iotas: Vec<usize> = (0..air.options().fri_number_of_queries)
+        .map(|_| (transcript_to_u32(transcript) as usize) % iota_max)
         .collect();
 
     Challenges {
@@ -566,6 +572,9 @@ where
     A: AIR<Field = F>,
     FieldElement<F>: ByteConversion,
 {
+    //let proof_debug = format!("{proof:?}");
+    //console::log_1(&proof_debug.into());
+    //console::log_1(&"%%%%% Verify there are enough queries".into());
     // Verify there are enough queries
     if proof.query_list.len() < proof_options.fri_number_of_queries {
         return false;
@@ -583,7 +592,16 @@ where
     let challenges =
         step_1_replay_rounds_and_recover_challenges(&air, proof, &domain, &mut transcript);
 
+    //println!("iota_0: {}", challenges.iotas[0]);
+    //println!("iota_0: {}", challenges.iotas[1]);
+
+    //let iota_0 = format!("iota_0 {}", challenges.iotas[0]);
+    //console::log_1(&iota_0.into());
+    //let iota_1 = format!("iota_1 {}", challenges.iotas[1]);
+    //console::log_1(&iota_1.into());
+
     // verify grinding
+    //console::log_1(&"%%%%% verify grinding".into());
     let grinding_factor = air.context().proof_options.grinding_factor;
     if challenges.leading_zeros_count < grinding_factor {
         error!("Grinding factor not satisfied");
@@ -600,6 +618,7 @@ where
     #[cfg(feature = "instruments")]
     let timer2 = Instant::now();
 
+    //console::log_1(&"%%%%% step_2_verify_claimed_composition_polynomial".into());
     if !step_2_verify_claimed_composition_polynomial(&air, proof, &domain, &challenges) {
         error!("Composition Polynomial verification failed");
         return false;
@@ -615,6 +634,7 @@ where
     #[cfg(feature = "instruments")]
     let timer3 = Instant::now();
 
+    //console::log_1(&"%%%%% step_3_verify_fri".into());
     if !step_3_verify_fri(proof, &domain, &challenges) {
         error!("FRI verification failed");
         return false;
@@ -630,6 +650,7 @@ where
     #[cfg(feature = "instruments")]
     let timer4 = Instant::now();
 
+    //console::log_1(&"%%%%% step_4_verify_deep_composition_polynomial".into());
     #[allow(clippy::let_and_return)]
     if !step_4_verify_deep_composition_polynomial(&air, proof, &domain, &challenges) {
         error!("DEEP Composition Polynomial verification failed");
