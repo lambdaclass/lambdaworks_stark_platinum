@@ -23,6 +23,7 @@ use lambdaworks_stark::{
             fibonacci_2_columns::{self, Fibonacci2ColsAIR},
             fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP, FibonacciRAPPublicInputs},
             quadratic_air::{self, QuadraticAIR, QuadraticPublicInputs},
+            quartic_air::{self, QuarticAIR, QuarticPublicInputs},
             simple_fibonacci::{self, FibonacciAIR, FibonacciPublicInputs},
         },
         proof::options::{ProofOptions, SecurityLevel},
@@ -105,6 +106,28 @@ fn test_prove_quadratic() {
 
     let proof = prove::<F, QuadraticAIR<F>>(&trace, &pub_inputs, &proof_options).unwrap();
     assert!(verify::<F, QuadraticAIR<F>>(
+        &proof,
+        &pub_inputs,
+        &proof_options
+    ));
+}
+
+#[test_log::test]
+fn test_prove_quartic() {
+    let trace = quartic_air::quartic_trace(FE::from(3), 8);
+
+    // let proof_options = ProofOptions::default_test_options();
+    let proof_options = ProofOptions {
+        blowup_factor: 4,
+        fri_number_of_queries: 3,
+        coset_offset: 3,
+        grinding_factor: 1,
+    };
+
+    let pub_inputs = QuarticPublicInputs { a0: FE::from(3) };
+
+    let proof = prove::<F, QuarticAIR<F>>(&trace, &pub_inputs, &proof_options).unwrap();
+    assert!(verify::<F, QuarticAIR<F>>(
         &proof,
         &pub_inputs,
         &proof_options
