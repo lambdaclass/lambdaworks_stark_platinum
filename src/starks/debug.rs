@@ -41,7 +41,7 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
 
             if boundary_value != trace_value {
                 ret = false;
-                println!("Boundary constraint inconsistency - Expected value {} in step {} and column {}, found: {}", boundary_value.representative(), step, col, trace_value.representative());
+                error!("Boundary constraint inconsistency - Expected value {} in step {} and column {}, found: {}", boundary_value.representative(), step, col, trace_value.representative());
             }
         });
 
@@ -68,7 +68,7 @@ pub fn validate_trace<F: IsFFTField, A: AIR<Field = F>>(
             // We don't take into account the transition exemptions.
             if step < exemption_steps[i] && eval != &FieldElement::<F>::zero() {
                 ret = false;
-                println!(
+                error!(
                     "Inconsistent evaluation of transition {} in step {} - expected 0, got {}",
                     i,
                     step,
@@ -92,7 +92,7 @@ pub fn check_boundary_polys_divisibility<F: IsFFTField>(
     {
         let (_, b) = poly.clone().long_division_with_remainder(z);
         if b != Polynomial::zero() {
-            println!("Boundary poly {} is not divisible by its zerofier", i);
+            error!("Boundary poly {} is not divisible by its zerofier", i);
         }
     }
 }
