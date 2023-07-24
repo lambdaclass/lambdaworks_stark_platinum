@@ -73,7 +73,6 @@ pub fn build_main_trace(
 
     let mut memory_holes = get_memory_holes(&address_cols, public_input.public_memory.len());
 
-    dbg!(memory_holes.is_empty());
     if !memory_holes.is_empty() {
         fill_memory_holes(&mut main_trace, &mut memory_holes);
     }
@@ -239,7 +238,7 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
     let padding_size = div_ceil(memory_holes.len(), ADDR_COLUMNS.len());
 
     let padding_row_iter = iter::repeat(last_row).take(padding_size);
-    let addr_columns_iter = iter::repeat(ADDR_COLUMNS).take(padding_size);
+    let addr_columns_iter = iter::repeat([FRAME_OP0_ADDR, FRAME_DST_ADDR]).take(padding_size);
     let mut memory_holes_iter = memory_holes.iter();
 
     for (addr_cols, mut padding_row) in iter::zip(addr_columns_iter, padding_row_iter) {

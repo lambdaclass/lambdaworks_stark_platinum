@@ -946,6 +946,21 @@ fn compute_register_constraints(constraints: &mut [FE], frame: &Frame<Stark252Pr
     constraints[NEXT_PC_1] = (&curr[FRAME_T1] - &curr[F_PC_JNZ])
         * (&next[FRAME_PC] - (&curr[FRAME_PC] + frame_inst_size(curr)));
 
+    println!("INST              T0  PCi PCi+1 OP1 JNZ ABS REL RES");
+    println!(
+        "{} {} {} {}   {} {} {} {} {} {}",
+        &curr[FRAME_INST],
+        &curr[FRAME_T0],
+        &curr[FRAME_PC],
+        &next[FRAME_PC],
+        &curr[FRAME_OP1],
+        &curr[F_PC_JNZ],
+        &curr[F_PC_ABS],
+        &curr[F_PC_ABS],
+        &curr[F_PC_REL],
+        &curr[FRAME_RES]
+    );
+
     constraints[NEXT_PC_2] = &curr[FRAME_T0]
         * (&next[FRAME_PC] - (&curr[FRAME_PC] + &curr[FRAME_OP1]))
         + (&one - &curr[F_PC_JNZ]) * &next[FRAME_PC]
@@ -1219,7 +1234,7 @@ mod test {
     fn check_simple_cairo_trace_evaluates_to_zero() {
         let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
         let (main_trace, public_input) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+            generate_prover_args(&program_content, &CairoVersion::V0, &None, false).unwrap();
         let mut trace_polys = main_trace.compute_trace_polys();
         let mut transcript = DefaultTranscript::new();
 
