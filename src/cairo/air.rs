@@ -527,13 +527,11 @@ fn generate_memory_permutation_argument_column(
         .collect();
     FieldElement::inplace_batch_inverse(&mut denom);
     // Returns the cumulative products of the numerators and denominators
-    println!("ACTUAL");
     addresses_original
         .iter()
         .zip(&values_original)
         .zip(&denom)
         .scan(FE::one(), |product, ((a_i, v_i), den_i)| {
-            println!("{a_i} {v_i}");
             let ret = *product;
             *product = &ret * ((z - (a_i + alpha * v_i)) * den_i);
             Some(*product)
@@ -785,13 +783,11 @@ impl AIR for CairoAIR {
 
         let builtin_offset = self.get_builtin_offset();
 
-        println!("EXPECTED");
         let cumulative_product = self
             .pub_inputs
             .public_memory
             .iter()
             .fold(FieldElement::one(), |product, (address, value)| {
-                println!("{address} {value}");
                 product
                     * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value))
             })
