@@ -73,6 +73,7 @@ pub fn build_main_trace(
 
     let mut memory_holes = get_memory_holes(&address_cols, public_input.public_memory.len());
 
+    dbg!(memory_holes.is_empty());
     if !memory_holes.is_empty() {
         fill_memory_holes(&mut main_trace, &mut memory_holes);
     }
@@ -92,7 +93,7 @@ fn add_pub_memory_dummy_accesses<F: IsFFTField>(
     main_trace: &mut TraceTable<F>,
     pub_memory_len: usize,
 ) {
-    pad_with_last_row_and_zeros(main_trace, (pub_memory_len >> 2) + 1, &MEMORY_COLUMNS)
+    pad_with_last_row(main_trace, (pub_memory_len >> 2) + 1)
 }
 
 fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usize) {
@@ -174,13 +175,14 @@ where
 
 /// Fills holes found in the range-checked columns.
 fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldElement<F>>) {
-    let zeros_left = vec![FieldElement::zero(); OFF_DST];
-    let zeros_right = vec![FieldElement::zero(); trace.n_cols - OFF_OP1 - 1];
+    let last_row = trace.last_row();
+    let mut row_left = last_row[..OFF_DST].to_vec();
+    let mut row_right = last_row[FRAME_T0..].to_vec();
 
     for i in (0..holes.len()).step_by(3) {
-        trace.table.append(&mut zeros_left.clone());
+        trace.table.append(&mut row_left);
         trace.table.append(&mut holes[i..(i + 3)].to_vec());
-        trace.table.append(&mut zeros_right.clone());
+        trace.table.append(&mut row_right);
     }
 }
 
@@ -678,6 +680,7 @@ mod test {
             CairoLayout::AllCairo,
             &program_content,
             &CairoVersion::V0,
+            false,
         )
         .unwrap();
         let pub_inputs = PublicInputs::from_regs_and_mem(
@@ -795,6 +798,7 @@ mod test {
             CairoLayout::AllCairo,
             &program_content,
             &CairoVersion::V0,
+            false,
         )
         .unwrap();
 

@@ -112,12 +112,17 @@ fn test_prove_quadratic() {
 }
 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
-fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) {
+fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>, proof_mode: bool) {
     let proof_options = ProofOptions::default_test_options();
 
     let program_content = std::fs::read(file_path).unwrap();
-    let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, output_range).unwrap();
+    let (main_trace, pub_inputs) = generate_prover_args(
+        &program_content,
+        &CairoVersion::V0,
+        output_range,
+        proof_mode,
+    )
+    .unwrap();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
 
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
@@ -128,20 +133,29 @@ fn test_prove_cairo1_program(file_path: &str) {
     let proof_options = ProofOptions::default_test_options();
     let program_content = std::fs::read(file_path).unwrap();
     let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V1, &None).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V1, &None, false).unwrap();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
 
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }
 
-#[test_log::test]
+#[test]
 fn test_prove_cairo_simple_program() {
-    test_prove_cairo_program(&cairo0_program_path("simple_program.json"), &None);
+    test_prove_cairo_program(&cairo0_program_path("simple_program.json"), &None, false);
+}
+
+#[test]
+fn test_prove_cairo_simple_program_proof_mode() {
+    test_prove_cairo_program(
+        &cairo0_program_path("simple_program_proof_mode.json"),
+        &None,
+        true,
+    );
 }
 
 #[test_log::test]
 fn test_prove_cairo_fibonacci_5() {
-    test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None);
+    test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None, false);
 }
 
 #[cfg_attr(feature = "metal", ignore)]
@@ -152,23 +166,31 @@ fn test_prove_cairo_fibonacci_casm() {
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
-    test_prove_cairo_program(&cairo0_program_path("rc_program.json"), &None);
+    test_prove_cairo_program(&cairo0_program_path("rc_program.json"), &None, false);
 }
 
 #[test_log::test]
 fn test_prove_cairo_lt_comparison() {
-    test_prove_cairo_program(&cairo0_program_path("lt_comparison.json"), &None);
+    test_prove_cairo_program(&cairo0_program_path("lt_comparison.json"), &None, false);
 }
 
 #[cfg_attr(feature = "metal", ignore)]
 #[test_log::test]
 fn test_prove_cairo_compare_lesser_array() {
-    test_prove_cairo_program(&cairo0_program_path("compare_lesser_array.json"), &None);
+    test_prove_cairo_program(
+        &cairo0_program_path("compare_lesser_array.json"),
+        &None,
+        false,
+    );
 }
 
 #[test_log::test]
 fn test_prove_cairo_output_and_rc_program() {
-    test_prove_cairo_program(&cairo0_program_path("signed_div_rem.json"), &Some(289..293));
+    test_prove_cairo_program(
+        &cairo0_program_path("signed_div_rem.json"),
+        &Some(289..293),
+        false,
+    );
 }
 
 #[test_log::test]
@@ -207,7 +229,7 @@ fn test_prove_dummy() {
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
     let (main_trace, mut pub_input) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, false).unwrap();
 
     let proof_options = ProofOptions::default_test_options();
 
@@ -227,7 +249,7 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 fn test_verifier_rejects_proof_with_different_range_bounds() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
     let (main_trace, mut pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, false).unwrap();
 
     let proof_options = ProofOptions::default_test_options();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
@@ -247,7 +269,7 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     // range-checked value won't hold, and the verifier will reject the proof.
     let program_content = std::fs::read(cairo0_program_path("rc_program.json")).unwrap();
     let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, false).unwrap();
 
     // The malicious value, we change the previous value to a 35.
     let malicious_rc_value = FE::from(35);
@@ -277,6 +299,7 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
         CairoLayout::Small,
         &program_content,
         &CairoVersion::V0,
+        false,
     )
     .unwrap();
 
@@ -305,7 +328,7 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 fn test_verifier_rejects_proof_with_changed_output() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
     let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, false).unwrap();
 
     // The malicious value, we change the previous value to a 100.
     let malicious_output_value = FE::from(100);
@@ -341,7 +364,7 @@ fn test_verifier_rejects_proof_with_changed_output() {
 fn test_verifier_rejects_proof_with_different_security_params() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
     let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, false).unwrap();
 
     let proof_options_prover = ProofOptions::new_secure(SecurityLevel::Conjecturable80Bits, 3);
 

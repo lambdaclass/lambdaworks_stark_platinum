@@ -27,7 +27,7 @@ fn generate_proof(
     };
 
     let Ok((main_trace, pub_inputs)) =
-        generate_prover_args(&program_content, &cairo_version, &None) else {
+        generate_prover_args(&program_content, &cairo_version, &None, false) else {
             println!("Error generating prover args");
             return None;
         };
