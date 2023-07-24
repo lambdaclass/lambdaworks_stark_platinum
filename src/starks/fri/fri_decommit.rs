@@ -57,7 +57,9 @@ where
         let mut bytes = bytes;
         let mut layers_auth_paths_sym = vec![];
         let layers_auth_paths_sym_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
@@ -70,14 +72,18 @@ where
         }
 
         let felt_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
         bytes = &bytes[8..];
 
         let layers_evaluations_sym_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
@@ -86,16 +92,18 @@ where
         let mut layers_evaluations_sym = vec![];
         for _ in 0..layers_evaluations_sym_len {
             let evaluation = FieldElement::<F>::from_bytes_be(
-                bytes[..felt_len]
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+                bytes
+                    .get(..felt_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             layers_evaluations_sym.push(evaluation);
         }
 
         let layer_evaluations_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
@@ -104,9 +112,9 @@ where
         let mut layers_evaluations = vec![];
         for _ in 0..layer_evaluations_len {
             let evaluation = FieldElement::<F>::from_bytes_be(
-                bytes[..felt_len]
-                    .try_into()
-                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+                bytes
+                    .get(..felt_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
             layers_evaluations.push(evaluation);
@@ -114,7 +122,9 @@ where
 
         let mut layers_auth_paths = vec![];
         let layers_auth_paths_len = usize::from_be_bytes(
-            bytes[..8]
+            bytes
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
                 .try_into()
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );

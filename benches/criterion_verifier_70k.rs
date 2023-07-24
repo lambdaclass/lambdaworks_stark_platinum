@@ -1,5 +1,6 @@
 use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
+    SamplingMode,
 };
 use lambdaworks_math::{
     field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::Deserializable,
@@ -42,15 +43,12 @@ fn verifier_benches(c: &mut Criterion) {
     };
 
     let mut group = c.benchmark_group("VERIFIER");
+    group.sampling_mode(SamplingMode::Flat);
+    group.sample_size(10);
     run_verifier_bench(
         &mut group,
-        "fibonacci/500",
-        &cairo0_proof_path("fibonacci_500.proof"),
-    );
-    run_verifier_bench(
-        &mut group,
-        "fibonacci/1000",
-        &cairo0_proof_path("fibonacci_1000.proof"),
+        "fibonacci/70000",
+        &cairo0_proof_path("fibonacci_70000.proof"),
     );
 }
 
