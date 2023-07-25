@@ -18,7 +18,7 @@ use super::{
             aux_get_last_nim_of_field_element, ApUpdate, CairoInstructionFlags, CairoOpcode,
             DstReg, Op0Reg, Op1Src, PcUpdate, ResLogic,
         },
-        instruction_offsets::InstructionOffsets,
+        instruction_offsets::{InstructionOffsets, OFFX_MASK, OFF_OP0_OFF},
     },
     register_states::RegisterStates,
 };
@@ -92,7 +92,7 @@ fn add_pub_memory_dummy_accesses<F: IsFFTField>(
     main_trace: &mut TraceTable<F>,
     pub_memory_len: usize,
 ) {
-    pad_with_last_row(main_trace, (pub_memory_len >> 2) + 1)
+    pad_with_last_row_and_zeros(main_trace, (pub_memory_len >> 2) + 1, &MEMORY_COLUMNS)
 }
 
 fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usize) {
@@ -245,9 +245,19 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
         // The particular placement of the holes in each column is not important,
         // the only thing that matters is that the addresses are put somewhere in the address
         // columns.
-        addr_cols.iter().for_each(|a_col| {
+        addr_cols.iter().for_each(|&a_col| {
             if let Some(hole) = memory_holes_iter.next() {
-                padding_row[*a_col] = *hole;
+                let old_cell = padding_row[a_col];
+                padding_row[a_col] = *hole;
+                if a_col == FRAME_OP0_ADDR {
+                    let curr_cell = padding_row[a_col];
+                    padding_row[OFF_OP0] += curr_cell - &old_cell;
+                    let new_op0_off = padding_row[OFF_OP0].representative() << OFF_OP0_OFF as usize;
+                    let new_inst = padding_row[FRAME_INST].representative()
+                        & UnsignedInteger::from_u64(!(OFFX_MASK << OFF_OP0_OFF))
+                        | new_op0_off;
+                    padding_row[FRAME_INST] = FE::new(new_inst);
+                }
             }
         });
 

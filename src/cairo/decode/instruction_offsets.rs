@@ -4,9 +4,9 @@ use lambdaworks_math::field::{element::FieldElement, traits::IsField};
 use super::instruction_flags::aux_get_last_nim_of_field_element;
 
 const OFF_DST_OFF: u32 = 0;
-const OFF_OP0_OFF: u32 = 16;
+pub const OFF_OP0_OFF: u32 = 16;
 const OFF_OP1_OFF: u32 = 32;
-const OFFX_MASK: u64 = 0xFFFF;
+pub const OFFX_MASK: u64 = 0xFFFF;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct InstructionOffsets {
