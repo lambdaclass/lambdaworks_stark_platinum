@@ -76,7 +76,11 @@ pub fn build_main_trace(
         fill_memory_holes(&mut main_trace, &mut memory_holes);
     }
 
-    add_pub_memory_dummy_accesses(&mut main_trace, public_input.public_memory.len());
+    add_pub_memory_dummy_accesses(
+        &mut main_trace,
+        public_input.public_memory.len(),
+        memory_holes.len(),
+    );
 
     let trace_len_next_power_of_two = main_trace.n_rows().next_power_of_two();
     let padding = trace_len_next_power_of_two - main_trace.n_rows();
@@ -87,11 +91,14 @@ pub fn build_main_trace(
 
 /// Artificial `(0, 0)` dummy memory accesses must be added for the public memory.
 /// See section 9.8 of the Cairo whitepaper.
-fn add_pub_memory_dummy_accesses<F: IsFFTField>(
-    main_trace: &mut TraceTable<F>,
+fn add_pub_memory_dummy_accesses(
+    main_trace: &mut TraceTable<Stark252PrimeField>,
     pub_memory_len: usize,
+    last_memory_hole_idx: usize,
 ) {
-    pad_with_last_row_and_zeros(main_trace, (pub_memory_len >> 2) + 1, &MEMORY_COLUMNS)
+    for i in 0..(pub_memory_len >> 2) + 1 {
+        add_to_extra_column(last_memory_hole_idx + i, main_trace, &FE::zero());
+    }
 }
 
 fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usize) {
@@ -226,16 +233,20 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
     // The particular placement of the holes in each column is not important,
     // the only thing that matters is that the addresses are put somewhere in the address
     // columns.
-    memory_holes.iter().enumerate().for_each(|(i, &hole)| {
-        let trace_idx = i * trace.n_cols + EXTRA_ADDR;
-        if trace_idx > trace.table.len() {
-            let mut last_row = trace.last_row().to_vec();
-            last_row[EXTRA_ADDR] = hole;
-            trace.table.append(&mut last_row);
-        } else {
-            trace.table[trace_idx] = hole;
-        }
+    memory_holes.iter().enumerate().for_each(|(i, hole)| {
+        add_to_extra_column(i, trace, hole);
     });
+}
+
+fn add_to_extra_column(i: usize, trace: &mut TraceTable<Stark252PrimeField>, value: &FE) {
+    let trace_idx = i * trace.n_cols + EXTRA_ADDR;
+    if trace_idx > trace.table.len() {
+        let mut last_row = trace.last_row().to_vec();
+        last_row[EXTRA_ADDR] = *value;
+        trace.table.append(&mut last_row);
+    } else {
+        trace.table[trace_idx] = *value;
+    }
 }
 
 /// Receives the raw Cairo trace and memory as outputted from the Cairo VM and returns
