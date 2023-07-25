@@ -48,27 +48,30 @@ const MEMORY_INCREASING_0: usize = 31;
 const MEMORY_INCREASING_1: usize = 32;
 const MEMORY_INCREASING_2: usize = 33;
 const MEMORY_INCREASING_3: usize = 34;
+const MEMORY_INCREASING_4: usize = 35;
 
-const MEMORY_CONSISTENCY_0: usize = 35;
-const MEMORY_CONSISTENCY_1: usize = 36;
-const MEMORY_CONSISTENCY_2: usize = 37;
-const MEMORY_CONSISTENCY_3: usize = 38;
+const MEMORY_CONSISTENCY_0: usize = 36;
+const MEMORY_CONSISTENCY_1: usize = 37;
+const MEMORY_CONSISTENCY_2: usize = 38;
+const MEMORY_CONSISTENCY_3: usize = 39;
+const MEMORY_CONSISTENCY_4: usize = 40;
 
-const PERMUTATION_ARGUMENT_0: usize = 39;
-const PERMUTATION_ARGUMENT_1: usize = 40;
-const PERMUTATION_ARGUMENT_2: usize = 41;
-const PERMUTATION_ARGUMENT_3: usize = 42;
+const PERMUTATION_ARGUMENT_0: usize = 41;
+const PERMUTATION_ARGUMENT_1: usize = 42;
+const PERMUTATION_ARGUMENT_2: usize = 43;
+const PERMUTATION_ARGUMENT_3: usize = 44;
+const PERMUTATION_ARGUMENT_4: usize = 45;
 
-const RANGE_CHECK_INCREASING_0: usize = 43;
-const RANGE_CHECK_INCREASING_1: usize = 44;
-const RANGE_CHECK_INCREASING_2: usize = 45;
+const RANGE_CHECK_INCREASING_0: usize = 46;
+const RANGE_CHECK_INCREASING_1: usize = 47;
+const RANGE_CHECK_INCREASING_2: usize = 48;
 
-const RANGE_CHECK_0: usize = 46;
-const RANGE_CHECK_1: usize = 47;
-const RANGE_CHECK_2: usize = 48;
+const RANGE_CHECK_0: usize = 49;
+const RANGE_CHECK_1: usize = 50;
+const RANGE_CHECK_2: usize = 51;
 
 // Range-check builtin value decomposition constraint
-const RANGE_CHECK_BUILTIN: usize = 49;
+const RANGE_CHECK_BUILTIN: usize = 52;
 
 // Frame row identifiers
 //  - Flags
@@ -107,43 +110,47 @@ pub const OFF_OP1: usize = 29;
 pub const FRAME_T0: usize = 30;
 pub const FRAME_T1: usize = 31;
 pub const FRAME_MUL: usize = 32;
-pub const FRAME_SELECTOR: usize = 33;
+pub const EXTRA_ADDR: usize = 33;
+pub const EXTRA_VAL: usize = 34;
 
 // Range-check frame identifiers
-pub const RC_0: usize = 34;
-pub const RC_1: usize = 35;
-pub const RC_2: usize = 36;
-pub const RC_3: usize = 37;
-pub const RC_4: usize = 38;
-pub const RC_5: usize = 39;
-pub const RC_6: usize = 40;
-pub const RC_7: usize = 41;
-pub const RC_VALUE: usize = 42;
+pub const RC_0: usize = 35;
+pub const RC_1: usize = 36;
+pub const RC_2: usize = 37;
+pub const RC_3: usize = 38;
+pub const RC_4: usize = 39;
+pub const RC_5: usize = 40;
+pub const RC_6: usize = 41;
+pub const RC_7: usize = 42;
+pub const RC_VALUE: usize = 43;
 
 // Auxiliary range check columns
-pub const RANGE_CHECK_COL_1: usize = 43;
-pub const RANGE_CHECK_COL_2: usize = 44;
-pub const RANGE_CHECK_COL_3: usize = 45;
+pub const RANGE_CHECK_COL_1: usize = 44;
+pub const RANGE_CHECK_COL_2: usize = 45;
+pub const RANGE_CHECK_COL_3: usize = 46;
 
 // Auxiliary memory columns
-pub const MEMORY_ADDR_SORTED_0: usize = 46;
-pub const MEMORY_ADDR_SORTED_1: usize = 47;
-pub const MEMORY_ADDR_SORTED_2: usize = 48;
-pub const MEMORY_ADDR_SORTED_3: usize = 49;
+pub const MEMORY_ADDR_SORTED_0: usize = 47;
+pub const MEMORY_ADDR_SORTED_1: usize = 48;
+pub const MEMORY_ADDR_SORTED_2: usize = 49;
+pub const MEMORY_ADDR_SORTED_3: usize = 50;
+pub const MEMORY_ADDR_SORTED_4: usize = 51;
 
-pub const MEMORY_VALUES_SORTED_0: usize = 50;
-pub const MEMORY_VALUES_SORTED_1: usize = 51;
-pub const MEMORY_VALUES_SORTED_2: usize = 52;
-pub const MEMORY_VALUES_SORTED_3: usize = 53;
+pub const MEMORY_VALUES_SORTED_0: usize = 52;
+pub const MEMORY_VALUES_SORTED_1: usize = 53;
+pub const MEMORY_VALUES_SORTED_2: usize = 54;
+pub const MEMORY_VALUES_SORTED_3: usize = 55;
+pub const MEMORY_VALUES_SORTED_4: usize = 56;
 
-pub const PERMUTATION_ARGUMENT_COL_0: usize = 54;
-pub const PERMUTATION_ARGUMENT_COL_1: usize = 55;
-pub const PERMUTATION_ARGUMENT_COL_2: usize = 56;
-pub const PERMUTATION_ARGUMENT_COL_3: usize = 57;
+pub const PERMUTATION_ARGUMENT_COL_0: usize = 57;
+pub const PERMUTATION_ARGUMENT_COL_1: usize = 58;
+pub const PERMUTATION_ARGUMENT_COL_2: usize = 59;
+pub const PERMUTATION_ARGUMENT_COL_3: usize = 60;
+pub const PERMUTATION_ARGUMENT_COL_4: usize = 61;
 
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1: usize = 58;
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2: usize = 59;
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3: usize = 60;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1: usize = 62;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2: usize = 63;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3: usize = 64;
 
 // Trace layout
 pub const MEM_P_TRACE_OFFSET: usize = 17;
@@ -591,14 +598,14 @@ impl AIR for CairoAIR {
     ) -> Self {
         debug_assert!(trace_length.is_power_of_two());
 
-        let mut trace_columns = 34 + 3 + 12 + 3;
+        let mut trace_columns = 34 + 3 + 15 + 3;
         let mut transition_degrees = vec![
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
             1, // Flag 15
             3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
-            2, 2, 2, 2, // Increasing memory auxiliary constraints.
-            2, 2, 2, 2, // Consistent memory auxiliary constraints.
-            2, 2, 2, 2, // Permutation auxiliary constraints.
+            2, 2, 2, 2, 2, // Increasing memory auxiliary constraints.
+            2, 2, 2, 2, 2, // Consistent memory auxiliary constraints.
+            2, 2, 2, 2, 2, // Permutation auxiliary constraints.
             2, 2, 2, // range-check increasing constraints.
             2, 2, 2, // range-check permutation argument constraints.
         ];
@@ -608,13 +615,13 @@ impl AIR for CairoAIR {
             0, 0, 0, // operand consraints (3)
             1, 1, 1, 1, 0, 0, // register constraints (6)
             0, 0, 0, 0, 0, // opcode constraints (5)
-            0, 0, 0, 1, // memory continuous (4)
-            0, 0, 0, 1, // memory value consistency (4)
-            0, 0, 0, 1, // memory permutation argument (4)
+            0, 0, 0, 0, 1, // memory continuous (4)
+            0, 0, 0, 0, 1, // memory value consistency (4)
+            0, 0, 0, 0, 1, // memory permutation argument (4)
             0, 0, 1, // range check continuous (3)
             0, 0, 0, // range check permutation argument (3)
         ];
-        let mut num_transition_constraints = 49;
+        let mut num_transition_constraints = 52;
 
         // This is a hacky solution for the moment and must be changed once we start implementing 
         // layouts functionality. The `has_rc_builtin` boolean should not exist, we will know the
@@ -663,10 +670,16 @@ impl AIR for CairoAIR {
         rap_challenges: &Self::RAPChallenges,
     ) -> TraceTable<Self::Field> {
         let addresses_original = main_trace
-            .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
+            .get_cols(&[
+                FRAME_PC,
+                FRAME_DST_ADDR,
+                FRAME_OP0_ADDR,
+                FRAME_OP1_ADDR,
+                EXTRA_ADDR,
+            ])
             .table;
         let values_original = main_trace
-            .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1])
+            .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1, EXTRA_VAL])
             .table;
 
         let (addresses, values) = add_pub_memory_in_public_input_section(
@@ -708,18 +721,21 @@ impl AIR for CairoAIR {
             aux_table.push(offsets_sorted[3 * i]);
             aux_table.push(offsets_sorted[3 * i + 1]);
             aux_table.push(offsets_sorted[3 * i + 2]);
-            aux_table.push(addresses[4 * i]);
-            aux_table.push(addresses[4 * i + 1]);
-            aux_table.push(addresses[4 * i + 2]);
-            aux_table.push(addresses[4 * i + 3]);
-            aux_table.push(values[4 * i]);
-            aux_table.push(values[4 * i + 1]);
-            aux_table.push(values[4 * i + 2]);
-            aux_table.push(values[4 * i + 3]);
-            aux_table.push(permutation_col[4 * i]);
-            aux_table.push(permutation_col[4 * i + 1]);
-            aux_table.push(permutation_col[4 * i + 2]);
-            aux_table.push(permutation_col[4 * i + 3]);
+            aux_table.push(addresses[5 * i]);
+            aux_table.push(addresses[5 * i + 1]);
+            aux_table.push(addresses[5 * i + 2]);
+            aux_table.push(addresses[5 * i + 3]);
+            aux_table.push(addresses[5 * i + 4]);
+            aux_table.push(values[5 * i]);
+            aux_table.push(values[5 * i + 1]);
+            aux_table.push(values[5 * i + 2]);
+            aux_table.push(values[5 * i + 3]);
+            aux_table.push(values[5 * i + 4]);
+            aux_table.push(permutation_col[5 * i]);
+            aux_table.push(permutation_col[5 * i + 1]);
+            aux_table.push(permutation_col[5 * i + 2]);
+            aux_table.push(permutation_col[5 * i + 3]);
+            aux_table.push(permutation_col[5 * i + 4]);
             aux_table.push(range_check_permutation_col[3 * i]);
             aux_table.push(range_check_permutation_col[3 * i + 1]);
             aux_table.push(range_check_permutation_col[3 * i + 2]);
@@ -737,7 +753,9 @@ impl AIR for CairoAIR {
     }
 
     fn number_auxiliary_rap_columns(&self) -> usize {
-        12 + 3 + 3
+        // RANGE_CHECK_COL_i + MEMORY_INCREASING_i + MEMORY_CONSISTENCY_i + PERMUTATION_ARGUMENT_COL_i +
+        // + PERMUTATION_ARGUMENT_RANGE_CHECK_COL_i
+        3 + 5 + 5 + 5 + 3
     }
 
     fn compute_transition(
@@ -977,13 +995,6 @@ fn compute_opcode_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prim
     constraints[ASSERT_EQ] = &curr[F_OPC_AEQ] * (&curr[FRAME_DST] - &curr[FRAME_RES]);
 }
 
-fn enforce_selector(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
-    let curr = frame.get_row(0);
-    for result_cell in constraints.iter_mut().take(ASSERT_EQ + 1).skip(INST) {
-        *result_cell = *result_cell * curr[FRAME_SELECTOR];
-    }
-}
-
 fn memory_is_increasing(
     constraints: &mut [FE],
     frame: &Frame<Stark252PrimeField>,
@@ -1012,9 +1023,15 @@ fn memory_is_increasing(
             - &one);
 
     constraints[MEMORY_INCREASING_3] = (&curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+        - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset])
+        * (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - &one);
+
+    constraints[MEMORY_INCREASING_4] = (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
         - &next[MEMORY_ADDR_SORTED_0 - builtin_offset])
         * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
-            - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
             - &one);
 
     constraints[MEMORY_CONSISTENCY_0] = (&curr[MEMORY_VALUES_SORTED_0 - builtin_offset]
@@ -1036,9 +1053,15 @@ fn memory_is_increasing(
             - &one);
 
     constraints[MEMORY_CONSISTENCY_3] = (&curr[MEMORY_VALUES_SORTED_3 - builtin_offset]
+        - &curr[MEMORY_VALUES_SORTED_4 - builtin_offset])
+        * (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - &one);
+
+    constraints[MEMORY_CONSISTENCY_4] = (&curr[MEMORY_VALUES_SORTED_4 - builtin_offset]
         - &next[MEMORY_VALUES_SORTED_0 - builtin_offset])
         * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
-            - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
             - &one);
 }
 
@@ -1058,26 +1081,31 @@ fn permutation_argument(
     let p1 = &curr[PERMUTATION_ARGUMENT_COL_1 - builtin_offset];
     let p2 = &curr[PERMUTATION_ARGUMENT_COL_2 - builtin_offset];
     let p3 = &curr[PERMUTATION_ARGUMENT_COL_3 - builtin_offset];
+    let p4 = &curr[PERMUTATION_ARGUMENT_COL_4 - builtin_offset];
 
     let ap0_next = &next[MEMORY_ADDR_SORTED_0 - builtin_offset];
     let ap1 = &curr[MEMORY_ADDR_SORTED_1 - builtin_offset];
     let ap2 = &curr[MEMORY_ADDR_SORTED_2 - builtin_offset];
     let ap3 = &curr[MEMORY_ADDR_SORTED_3 - builtin_offset];
+    let ap4 = &curr[MEMORY_ADDR_SORTED_4 - builtin_offset];
 
     let vp0_next = &next[MEMORY_VALUES_SORTED_0 - builtin_offset];
     let vp1 = &curr[MEMORY_VALUES_SORTED_1 - builtin_offset];
     let vp2 = &curr[MEMORY_VALUES_SORTED_2 - builtin_offset];
     let vp3 = &curr[MEMORY_VALUES_SORTED_3 - builtin_offset];
+    let vp4 = &curr[MEMORY_VALUES_SORTED_4 - builtin_offset];
 
     let a0_next = &next[FRAME_PC];
     let a1 = &curr[FRAME_DST_ADDR];
     let a2 = &curr[FRAME_OP0_ADDR];
     let a3 = &curr[FRAME_OP1_ADDR];
+    let a4 = &curr[EXTRA_ADDR];
 
     let v0_next = &next[FRAME_INST];
     let v1 = &curr[FRAME_DST];
     let v2 = &curr[FRAME_OP0];
     let v3 = &curr[FRAME_OP1];
+    let v4 = &curr[EXTRA_VAL];
 
     constraints[PERMUTATION_ARGUMENT_0] =
         (z - (ap1 + alpha * vp1)) * p1 - (z - (a1 + alpha * v1)) * p0;
@@ -1086,7 +1114,9 @@ fn permutation_argument(
     constraints[PERMUTATION_ARGUMENT_2] =
         (z - (ap3 + alpha * vp3)) * p3 - (z - (a3 + alpha * v3)) * p2;
     constraints[PERMUTATION_ARGUMENT_3] =
-        (z - (ap0_next + alpha * vp0_next)) * p0_next - (z - (a0_next + alpha * v0_next)) * p3;
+        (z - (ap4 + alpha * vp4)) * p4 - (z - (a4 + alpha * v4)) * p3;
+    constraints[PERMUTATION_ARGUMENT_4] =
+        (z - (ap0_next + alpha * vp0_next)) * p0_next - (z - (a0_next + alpha * v0_next)) * p4;
 }
 
 fn permutation_argument_range_check(
