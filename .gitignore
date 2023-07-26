@@ -17,3 +17,4 @@ flamegraph.svg
 
 **/.DS_Store
 **/*.swp
+.ipynb_checkpoints
