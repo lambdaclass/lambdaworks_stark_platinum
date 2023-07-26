@@ -1,5 +1,9 @@
 # Starknet Stack Prover Lambdaworks
-This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
+
+This prover is still in development and may contain bugs. It is not intended to be used in production yet. 
+
+Please check issues under security label, and wait for them to be resolved if they are relevant your project.
+
 We expect to have something working in a good state by mid August 2023.
 
 ## Main building blocks
@@ -9,6 +13,7 @@ We expect to have something working in a good state by mid August 2023.
 
 To be added:
 
+-  Add winterfell api compatibility
 -  Add parameters for proving and verifying in the CLI / (Public inputs should be serialized and deserialized)
 -  Add Cairo compilation inside Rust, to prove and verify Cairo1/Cairo2 from the .cairo file, instead of the .casm file
 -  Add last constraint of Range Check Built In
