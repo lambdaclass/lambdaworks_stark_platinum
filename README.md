@@ -4,6 +4,8 @@ This prover is still in development and may contain bugs. It is not intended to 
 
 Please check issues under security label, and wait for them to be resolved if they are relevant your project.
 
+Output builtin is finished, and range check is supported but it's not sound yet. 
+
 We expect to have something working in a good state by mid August 2023.
 
 ## Main building blocks
