@@ -42,6 +42,15 @@ impl<F: IsFFTField> TraceTable<F> {
         }
     }
 
+    pub fn get_cols_appended(&self, columns: &[usize]) -> Vec<FieldElement<F>> {
+        let mut ret = Vec::new();
+        let trace_cols = self.cols();
+        for col in columns {
+            ret.extend_from_slice(&trace_cols[*col]);
+        }
+        ret
+    }
+
     pub fn new_from_cols(cols: &[Vec<FieldElement<F>>]) -> Self {
         let n_rows = cols[0].len();
         debug_assert!(cols.iter().all(|c| c.len() == n_rows));

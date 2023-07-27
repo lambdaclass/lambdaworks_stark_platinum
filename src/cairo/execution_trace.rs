@@ -83,7 +83,7 @@ fn add_pub_memory_dummy_accesses(
     pub_memory_len: usize,
     last_memory_hole_idx: usize,
 ) {
-    for i in 0..(pub_memory_len >> 2) + 1 {
+    for i in 0..pub_memory_len {
         add_to_column(
             last_memory_hole_idx + i,
             main_trace,

@@ -1,5 +1,6 @@
 use std::{collections::HashMap, ops::Range};
 
+use itertools::Itertools;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::{
     errors::DeserializationError,
@@ -674,25 +675,37 @@ impl AIR for CairoAIR {
         main_trace: &TraceTable<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
     ) -> TraceTable<Self::Field> {
-        let addresses_original = main_trace
-            .get_cols(&[
-                FRAME_PC,
-                FRAME_DST_ADDR,
-                FRAME_OP0_ADDR,
-                FRAME_OP1_ADDR,
-                EXTRA_ADDR,
-            ])
-            .table;
-        let values_original = main_trace
-            .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1, EXTRA_VAL])
-            .table;
+        let addresses_original = main_trace.get_cols_appended(&[
+            FRAME_PC,
+            FRAME_DST_ADDR,
+            FRAME_OP0_ADDR,
+            FRAME_OP1_ADDR,
+            EXTRA_ADDR,
+        ]);
+        let values_original =
+            main_trace.get_cols_appended(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1, EXTRA_VAL]);
+
+        println!("ADDRS - VALUES ORIGINAL");
+        std::iter::zip(&addresses_original, &values_original)
+            .for_each(|(a, v)| println!("ADDR: {} - VALUE: {}", a, v));
 
         let (addresses, values) = add_pub_memory_in_public_input_section(
             &addresses_original,
             &values_original,
             &self.pub_inputs,
         );
+
+        println!();
+        println!("ADDRS - VALUES WITH PUB MEMORY");
+        std::iter::zip(&addresses, &values)
+            .for_each(|(a, v)| println!("ADDR: {} - VALUE: {}", a, v));
+
         let (addresses, values) = sort_columns_by_memory_address(addresses, values);
+
+        println!();
+        println!("ADDRS - VALUES SORTED");
+        std::iter::zip(&addresses, &values)
+            .for_each(|(a, v)| println!("ADDR: {} - VALUE: {}", a, v));
 
         let permutation_col = generate_memory_permutation_argument_column(
             addresses_original,
