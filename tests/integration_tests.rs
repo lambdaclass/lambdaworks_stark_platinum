@@ -158,6 +158,15 @@ fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None, false);
 }
 
+#[test_log::test]
+fn test_prove_cairo_fibonacci_5_proof_mode() {
+    test_prove_cairo_program(
+        &cairo0_program_path("fibonacci_500_proof_mode.json"),
+        &None,
+        true,
+    );
+}
+
 #[cfg_attr(feature = "metal", ignore)]
 #[test_log::test]
 fn test_prove_cairo_fibonacci_casm() {

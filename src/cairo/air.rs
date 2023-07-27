@@ -493,15 +493,28 @@ fn add_pub_memory_in_public_input_section(
     let mut a_aux = addresses.clone();
     let mut v_aux = values.to_owned();
 
-    let public_input_section = addresses.len() - public_input.public_memory.len();
+    // let public_input_section = addresses.len() - public_input.public_memory.len();
     let output_range = public_input.memory_segments.get(&MemorySegment::Output);
-    let pub_memory_addrs = get_pub_memory_addrs(output_range, public_input);
 
-    a_aux.splice(public_input_section.., pub_memory_addrs);
-    for i in public_input_section..a_aux.len() {
-        let address = &a_aux[i];
-        v_aux[i] = *public_input.public_memory.get(address).unwrap();
+    let pub_addrs = get_pub_memory_addrs(output_range, public_input);
+    let mut pub_addrs_iter = pub_addrs.iter();
+
+    for (i, a) in a_aux.iter_mut().enumerate() {
+        if a == &FE::zero() {
+            if let Some(pub_addr) = pub_addrs_iter.next() {
+                *a = pub_addr.clone();
+                v_aux[i] = *public_input.public_memory.get(pub_addr).unwrap();
+            } else {
+                break;
+            }
+        }
     }
+
+    // a_aux.splice(public_input_section.., pub_memory_addrs);
+    // for i in public_input_section..a_aux.len() {
+    //     let address = &a_aux[i];
+    //     v_aux[i] = *public_input.public_memory.get(address).unwrap();
+    // }
 
     (a_aux, v_aux)
 }
@@ -675,15 +688,19 @@ impl AIR for CairoAIR {
         main_trace: &TraceTable<Self::Field>,
         rap_challenges: &Self::RAPChallenges,
     ) -> TraceTable<Self::Field> {
-        let addresses_original = main_trace.get_cols_appended(&[
-            FRAME_PC,
-            FRAME_DST_ADDR,
-            FRAME_OP0_ADDR,
-            FRAME_OP1_ADDR,
-            EXTRA_ADDR,
-        ]);
-        let values_original =
-            main_trace.get_cols_appended(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1, EXTRA_VAL]);
+        let addresses_original = main_trace
+            .get_cols(&[
+                FRAME_PC,
+                FRAME_DST_ADDR,
+                FRAME_OP0_ADDR,
+                FRAME_OP1_ADDR,
+                EXTRA_ADDR,
+            ])
+            .table;
+
+        let values_original = main_trace
+            .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1, EXTRA_VAL])
+            .table;
 
         println!("ADDRS - VALUES ORIGINAL");
         std::iter::zip(&addresses_original, &values_original)
