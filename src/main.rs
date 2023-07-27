@@ -70,9 +70,7 @@ fn verify_proof(
 }
 
 fn main() {
-    
-    let proof_options = 
-        ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
+    let proof_options = ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
 
     let args: Vec<String> = env::args().collect();
 
