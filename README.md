@@ -1,4 +1,4 @@
-# Starknet Stack Prover Lambdaworks
+# Lambdaworks Starknet Stack Prover 
 
 This prover is still in development and may contain bugs. It is not intended to be used in production yet. 
 
