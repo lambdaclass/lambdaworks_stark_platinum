@@ -2,6 +2,8 @@
 This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
 We expect to have something working in a good state by mid August 2023.
 
+CLI currently runs with 100 bits of conjecturable security
+
 ## Main building blocks
 
 - [STARKS](https://github.com/lambdaclass/lambdaworks_cairo_prover/tree/main/src/starks): Everything related to STARKs building blocks such as the prover, verifier and FRI.

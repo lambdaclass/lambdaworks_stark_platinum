@@ -2,7 +2,7 @@ use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark2
 use lambdaworks_math::traits::{Deserializable, Serializable};
 use lambdaworks_stark::cairo::air::{generate_cairo_proof, verify_cairo_proof, PublicInputs};
 use lambdaworks_stark::cairo::runner::run::{generate_prover_args, CairoVersion};
-use lambdaworks_stark::starks::proof::options::ProofOptions;
+use lambdaworks_stark::starks::proof::options::{ProofOptions, SecurityLevel};
 use lambdaworks_stark::starks::proof::stark::StarkProof;
 use std::env;
 use std::time::Instant;
@@ -70,7 +70,9 @@ fn verify_proof(
 }
 
 fn main() {
-    let proof_options = ProofOptions::default_test_options();
+    
+    let proof_options = 
+        ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
 
     let args: Vec<String> = env::args().collect();
 
