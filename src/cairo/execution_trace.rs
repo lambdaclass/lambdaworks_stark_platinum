@@ -671,6 +671,7 @@ mod test {
             CairoLayout::AllCairo,
             &program_content,
             &CairoVersion::V0,
+            false,
         )
         .unwrap();
         let pub_inputs = PublicInputs::from_regs_and_mem(
@@ -788,6 +789,7 @@ mod test {
             CairoLayout::AllCairo,
             &program_content,
             &CairoVersion::V0,
+            false,
         )
         .unwrap();
 

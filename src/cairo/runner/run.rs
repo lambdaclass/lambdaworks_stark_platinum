@@ -66,6 +66,7 @@ pub fn run_program(
     layout: CairoLayout,
     program_content: &[u8],
     cairo_version: &CairoVersion,
+    proof_mode: bool,
 ) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
@@ -81,7 +82,7 @@ pub fn run_program(
                 trace_enabled,
                 relocate_mem: true,
                 layout: layout.as_str(),
-                proof_mode: false,
+                proof_mode,
                 secure_run: None,
             };
 
@@ -243,14 +244,20 @@ pub fn generate_prover_args(
     program_content: &[u8],
     cairo_version: &CairoVersion,
     output_range: &Option<Range<u64>>,
+    proof_mode: bool,
 ) -> Result<(TraceTable<Stark252PrimeField>, PublicInputs), Error> {
     let cairo_layout = match cairo_version {
-        CairoVersion::V0 => CairoLayout::Small,
+        CairoVersion::V0 => CairoLayout::Plain,
         CairoVersion::V1 => CairoLayout::Plain,
     };
 
-    let (register_states, memory, program_size, range_check_builtin_range) =
-        run_program(None, cairo_layout, program_content, cairo_version)?;
+    let (register_states, memory, program_size, range_check_builtin_range) = run_program(
+        None,
+        cairo_layout,
+        program_content,
+        cairo_version,
+        proof_mode,
+    )?;
 
     let memory_segments = create_memory_segment_map(range_check_builtin_range, output_range);
 
@@ -317,6 +324,7 @@ mod tests {
             CairoLayout::AllCairo,
             &program_content,
             &CairoVersion::V0,
+            false,
         )
         .unwrap();
 

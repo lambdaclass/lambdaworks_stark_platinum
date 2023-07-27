@@ -27,10 +27,11 @@ fn generate_proof(
     };
 
     let Ok((main_trace, pub_inputs)) =
-        generate_prover_args(&program_content, &cairo_version, &None) else {
-            println!("Error generating prover args");
-            return None;
-        };
+        generate_prover_args(&program_content, &cairo_version, &None, false)
+    else {
+        println!("Error generating prover args");
+        return None;
+    };
 
     println!("  Time spent: {:?} \n", timer.elapsed());
 
@@ -129,7 +130,8 @@ fn main() {
                 println!("Error reading proof from file: {input_path}");
                 return;
             }
-            let Ok(proof) = StarkProof::<Stark252PrimeField>::deserialize(&bytes[0..proof_len]) else {
+            let Ok(proof) = StarkProof::<Stark252PrimeField>::deserialize(&bytes[0..proof_len])
+            else {
                 println!("Error reading proof from file: {input_path}");
                 return;
             };
