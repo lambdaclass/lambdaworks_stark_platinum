@@ -191,6 +191,7 @@ pub struct PublicInputs {
     pub memory_segments: MemorySegmentMap,
     pub public_memory: HashMap<FE, FE>,
     pub num_steps: usize, // number of execution steps
+    pub codelen: usize,   // length of the program segment
 }
 
 impl PublicInputs {
@@ -227,6 +228,7 @@ impl PublicInputs {
             memory_segments: memory_segments.clone(),
             public_memory,
             num_steps: register_states.steps(),
+            codelen,
         }
     }
 }
@@ -281,6 +283,7 @@ impl Serializable for PublicInputs {
         bytes.extend(public_memory_bytes);
 
         bytes.extend(self.num_steps.to_be_bytes());
+        bytes.extend(self.codelen.to_be_bytes());
 
         bytes
     }
@@ -444,6 +447,14 @@ impl Deserializable for PublicInputs {
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
 
+        let codelen = usize::from_be_bytes(
+            bytes
+                .get(0..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+
         Ok(Self {
             pc_init,
             ap_init,
@@ -455,6 +466,7 @@ impl Deserializable for PublicInputs {
             memory_segments,
             public_memory,
             num_steps,
+            codelen,
         })
     }
 }
@@ -494,8 +506,6 @@ fn add_pub_memory_in_public_input_section(
     let output_range = public_input.memory_segments.get(&MemorySegment::Output);
 
     let pub_addrs = get_pub_memory_addrs(output_range, public_input);
-
-    pub_addrs.iter().for_each(|a| println!("PUB ADDR: {}", a));
 
     let mut pub_addrs_iter = pub_addrs.iter();
 
@@ -703,13 +713,6 @@ impl AIR for CairoAIR {
         );
 
         let (addresses, values) = sort_columns_by_memory_address(addresses, values);
-
-        addresses.windows(2).for_each(|w| {
-            if w[1] - w[0] > FE::one() {
-                println!("ADDR_i+1: {} - ADDR_i: {}", w[1], w[0]);
-                println!("DIFF: {}", w[1] - w[0]);
-            }
-        });
 
         let permutation_col = generate_memory_permutation_argument_column(
             addresses_original,
@@ -1326,6 +1329,7 @@ mod test {
             range_check_min: None,
             num_steps: 1,
             memory_segments: MemorySegmentMap::new(),
+            codelen: 3,
         };
 
         let a = vec![
@@ -1388,6 +1392,7 @@ mod test {
             range_check_min: None,
             num_steps: 1,
             memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..22)]),
+            codelen: 3,
         };
 
         let a = vec![
@@ -1535,6 +1540,7 @@ mod test {
             range_check_max in proptest::option::of(any::<u16>()),
             range_check_min in proptest::option::of(any::<u16>()),
             num_steps in any::<usize>(),
+            codelen in any::<usize>(),
         ) -> PublicInputs {
             let public_memory = public_memory.iter().map(|(k, v)| (FE::from(*k), FE::from(*v))).collect();
             let memory_segments = MemorySegmentMap::from([(MemorySegment::Output, 10u64..16u64), (MemorySegment::RangeCheck, 20u64..71u64)]);
@@ -1549,6 +1555,7 @@ mod test {
                 range_check_min,
                 num_steps,
                 memory_segments,
+                codelen,
             }
         }
     }

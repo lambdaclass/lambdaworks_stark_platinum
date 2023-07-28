@@ -247,7 +247,7 @@ pub fn generate_prover_args(
     proof_mode: bool,
 ) -> Result<(TraceTable<Stark252PrimeField>, PublicInputs), Error> {
     let cairo_layout = match cairo_version {
-        CairoVersion::V0 => CairoLayout::Plain,
+        CairoVersion::V0 => CairoLayout::Small,
         CairoVersion::V1 => CairoLayout::Plain,
     };
 

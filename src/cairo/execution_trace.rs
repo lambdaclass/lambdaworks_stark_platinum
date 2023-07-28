@@ -58,7 +58,7 @@ pub fn build_main_trace(
     public_input.range_check_max = Some(rc_max);
     fill_rc_holes(&mut main_trace, &rc_holes);
 
-    let memory_holes = get_memory_holes(&address_cols, public_input.public_memory.len());
+    let memory_holes = get_memory_holes(&address_cols, public_input.codelen);
 
     if !memory_holes.is_empty() {
         fill_memory_holes(&mut main_trace, &memory_holes);
@@ -209,7 +209,6 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
     // columns.
 
     memory_holes.iter().enumerate().for_each(|(i, hole)| {
-        // println!("MEM HOLE: {}", hole);
         add_to_column(i, trace, hole, EXTRA_ADDR);
     });
 }
@@ -235,7 +234,6 @@ pub fn build_cairo_execution_trace(
     public_inputs: &PublicInputs,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
-    println!("STEPS: {}", n_steps);
 
     // Instruction flags and offsets are decoded from the raw instructions and represented
     // by the CairoInstructionFlags and InstructionOffsets as an intermediate representation
