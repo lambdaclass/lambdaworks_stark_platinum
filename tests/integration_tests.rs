@@ -149,6 +149,15 @@ fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None, false);
 }
 
+#[test_log::test]
+fn test_prove_cairo_fibonacci_5_proof_mode() {
+    test_prove_cairo_program(
+        &cairo0_program_path("fibonacci_5_proof_mode.json"),
+        &None,
+        true,
+    );
+}
+
 #[cfg_attr(feature = "metal", ignore)]
 #[test_log::test]
 fn test_prove_cairo_fibonacci_casm() {
@@ -165,6 +174,15 @@ fn test_prove_cairo_lt_comparison() {
     test_prove_cairo_program(&cairo0_program_path("lt_comparison.json"), &None, false);
 }
 
+#[test_log::test]
+fn test_prove_cairo_lt_comparison_proof_mode() {
+    test_prove_cairo_program(
+        &cairo0_program_path("lt_comparison_proof_mode.json"),
+        &None,
+        true,
+    );
+}
+
 #[cfg_attr(feature = "metal", ignore)]
 #[test_log::test]
 fn test_prove_cairo_compare_lesser_array() {
@@ -175,12 +193,31 @@ fn test_prove_cairo_compare_lesser_array() {
     );
 }
 
+#[cfg_attr(feature = "metal", ignore)]
+#[test_log::test]
+fn test_prove_cairo_compare_lesser_array_proof_mode() {
+    test_prove_cairo_program(
+        &cairo0_program_path("compare_lesser_array_proof_mode.json"),
+        &None,
+        true,
+    );
+}
+
 #[test_log::test]
 fn test_prove_cairo_output_and_rc_program() {
     test_prove_cairo_program(
         &cairo0_program_path("signed_div_rem.json"),
         &Some(289..293),
         false,
+    );
+}
+
+#[test_log::test]
+fn test_prove_cairo_output_and_rc_program_proof_mode() {
+    test_prove_cairo_program(
+        &cairo0_program_path("signed_div_rem_proof_mode.json"),
+        &Some(297..301),
+        true,
     );
 }
 

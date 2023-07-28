@@ -104,27 +104,6 @@ fn pad_with_last_row<F: IsFFTField>(trace: &mut TraceTable<F>, number_rows: usiz
     trace.table.append(&mut pad);
 }
 
-/// Pads trace with its last row, with the exception of the columns specified in
-/// `zero_pad_columns`, where the pad is done with zeros.
-/// If the last row is [2, 1, 4, 1] and the zero pad columns are [0, 1], then the
-/// padding will be [0, 0, 4, 1].
-fn pad_with_last_row_and_zeros<F: IsFFTField>(
-    trace: &mut TraceTable<F>,
-    number_rows: usize,
-    zero_pad_columns: &[usize],
-) {
-    let mut last_row = trace.last_row().to_vec();
-    for exemption_column in zero_pad_columns.iter() {
-        last_row[*exemption_column] = FieldElement::zero();
-    }
-    let mut pad: Vec<_> = std::iter::repeat(&last_row)
-        .take(number_rows)
-        .flatten()
-        .cloned()
-        .collect();
-    trace.table.append(&mut pad);
-}
-
 /// Gets holes from the range-checked columns. These holes must be filled for the
 /// permutation range-checks, as can be read in section 9.9 of the Cairo whitepaper.
 /// Receives the trace and the indexes of the range-checked columns.
@@ -228,7 +207,9 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
     // The particular placement of the holes in each column is not important,
     // the only thing that matters is that the addresses are put somewhere in the address
     // columns.
+
     memory_holes.iter().enumerate().for_each(|(i, hole)| {
+        // println!("MEM HOLE: {}", hole);
         add_to_column(i, trace, hole, EXTRA_ADDR);
     });
 }
@@ -254,6 +235,7 @@ pub fn build_cairo_execution_trace(
     public_inputs: &PublicInputs,
 ) -> TraceTable<Stark252PrimeField> {
     let n_steps = raw_trace.steps();
+    println!("STEPS: {}", n_steps);
 
     // Instruction flags and offsets are decoded from the raw instructions and represented
     // by the CairoInstructionFlags and InstructionOffsets as an intermediate representation

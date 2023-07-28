@@ -1,5 +1,3 @@
-use std::{collections::HashMap, ops::Range};
-
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::{
     errors::DeserializationError,
@@ -8,6 +6,7 @@ use lambdaworks_math::{
     },
     traits::{ByteConversion, Deserializable, Serializable},
 };
+use std::{collections::HashMap, ops::Range};
 
 use crate::{
     starks::{
@@ -201,12 +200,12 @@ impl PublicInputs {
     pub fn from_regs_and_mem(
         register_states: &RegisterStates,
         memory: &CairoMemory,
-        program_size: usize,
+        codelen: usize,
         memory_segments: &MemorySegmentMap,
     ) -> Self {
         let output_range = memory_segments.get(&MemorySegment::Output);
 
-        let mut public_memory = (1..=program_size as u64)
+        let mut public_memory = (1..=codelen as u64)
             .map(|i| (FE::from(i), *memory.get(&i).unwrap()))
             .collect::<HashMap<FE, FE>>();
 
@@ -495,6 +494,9 @@ fn add_pub_memory_in_public_input_section(
     let output_range = public_input.memory_segments.get(&MemorySegment::Output);
 
     let pub_addrs = get_pub_memory_addrs(output_range, public_input);
+
+    pub_addrs.iter().for_each(|a| println!("PUB ADDR: {}", a));
+
     let mut pub_addrs_iter = pub_addrs.iter();
 
     for (i, a) in a_aux.iter_mut().enumerate() {
@@ -627,8 +629,8 @@ impl AIR for CairoAIR {
             1, 1, 1, 1, 0, 0, // register constraints (6)
             0, 0, 0, 0, 0, // opcode constraints (5)
             0, 0, 0, 0, 1, // memory continuous (4)
-            0, 0, 0, 1, // memory value consistency (4)
-            0, 0, 0, 1, // memory permutation argument (4)
+            0, 0, 0, 0, 1, // memory value consistency (4)
+            0, 0, 0, 0, 1, // memory permutation argument (4)
             0, 0, 0, 1, // range check continuous (3)
             0, 0, 0, 0, // range check permutation argument (3)
         ];
@@ -689,6 +691,7 @@ impl AIR for CairoAIR {
                 EXTRA_ADDR,
             ])
             .table;
+
         let values_original = main_trace
             .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1, EXTRA_VAL])
             .table;
@@ -698,7 +701,15 @@ impl AIR for CairoAIR {
             &values_original,
             &self.pub_inputs,
         );
+
         let (addresses, values) = sort_columns_by_memory_address(addresses, values);
+
+        addresses.windows(2).for_each(|w| {
+            if w[1] - w[0] > FE::one() {
+                println!("ADDR_i+1: {} - ADDR_i: {}", w[1], w[0]);
+                println!("DIFF: {}", w[1] - w[0]);
+            }
+        });
 
         let permutation_col = generate_memory_permutation_argument_column(
             addresses_original,
@@ -838,10 +849,12 @@ impl AIR for CairoAIR {
                     * (&rap_challenges.z_memory - (address + &rap_challenges.alpha_memory * value))
             })
             .inv();
+
         let permutation_final = rap_challenges
             .z_memory
             .pow(self.pub_inputs.public_memory.len())
             * cumulative_product;
+
         let permutation_final_constraint = BoundaryConstraint::new(
             PERMUTATION_ARGUMENT_COL_4 - builtin_offset,
             final_index,
@@ -860,6 +873,7 @@ impl AIR for CairoAIR {
             0,
             FieldElement::from(self.pub_inputs.range_check_min.unwrap() as u64),
         );
+
         let range_check_max = BoundaryConstraint::new(
             RANGE_CHECK_COL_4 - builtin_offset,
             final_index,
@@ -1037,9 +1051,15 @@ fn memory_is_increasing(
             - &one);
 
     constraints[MEMORY_INCREASING_3] = (&curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+        - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset])
+        * (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - &one);
+
+    constraints[MEMORY_INCREASING_4] = (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
         - &next[MEMORY_ADDR_SORTED_0 - builtin_offset])
         * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
-            - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
             - &one);
 
     constraints[MEMORY_CONSISTENCY_0] = (&curr[MEMORY_VALUES_SORTED_0 - builtin_offset]
@@ -1067,12 +1087,6 @@ fn memory_is_increasing(
             - &one);
 
     constraints[MEMORY_CONSISTENCY_4] = (&curr[MEMORY_VALUES_SORTED_4 - builtin_offset]
-        - &curr[MEMORY_ADDR_SORTED_0 - builtin_offset])
-        * (&curr[MEMORY_ADDR_SORTED_0 - builtin_offset]
-            - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
-            - &one);
-
-    constraints[MEMORY_INCREASING_4] = (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
         - &next[MEMORY_VALUES_SORTED_0 - builtin_offset])
         * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
             - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
@@ -1149,19 +1163,16 @@ fn permutation_argument_range_check(
         * (&curr[RANGE_CHECK_COL_2 - builtin_offset]
             - &curr[RANGE_CHECK_COL_1 - builtin_offset]
             - &one);
-
     constraints[RANGE_CHECK_INCREASING_1] = (&curr[RANGE_CHECK_COL_2 - builtin_offset]
         - &curr[RANGE_CHECK_COL_3 - builtin_offset])
         * (&curr[RANGE_CHECK_COL_3 - builtin_offset]
             - &curr[RANGE_CHECK_COL_2 - builtin_offset]
             - &one);
-
     constraints[RANGE_CHECK_INCREASING_2] = (&curr[RANGE_CHECK_COL_3 - builtin_offset]
         - &curr[RANGE_CHECK_COL_4 - builtin_offset])
         * (&curr[RANGE_CHECK_COL_4 - builtin_offset]
             - &curr[RANGE_CHECK_COL_3 - builtin_offset]
             - &one);
-
     constraints[RANGE_CHECK_INCREASING_3] = (&curr[RANGE_CHECK_COL_4 - builtin_offset]
         - &next[RANGE_CHECK_COL_1 - builtin_offset])
         * (&next[RANGE_CHECK_COL_1 - builtin_offset]
@@ -1187,7 +1198,7 @@ fn permutation_argument_range_check(
     constraints[RANGE_CHECK_0] = (z - ap1) * p1 - (z - a1) * p0;
     constraints[RANGE_CHECK_1] = (z - ap2) * p2 - (z - a2) * p1;
     constraints[RANGE_CHECK_2] = (z - ap3) * p3 - (z - a3) * p2;
-    constraints[RANGE_CHECK_3] = (z - ap0_next) * p0_next - (z - a0_next) * p3
+    constraints[RANGE_CHECK_3] = (z - ap0_next) * p0_next - (z - a0_next) * p3;
 }
 
 fn frame_inst_size(frame_row: &[FE]) -> FE {
