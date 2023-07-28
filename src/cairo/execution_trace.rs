@@ -1,16 +1,3 @@
-use std::{iter, ops::Range};
-
-use crate::{cairo::air::*, starks::trace::TraceTable, FE};
-use lambdaworks_math::{
-    field::{
-        element::FieldElement,
-        fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
-        traits::{IsFFTField, IsPrimeField},
-    },
-    unsigned_integer::element::UnsignedInteger,
-};
-use num_integer::div_ceil;
-
 use super::{
     cairo_mem::CairoMemory,
     decode::{
@@ -22,6 +9,16 @@ use super::{
     },
     register_states::RegisterStates,
 };
+use crate::{cairo::air::*, starks::trace::TraceTable, FE};
+use lambdaworks_math::{
+    field::{
+        element::FieldElement,
+        fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+        traits::{IsFFTField, IsPrimeField},
+    },
+    unsigned_integer::element::UnsignedInteger,
+};
+use std::ops::Range;
 
 // MAIN TRACE LAYOUT
 // -----------------------------------------------------------------------------------------
@@ -600,7 +597,8 @@ fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
 mod test {
     use crate::cairo::{
         cairo_layout::CairoLayout,
-        runner::run::{cairo0_program_path, run_program, CairoVersion},
+        runner::run::{run_program, CairoVersion},
+        tests::utils::cairo0_program_path,
     };
 
     use super::*;

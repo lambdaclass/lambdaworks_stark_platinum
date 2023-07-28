@@ -17,3 +17,6 @@ pub mod verifier;
 
 /// Configurations of the Prover available in compile time
 pub mod config;
+
+#[cfg(test)]
+pub mod tests;

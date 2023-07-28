@@ -1,143 +1,28 @@
-use std::ops::Range;
+use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 
-use lambdaworks_math::field::fields::{
-    fft_friendly::stark_252_prime_field::Stark252PrimeField as F,
-    u64_prime_field::{F17, FE17},
-};
-use lambdaworks_stark::{
+use crate::{
     cairo::{
         air::{
-            generate_cairo_proof, verify_cairo_proof, MemorySegment, MemorySegmentMap,
+            generate_cairo_proof, verify_cairo_proof, CairoAIR, MemorySegment, MemorySegmentMap,
             PublicInputs, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR, FRAME_PC,
         },
         cairo_layout::CairoLayout,
         execution_trace::build_main_trace,
-        runner::run::{
-            cairo0_program_path, cairo1_program_path, generate_prover_args, run_program,
-            CairoVersion,
+        runner::run::{generate_prover_args, run_program, CairoVersion},
+        tests::utils::{
+            cairo0_program_path, cairo1_program_path, test_prove_cairo1_program,
+            test_prove_cairo_program,
         },
     },
     starks::{
-        example::{
-            dummy_air::{self, DummyAIR},
-            fibonacci_2_columns::{self, Fibonacci2ColsAIR},
-            fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP, FibonacciRAPPublicInputs},
-            quadratic_air::{self, QuadraticAIR, QuadraticPublicInputs},
-            simple_fibonacci::{self, FibonacciAIR, FibonacciPublicInputs},
-        },
+        debug::validate_trace,
+        domain::Domain,
         proof::options::{ProofOptions, SecurityLevel},
-        prover::prove,
         trace::TraceTable,
-        verifier::verify,
+        traits::AIR,
     },
     FE,
 };
-
-#[test_log::test]
-fn test_prove_fib() {
-    let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
-
-    let proof_options = ProofOptions::default_test_options();
-
-    let pub_inputs = FibonacciPublicInputs {
-        a0: FE::one(),
-        a1: FE::one(),
-    };
-
-    let proof = prove::<F, FibonacciAIR<F>>(&trace, &pub_inputs, &proof_options).unwrap();
-    assert!(verify::<F, FibonacciAIR<F>>(
-        &proof,
-        &pub_inputs,
-        &proof_options
-    ));
-}
-
-#[test_log::test]
-fn test_prove_fib17() {
-    let trace = simple_fibonacci::fibonacci_trace([FE17::from(1), FE17::from(1)], 4);
-
-    let proof_options = ProofOptions {
-        blowup_factor: 2,
-        fri_number_of_queries: 7,
-        coset_offset: 3,
-        grinding_factor: 1,
-    };
-
-    let pub_inputs = FibonacciPublicInputs {
-        a0: FE17::one(),
-        a1: FE17::one(),
-    };
-
-    let proof = prove::<F17, FibonacciAIR<F17>>(&trace, &pub_inputs, &proof_options).unwrap();
-    assert!(verify::<F17, FibonacciAIR<F17>>(
-        &proof,
-        &pub_inputs,
-        &proof_options
-    ));
-}
-
-#[test_log::test]
-fn test_prove_fib_2_cols() {
-    let trace = fibonacci_2_columns::fibonacci_trace_2_columns([FE::from(1), FE::from(1)], 16);
-
-    let proof_options = ProofOptions::default_test_options();
-
-    let pub_inputs = FibonacciPublicInputs {
-        a0: FE::one(),
-        a1: FE::one(),
-    };
-
-    let proof = prove::<F, Fibonacci2ColsAIR<F>>(&trace, &pub_inputs, &proof_options).unwrap();
-    assert!(verify::<F, Fibonacci2ColsAIR<F>>(
-        &proof,
-        &pub_inputs,
-        &proof_options
-    ));
-}
-
-#[test_log::test]
-fn test_prove_quadratic() {
-    let trace = quadratic_air::quadratic_trace(FE::from(3), 4);
-
-    let proof_options = ProofOptions::default_test_options();
-
-    let pub_inputs = QuadraticPublicInputs { a0: FE::from(3) };
-
-    let proof = prove::<F, QuadraticAIR<F>>(&trace, &pub_inputs, &proof_options).unwrap();
-    assert!(verify::<F, QuadraticAIR<F>>(
-        &proof,
-        &pub_inputs,
-        &proof_options
-    ));
-}
-
-/// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
-fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>, proof_mode: bool) {
-    let proof_options = ProofOptions::default_test_options();
-
-    let program_content = std::fs::read(file_path).unwrap();
-    let (main_trace, pub_inputs) = generate_prover_args(
-        &program_content,
-        &CairoVersion::V0,
-        output_range,
-        proof_mode,
-    )
-    .unwrap();
-    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
-
-    assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
-}
-
-/// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
-fn test_prove_cairo1_program(file_path: &str) {
-    let proof_options = ProofOptions::default_test_options();
-    let program_content = std::fs::read(file_path).unwrap();
-    let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V1, &None, false).unwrap();
-    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
-
-    assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
-}
 
 #[test_log::test]
 fn test_prove_cairo_simple_program() {
@@ -219,38 +104,6 @@ fn test_prove_cairo_output_and_rc_program_proof_mode() {
         &Some(297..301),
         true,
     );
-}
-
-#[test_log::test]
-fn test_prove_rap_fib() {
-    let steps = 16;
-    let trace = fibonacci_rap_trace([FE::from(1), FE::from(1)], steps);
-
-    let proof_options = ProofOptions::default_test_options();
-
-    let pub_inputs = FibonacciRAPPublicInputs {
-        steps,
-        a0: FE::one(),
-        a1: FE::one(),
-    };
-
-    let proof = prove::<F, FibonacciRAP<F>>(&trace, &pub_inputs, &proof_options).unwrap();
-    assert!(verify::<F, FibonacciRAP<F>>(
-        &proof,
-        &pub_inputs,
-        &proof_options
-    ));
-}
-
-#[test_log::test]
-fn test_prove_dummy() {
-    let trace_length = 16;
-    let trace = dummy_air::dummy_trace(trace_length);
-
-    let proof_options = ProofOptions::default_test_options();
-
-    let proof = prove::<F, DummyAIR>(&trace, &(), &proof_options).unwrap();
-    assert!(verify::<F, DummyAIR>(&proof, &(), &proof_options));
 }
 
 #[test_log::test]
@@ -404,5 +257,32 @@ fn test_verifier_rejects_proof_with_different_security_params() {
         &proof,
         &pub_inputs,
         &proof_options_verifier
+    ));
+}
+
+#[test]
+fn check_simple_cairo_trace_evaluates_to_zero() {
+    let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
+    let (main_trace, public_input) =
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, false).unwrap();
+    let mut trace_polys = main_trace.compute_trace_polys();
+    let mut transcript = DefaultTranscript::new();
+
+    let proof_options = ProofOptions::default_test_options();
+    let cairo_air = CairoAIR::new(main_trace.n_rows(), &public_input, &proof_options);
+    let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
+
+    let aux_trace = cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges);
+    let aux_polys = aux_trace.compute_trace_polys();
+
+    trace_polys.extend_from_slice(&aux_polys);
+
+    let domain = Domain::new(&cairo_air);
+
+    assert!(validate_trace(
+        &cairo_air,
+        &trace_polys,
+        &domain,
+        &rap_challenges
     ));
 }

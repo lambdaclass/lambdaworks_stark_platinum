@@ -285,20 +285,6 @@ fn create_memory_segment_map(
     memory_segments
 }
 
-pub fn cairo0_program_path(program_name: &str) -> String {
-    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const CAIRO0_BASE_REL_PATH: &str = "/cairo_programs/cairo0/";
-    let program_base_path = CARGO_DIR.to_string() + CAIRO0_BASE_REL_PATH;
-    program_base_path + program_name
-}
-
-pub fn cairo1_program_path(program_name: &str) -> String {
-    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const CAIRO1_BASE_REL_PATH: &str = "/cairo_programs/cairo1/";
-    let program_base_path = CARGO_DIR.to_string() + CAIRO1_BASE_REL_PATH;
-    program_base_path + program_name
-}
-
 #[cfg(test)]
 mod tests {
     use crate::cairo::execution_trace::build_cairo_execution_trace;

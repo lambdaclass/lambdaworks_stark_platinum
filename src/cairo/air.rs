@@ -1254,15 +1254,9 @@ pub fn verify_cairo_proof(
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
-    use crate::{
-        cairo::runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
-        starks::{debug::validate_trace, domain::Domain},
-    };
-    use proptest::{prelude::*, prop_compose, proptest};
-
     use super::*;
-    use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
     use lambdaworks_math::field::element::FieldElement;
+    use proptest::{prelude::*, prop_compose, proptest};
 
     #[test]
     fn range_check_eval_works() {
@@ -1283,33 +1277,6 @@ mod test {
 
         row[super::RC_VALUE] = FE::from_hex("00010001000100010001000100010001").unwrap();
         assert_eq!(evaluate_range_check_builtin_constraint(&row), FE::zero());
-    }
-
-    #[test]
-    fn check_simple_cairo_trace_evaluates_to_zero() {
-        let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
-        let (main_trace, public_input) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None, false).unwrap();
-        let mut trace_polys = main_trace.compute_trace_polys();
-        let mut transcript = DefaultTranscript::new();
-
-        let proof_options = ProofOptions::default_test_options();
-        let cairo_air = CairoAIR::new(main_trace.n_rows(), &public_input, &proof_options);
-        let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
-
-        let aux_trace = cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges);
-        let aux_polys = aux_trace.compute_trace_polys();
-
-        trace_polys.extend_from_slice(&aux_polys);
-
-        let domain = Domain::new(&cairo_air);
-
-        assert!(validate_trace(
-            &cairo_air,
-            &trace_polys,
-            &domain,
-            &rap_challenges
-        ));
     }
 
     #[test]

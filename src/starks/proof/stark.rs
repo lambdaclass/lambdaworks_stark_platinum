@@ -451,7 +451,8 @@ mod test {
     use crate::{
         cairo::{
             air::{generate_cairo_proof, verify_cairo_proof},
-            runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
+            runner::run::{generate_prover_args, CairoVersion},
+            tests::utils::cairo0_program_path,
         },
         starks::{
             config::{Commitment, COMMITMENT_SIZE},
