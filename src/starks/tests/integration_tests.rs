@@ -1,8 +1,3 @@
-use lambdaworks_math::field::fields::{
-    fft_friendly::stark_252_prime_field::Stark252PrimeField as F,
-    u64_prime_field::{F17, FE17},
-};
-
 use crate::{
     starks::{
         example::{
@@ -17,6 +12,10 @@ use crate::{
         verifier::verify,
     },
     FE,
+};
+use lambdaworks_math::field::fields::{
+    fft_friendly::stark_252_prime_field::Stark252PrimeField as F,
+    u64_prime_field::{F17, FE17},
 };
 
 #[test_log::test]

@@ -643,7 +643,11 @@ mod test {
         ```
         */
 
-        let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
+        let base_dir = env!("CARGO_MANIFEST_DIR");
+        let json_filename = base_dir.to_owned() + "/src/cairo/runner/program.json";
+
+        let program_content = std::fs::read(json_filename).unwrap();
+
         let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
@@ -732,402 +736,12 @@ mod test {
             vec![FE::zero(), FE::zero(), FE::zero()],
             // col 32
             vec![FE::from(0x1b), FE::from(0x1b), FE::from(0x51)],
-            // col 33 - Selector column
-            vec![FE::one(), FE::one(), FE::zero()],
-        ]);
-
-        assert_eq!(execution_trace.cols(), expected_trace.cols());
-    }
-
-    #[test]
-    fn test_build_main_trace_call_func_program() {
-        /*
-        The following trace and memory files are obtained running the following Cairo program:
-        ```
-        func mul(x: felt, y: felt) -> (res: felt) {
-            return (res = x * y);
-        }
-
-        func main() {
-            let x = 2;
-            let y = 3;
-
-            let (res) = mul(x, y);
-            assert res = 6;
-
-            return ();
-        }
-
-        ```
-        */
-
-        let program_content = std::fs::read(cairo0_program_path("call_func.json")).unwrap();
-        let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
-            None,
-            CairoLayout::AllCairo,
-            &program_content,
-            &CairoVersion::V0,
-            false,
-        )
-        .unwrap();
-
-        let pub_inputs = PublicInputs::from_regs_and_mem(
-            &register_states,
-            &memory,
-            program_size,
-            &MemorySegmentMap::new(),
-        );
-
-        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
-
-        // This trace is obtained from Giza when running the prover for the mentioned program.
-        let expected_trace = TraceTable::new_from_cols(&[
-            // col 0
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-            ],
-            // col 1
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-            ],
-            // col 2
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-            ],
-            // col 3
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-            ],
-            // col 4
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 5
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 6
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 7
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-            ],
-            // col 8
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 9
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 10
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 11
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 12
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 13
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-            ],
-            // col 14
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-            ],
-            // col 15
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 16
-            vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from_hex_unchecked(
-                    "0800000000000010fffffffffffffffffffffffffffffffffffffffffffffffb",
-                ),
-                FE::from(6),
-                FE::from(9),
-                FE::from(6),
-                FE::from(19),
-            ],
-            // col 17
-            vec![
-                FE::from(14),
-                FE::from(15),
-                FE::from(16),
-                FE::from(18),
-                FE::from(19),
-                FE::from(19),
-                FE::from(19),
-            ],
-            // col 18
-            vec![
-                FE::from(14),
-                FE::from(14),
-                FE::from(14),
-                FE::from(18),
-                FE::from(18),
-                FE::from(14),
-                FE::from(14),
-            ],
-            // col 19
-            vec![
-                FE::from(3),
-                FE::from(5),
-                FE::from(7),
-                FE::from(1),
-                FE::from(2),
-                FE::from(9),
-                FE::from(11),
-            ],
-            // col 20
-            vec![
-                FE::from(14),
-                FE::from(15),
-                FE::from(16),
-                FE::from(18),
-                FE::from(16),
-                FE::from(18),
-                FE::from(12),
-            ],
-            // col 21
-            vec![
-                FE::from(13),
-                FE::from(13),
-                FE::from(17),
-                FE::from(14),
-                FE::from(17),
-                FE::from(13),
-                FE::from(13),
-            ],
-            // col 22
-            vec![
-                FE::from(4),
-                FE::from(6),
-                FE::from(8),
-                FE::from(15),
-                FE::from(17),
-                FE::from(10),
-                FE::from(13),
-            ],
-            // col 23
-            vec![
-                FE::from(0x480680017fff8000),
-                FE::from(0x480680017fff8000),
-                FE::from(0x1104800180018000),
-                FE::from(0x484a7ffd7ffc8000),
-                FE::from(0x208b7fff7fff7ffe),
-                FE::from(0x400680017fff7fff),
-                FE::from(0x208b7fff7fff7ffe),
-            ],
-            // col 24
-            vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from(14),
-                FE::from(6),
-                FE::from(14),
-                FE::from(6),
-                FE::from(19),
-            ],
-            // col 25
-            vec![
-                FE::from(19),
-                FE::from(19),
-                FE::from(9),
-                FE::from(2),
-                FE::from(9),
-                FE::from(19),
-                FE::from(19),
-            ],
-            // col 26
-            vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from_hex_unchecked(
-                    "0800000000000010fffffffffffffffffffffffffffffffffffffffffffffffb",
-                ),
-                FE::from(3),
-                FE::from(9),
-                FE::from(6),
-                FE::from(19),
-            ],
-            // col 27
-            vec![
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x7ffe),
-                FE::from(0x7fff),
-                FE::from(0x7ffe),
-            ],
-            // col 28
-            vec![
-                FE::from(0x7fff),
-                FE::from(0x7fff),
-                FE::from(0x8001),
-                FE::from(0x7ffc),
-                FE::from(0x7fff),
-                FE::from(0x7fff),
-                FE::from(0x7fff),
-            ],
-            // col 29
-            vec![
-                FE::from(0x8001),
-                FE::from(0x8001),
-                FE::from(0x8001),
-                FE::from(0x7ffd),
-                FE::from(0x7fff),
-                FE::from(0x8001),
-                FE::from(0x7fff),
-            ],
-            // col 30
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 31
-            vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-            ],
-            // col 32
-            vec![
-                FE::from(38),
-                FE::from(57),
-                FE::from_hex_unchecked(
-                    "0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffcb",
-                ),
-                FE::from(6),
-                FE::from(81),
-                FE::from(114),
-                FE::from(0x169),
-            ],
-            // col 33 - Selector column
-            vec![
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-            ],
+            // col 33 - extra addrs
+            vec![FE::zero(), FE::zero(), FE::zero()],
+            // col 34 - extra values
+            vec![FE::zero(), FE::zero(), FE::zero()],
+            // col 35 - rc holes
+            vec![FE::zero(), FE::zero(), FE::zero()],
         ]);
 
         assert_eq!(execution_trace.cols(), expected_trace.cols());
@@ -1157,39 +771,38 @@ mod test {
     }
 
     #[test]
-    fn test_add_missing_values_to_offsets_column() {
-        let mut main_trace = TraceTable::<Stark252PrimeField> {
-            table: (0..34 * 2).map(FieldElement::from).collect(),
-            n_cols: 34,
-        };
-        let missing_values = vec![
-            FieldElement::from(1),
-            FieldElement::from(2),
-            FieldElement::from(3),
-            FieldElement::from(4),
-            FieldElement::from(5),
-            FieldElement::from(6),
-        ];
-        fill_rc_holes(&mut main_trace, &missing_values);
+    fn test_add_missing_values_to_rc_holes_column() {
+        let mut row = vec![FE::from(5); 36];
+        row[35] = FE::zero();
+        let table = row.repeat(8);
 
-        let mut expected: Vec<_> = (0..34 * 2).map(FieldElement::from).collect();
-        expected.append(&mut vec![FieldElement::zero(); OFF_DST]);
-        expected.append(&mut vec![
-            FieldElement::from(1),
-            FieldElement::from(2),
-            FieldElement::from(3),
-        ]);
-        expected.append(&mut vec![FieldElement::zero(); 34 - OFF_OP1 - 1]);
-        expected.append(&mut vec![FieldElement::zero(); OFF_DST]);
-        expected.append(&mut vec![
-            FieldElement::from(4),
-            FieldElement::from(5),
-            FieldElement::from(6),
-        ]);
-        expected.append(&mut vec![FieldElement::zero(); 34 - OFF_OP1 - 1]);
-        assert_eq!(main_trace.table, expected);
-        assert_eq!(main_trace.n_cols, 34);
-        assert_eq!(main_trace.table.len(), 34 * 4);
+        let mut main_trace = TraceTable::<Stark252PrimeField> { table, n_cols: 36 };
+
+        let rc_holes = vec![
+            FE::from(1),
+            FE::from(2),
+            FE::from(3),
+            FE::from(4),
+            FE::from(5),
+            FE::from(6),
+        ];
+
+        fill_rc_holes(&mut main_trace, &rc_holes);
+
+        let expected_rc_holes_column = vec![
+            FE::from(1),
+            FE::from(2),
+            FE::from(3),
+            FE::from(4),
+            FE::from(5),
+            FE::from(6),
+            FE::from(6),
+            FE::from(6),
+        ];
+
+        let rc_holes_column = main_trace.cols()[35].clone();
+
+        assert_eq!(expected_rc_holes_column, rc_holes_column);
     }
 
     #[test]

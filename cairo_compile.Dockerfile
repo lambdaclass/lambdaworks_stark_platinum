@@ -11,4 +11,4 @@ RUN apt-get update && \
   typeguard==2.13.3 \
   cairo-lang==0.11.0
 
-CMD ["cairo-compile"]
+ENTRYPOINT ["cairo-compile"]

@@ -1,6 +1,7 @@
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use lambdaworks_math::traits::{Deserializable, Serializable};
 use lambdaworks_stark::cairo::air::{generate_cairo_proof, verify_cairo_proof, PublicInputs};
+use lambdaworks_stark::cairo::cairo_layout::CairoLayout;
 use lambdaworks_stark::cairo::runner::run::{generate_prover_args, CairoVersion};
 use lambdaworks_stark::starks::proof::options::ProofOptions;
 use lambdaworks_stark::starks::proof::stark::StarkProof;
@@ -26,8 +27,11 @@ fn generate_proof(
         return None;
     };
 
+    // FIXME: We should set this through the CLI in the future
+    let layout = CairoLayout::Plain;
+
     let Ok((main_trace, pub_inputs)) =
-        generate_prover_args(&program_content, &cairo_version, &None, false)
+        generate_prover_args(&program_content, &cairo_version, &None, layout)
     else {
         println!("Error generating prover args");
         return None;

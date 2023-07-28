@@ -650,7 +650,7 @@ impl AIR for CairoAIR {
         // layouts functionality. The `has_rc_builtin` boolean should not exist, we will know the
         // layout from the Cairo public inputs directly, and the number of constraints and columns
         // will be enforced through that.
-        let has_rc_builtin = !pub_inputs.memory_segments.is_empty();
+        let has_rc_builtin = pub_inputs.memory_segments.get(&MemorySegment::RangeCheck).is_some();
         if has_rc_builtin {
             trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
             transition_degrees.push(1); // Range check builtin constraint

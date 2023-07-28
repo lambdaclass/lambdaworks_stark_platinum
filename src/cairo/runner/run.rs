@@ -213,24 +213,34 @@ pub fn run_program(
 
     let data_len = runner.get_program().data_len();
 
-    // get range start and end
-    let range_check = vm
-        .get_range_check_builtin()
-        .map(|builtin| {
-            let (idx, stop_offset) = builtin.get_memory_segment_addresses();
-            let stop_offset = stop_offset.unwrap_or_default();
-            let range_check_base =
-                (0..idx).fold(1, |acc, i| acc + vm.get_segment_size(i).unwrap_or_default());
-            let range_check_end = range_check_base + stop_offset;
+    let range_check_builtin_included = runner
+        .get_program()
+        .iter_builtins()
+        .any(|builtin| builtin.name() == "range_check_builtin");
 
-            (range_check_base, range_check_end)
-        })
-        .ok();
+    // get range start and end
+    let range_check = if range_check_builtin_included {
+        vm.get_range_check_builtin()
+            .map(|builtin| {
+                let (idx, stop_offset) = builtin.get_memory_segment_addresses();
+                let stop_offset = stop_offset.unwrap_or_default();
+                let range_check_base =
+                    (0..idx).fold(1, |acc, i| acc + vm.get_segment_size(i).unwrap_or_default());
+                let range_check_end = range_check_base + stop_offset;
+
+                (range_check_base, range_check_end)
+            })
+            .ok()
+    } else {
+        None
+    };
 
     let range_check_builtin_range = range_check.map(|(start, end)| Range {
         start: start as u64,
         end: end as u64,
     });
+
+    println!("RANGE CHECK: {:?}", range_check_builtin_range);
 
     Ok((
         register_states,
@@ -244,20 +254,10 @@ pub fn generate_prover_args(
     program_content: &[u8],
     cairo_version: &CairoVersion,
     output_range: &Option<Range<u64>>,
-    proof_mode: bool,
+    layout: CairoLayout,
 ) -> Result<(TraceTable<Stark252PrimeField>, PublicInputs), Error> {
-    let cairo_layout = match cairo_version {
-        CairoVersion::V0 => CairoLayout::Small,
-        CairoVersion::V1 => CairoLayout::Plain,
-    };
-
-    let (register_states, memory, program_size, range_check_builtin_range) = run_program(
-        None,
-        cairo_layout,
-        program_content,
-        cairo_version,
-        proof_mode,
-    )?;
+    let (register_states, memory, program_size, range_check_builtin_range) =
+        run_program(None, layout, program_content, cairo_version, true)?;
 
     let memory_segments = create_memory_segment_map(range_check_builtin_range, output_range);
 
@@ -395,8 +395,12 @@ mod tests {
             vec![FE::zero(), FE::zero(), FE::zero()],
             // col 32
             vec![FE::from(0x1b), FE::from(0x1b), FE::from(0x51)],
-            // col 33 - Selector column
-            vec![FE::one(), FE::one(), FE::zero()],
+            // col 33 - extra addrs
+            vec![FE::zero(), FE::zero(), FE::zero()],
+            // col 34 - extra values
+            vec![FE::zero(), FE::zero(), FE::zero()],
+            // col 35 - rc holes
+            vec![FE::zero(), FE::zero(), FE::zero()],
         ]);
 
         assert_eq!(execution_trace.cols(), expected_trace.cols());
