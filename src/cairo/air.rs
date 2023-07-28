@@ -1290,7 +1290,6 @@ mod test {
             public_memory: HashMap::from([
                 (FieldElement::one(), FieldElement::from(10)),
                 (FieldElement::from(2), FieldElement::from(20)),
-                (FieldElement::from(3), FieldElement::from(30)),
             ]),
             range_check_max: None,
             range_check_min: None,
@@ -1302,14 +1301,22 @@ mod test {
         let a = vec![
             FieldElement::one(),
             FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
             FieldElement::zero(),
-            FieldElement::zero(),
-            FieldElement::zero(),
+            FieldElement::from(2),
+            FieldElement::from(2),
+            FieldElement::from(2),
+            FieldElement::from(2),
             FieldElement::zero(),
         ];
         let v = vec![
             FieldElement::one(),
             FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
             FieldElement::zero(),
             FieldElement::zero(),
             FieldElement::zero(),
@@ -1321,10 +1328,14 @@ mod test {
             vec![
                 FieldElement::one(),
                 FieldElement::one(),
-                FieldElement::zero(),
+                FieldElement::one(),
+                FieldElement::one(),
                 FieldElement::one(),
                 FieldElement::from(2),
-                FieldElement::from(3)
+                FieldElement::from(2),
+                FieldElement::from(2),
+                FieldElement::from(2),
+                FieldElement::from(2),
             ]
         );
         assert_eq!(
@@ -1333,9 +1344,13 @@ mod test {
                 FieldElement::one(),
                 FieldElement::one(),
                 FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(10),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(20),
-                FieldElement::from(30)
             ]
         );
     }
@@ -1351,27 +1366,33 @@ mod test {
             public_memory: HashMap::from([
                 (FieldElement::one(), FieldElement::from(10)),
                 (FieldElement::from(2), FieldElement::from(20)),
-                (FieldElement::from(3), FieldElement::from(30)),
                 (FieldElement::from(20), FieldElement::from(40)),
-                (FieldElement::from(21), FieldElement::from(50)),
             ]),
             range_check_max: None,
             range_check_min: None,
             num_steps: 1,
-            memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..22)]),
+            memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..21)]),
             codelen: 3,
         };
 
         let a = vec![
             FieldElement::one(),
             FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
             FieldElement::zero(),
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
             FieldElement::zero(),
-            FieldElement::zero(),
-            FieldElement::zero(),
-            FieldElement::zero(),
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
             FieldElement::zero(),
         ];
+
         let v = vec![
             FieldElement::one(),
             FieldElement::one(),
@@ -1381,19 +1402,34 @@ mod test {
             FieldElement::zero(),
             FieldElement::zero(),
             FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
         ];
+
         let (ap, vp) = add_pub_memory_in_public_input_section(&a, &v, &dummy_public_input);
         assert_eq!(
             ap,
             vec![
                 FieldElement::one(),
                 FieldElement::one(),
-                FieldElement::zero(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
                 FieldElement::one(),
                 FieldElement::from(2),
-                FieldElement::from(3),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
                 FieldElement::from(20),
-                FieldElement::from(21)
             ]
         );
         assert_eq!(
@@ -1402,11 +1438,18 @@ mod test {
                 FieldElement::one(),
                 FieldElement::one(),
                 FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(10),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(20),
-                FieldElement::from(30),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(40),
-                FieldElement::from(50)
             ]
         );
     }
