@@ -1,4 +1,4 @@
-# Lambdaworks Platinum Stark Prover 
+# Lambdaworks Stark Platinum Prover 
 
 <img src="https://github.com/lambdaclass/lambdaworks_stark_platinum/assets/569014/ad8d7943-f011-49b5-a0c5-f07e5ef4133e" alt="drawing" width="300"/>
 
