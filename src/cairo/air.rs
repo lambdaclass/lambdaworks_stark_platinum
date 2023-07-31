@@ -625,7 +625,7 @@ impl AIR for CairoAIR {
         let mut transition_degrees = vec![
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
             1, // Flag 15
-            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Other constraints.
             2, 2, 2, 2, 2, // Increasing memory auxiliary constraints.
             2, 2, 2, 2, 2, // Consistent memory auxiliary constraints.
             2, 2, 2, 2, 2, // Permutation auxiliary constraints.
