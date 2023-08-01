@@ -495,6 +495,14 @@ pub struct CairoRAPChallenges {
     pub z_range_check: FieldElement<Stark252PrimeField>,
 }
 
+/// Receives two slices corresponding to the accessed addresses and values, filled with
+/// the memory holes and with the (0, 0) public memory dummy accesses.
+/// Each (address, value) public memory pair is written in a (0, 0) dummy access until
+/// there is no one left.
+///
+/// NOTE: At the end of this process there might be some additional (0, 0) dummy accesses
+/// that were not overwritten. This is not a problem as long as all the public memory pairs
+/// have been written.
 fn add_pub_memory_in_public_input_section(
     addresses: &[FE],
     values: &[FE],
@@ -506,15 +514,21 @@ fn add_pub_memory_in_public_input_section(
     let output_range = public_input.memory_segments.get(&MemorySegment::Output);
 
     let pub_addrs = get_pub_memory_addrs(output_range, public_input);
-
     let mut pub_addrs_iter = pub_addrs.iter();
 
+    // Iterate over addresses
     for (i, a) in a_aux.iter_mut().enumerate() {
+        // When address `0` is found, it means it corresponds to a dummy access.
         if a == &FE::zero() {
+            // While there are public memory addresses left, overwrite the dummy
+            // (addr, value) accesses with the real public memory pairs.
             if let Some(pub_addr) = pub_addrs_iter.next() {
                 *a = *pub_addr;
                 v_aux[i] = *public_input.public_memory.get(pub_addr).unwrap();
             } else {
+                // When there are no public memory pairs left to write, break the
+                // loop and return the (addr, value) pairs with dummy accesses
+                // overwritten.
                 break;
             }
         }
