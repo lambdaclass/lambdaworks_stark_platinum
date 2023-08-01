@@ -41,6 +41,7 @@ fn cairo_benches(c: &mut Criterion) {
         &proof_options,
         "lambdaworks/fibonacci/1000",
         &cairo0_program_path("fibonacci_1000.json"),
+        CairoLayout::Plain,
     );
     run_giza_bench(
         &mut group,
@@ -56,6 +57,7 @@ fn cairo_benches(c: &mut Criterion) {
         &proof_options,
         "lambdaworks/fibonacci/10000",
         &cairo0_program_path("fibonacci_10000.json"),
+        CairoLayout::Plain,
     );
     run_giza_bench(
         &mut group,
@@ -81,10 +83,11 @@ fn run_lambdaworks_bench(
     proof_options: &options::ProofOptions,
     benchname: &str,
     program_path: &str,
+    layout: CairoLayout,
 ) {
     let program_content = std::fs::read(program_path).unwrap();
     let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, layout).unwrap();
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| {
