@@ -66,35 +66,35 @@ docker_build_cairo_compiler:
 	docker build -f cairo_compile.Dockerfile -t cairo .	
 	
 docker_compile_cairo:
-	docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(OUTPUT)
+	docker run -v $(ROOT_DIR):/pwd cairo --proof_mode /pwd/$(PROGRAM) > $(OUTPUT)
 
 target/release/lambdaworks-stark: 
 	cargo build --release
 	
 docker_compile_and_run_all: target/release/lambdaworks-stark
 	@echo "Compiling program with docker"
-	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
+	@docker run -v $(ROOT_DIR):/pwd cairo --proof_mode /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
 	@cargo run --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
 	@rm $(PROGRAM).json
 
 docker_compile_and_prove: target/release/lambdaworks-stark
 	@echo "Compiling program with docker"
-	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
+	@docker run -v $(ROOT_DIR):/pwd cairo --proof_mode /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
 	@cargo run --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
 	@rm $(PROGRAM).json
 
 compile_and_run_all: target/release/lambdaworks-stark
 	@echo "Compiling program with cairo-compile"
-	@cairo-compile $(PROGRAM) > $(PROGRAM).json
+	@cairo-compile --proof_mode $(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
 	@cargo run --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
 	@rm $(PROGRAM).json
 
 compile_and_prove: target/release/lambdaworks-stark
 	@echo "Compiling program with cairo-compile"
-	@cairo-compile $(PROGRAM) > $(PROGRAM).json
+	@cairo-compile --proof_mode $(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
 	@cargo run --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
 	@rm $(PROGRAM).json

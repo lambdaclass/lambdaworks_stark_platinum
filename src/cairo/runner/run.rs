@@ -240,8 +240,6 @@ pub fn run_program(
         end: end as u64,
     });
 
-    println!("RANGE CHECK: {:?}", range_check_builtin_range);
-
     Ok((
         register_states,
         cairo_mem,
