@@ -1,11 +1,13 @@
-use lambdaworks_math::field::{fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, element::FieldElement};
+use lambdaworks_math::field::{
+    element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+};
 
 pub mod constraints;
 pub mod context;
 #[cfg(debug_assertions)]
 pub mod debug;
 pub mod domain;
-pub mod example;
+pub mod examples;
 pub mod frame;
 pub mod fri;
 pub mod grinding;
@@ -17,8 +19,11 @@ pub mod transcript;
 pub mod utils;
 pub mod verifier;
 
+#[cfg(test)]
+pub mod tests;
+
 /// Configurations of the Prover available in compile time
 pub mod config;
 
 pub type PrimeField = Stark252PrimeField;
-pub type FE = FieldElement<PrimeField>;
+pub type Felt252 = FieldElement<PrimeField>;

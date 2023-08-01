@@ -1,10 +1,8 @@
+use crate::cairo_layout::CairoLayout;
+use crate::cairo_mem::CairoMemory;
+use crate::register_states::RegisterStates;
+
 use super::vec_writer::VecWriter;
-use crate::cairo::air::{MemorySegment, MemorySegmentMap, PublicInputs};
-use crate::cairo::cairo_layout::CairoLayout;
-use crate::cairo::cairo_mem::CairoMemory;
-use crate::cairo::execution_trace::build_main_trace;
-use crate::cairo::register_states::RegisterStates;
-use crate::starks::trace::TraceTable;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
@@ -262,39 +260,9 @@ pub fn generate_prover_args(
     Ok((main_trace, pub_inputs))
 }
 
-fn create_memory_segment_map(
-    range_check_builtin_range: Option<Range<u64>>,
-    output_range: &Option<Range<u64>>,
-) -> MemorySegmentMap {
-    let mut memory_segments = MemorySegmentMap::new();
-
-    if let Some(range_check_builtin_range) = range_check_builtin_range {
-        memory_segments.insert(MemorySegment::RangeCheck, range_check_builtin_range);
-    }
-    if let Some(output_range) = output_range {
-        memory_segments.insert(MemorySegment::Output, output_range.clone());
-    }
-
-    memory_segments
-}
-
-pub fn cairo0_program_path(program_name: &str) -> String {
-    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const CAIRO0_BASE_REL_PATH: &str = "/cairo_programs/cairo0/";
-    let program_base_path = CARGO_DIR.to_string() + CAIRO0_BASE_REL_PATH;
-    program_base_path + program_name
-}
-
-pub fn cairo1_program_path(program_name: &str) -> String {
-    const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
-    const CAIRO1_BASE_REL_PATH: &str = "/cairo_programs/cairo1/";
-    let program_base_path = CARGO_DIR.to_string() + CAIRO1_BASE_REL_PATH;
-    program_base_path + program_name
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::cairo::execution_trace::build_cairo_execution_trace;
+    use crate::execution_trace::build_cairo_execution_trace;
 
     use super::*;
     use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::MontgomeryConfigStark252PrimeField;

@@ -1,11 +1,11 @@
-#[cfg(feature = "instruments")]
+#[cfg(Felt252ature = "instruments")]
 use std::time::Instant;
 
-#[cfg(not(feature = "test_fiat_shamir"))]
+#[cfg(not(Felt252ature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 
-#[cfg(feature = "test_fiat_shamir")]
+#[cfg(Felt252ature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
 
 use lambdaworks_math::fft::{errors::FFTError, polynomial::FFTPoly};
@@ -16,7 +16,7 @@ use lambdaworks_math::{
 };
 use log::info;
 
-#[cfg(feature = "parallel")]
+#[cfg(Felt252ature = "parallel")]
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::debug::validate_trace;
@@ -24,7 +24,6 @@ use crate::transcript::sample_z_ood;
 
 //use crate::constraints::boundary::BoundaryConstraint;
 #[cfg(debug_assertions)]
-
 use super::config::{BatchedMerkleTree, Commitment};
 use super::constraints::evaluator::ConstraintEvaluator;
 use super::domain::Domain;
@@ -83,12 +82,12 @@ struct Round4<F: IsFFTField> {
     nonce: u64,
 }
 
-#[cfg(feature = "test_fiat_shamir")]
+#[cfg(Felt252ature = "test_fiat_shamir")]
 fn round_0_transcript_initialization() -> TestTranscript {
     TestTranscript::new()
 }
 
-#[cfg(not(feature = "test_fiat_shamir"))]
+#[cfg(not(Felt252ature = "test_fiat_shamir"))]
 fn round_0_transcript_initialization() -> DefaultTranscript {
     // TODO: add strong fiat shamir
     DefaultTranscript::new()
@@ -167,9 +166,9 @@ where
     F: IsFFTField,
     FieldElement<F>: Send + Sync,
 {
-    #[cfg(not(feature = "parallel"))]
+    #[cfg(not(Felt252ature = "parallel"))]
     let trace_polys_iter = trace_polys.iter();
-    #[cfg(feature = "parallel")]
+    #[cfg(Felt252ature = "parallel")]
     let trace_polys_iter = trace_polys.par_iter();
 
     trace_polys_iter
@@ -542,27 +541,27 @@ where
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     info!("Started proof generation...");
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("- Started round 0: Transcript Initialization");
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let timer0 = Instant::now();
 
     let air = A::new(main_trace.n_rows(), pub_inputs, proof_options);
     let domain = Domain::new(&air);
     let mut transcript = round_0_transcript_initialization();
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let elapsed0 = timer0.elapsed();
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("  Time spent: {:?}", elapsed0);
 
     // ===================================
     // ==========|   Round 1   |==========
     // ===================================
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("- Started round 1: RAP");
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let timer1 = Instant::now();
 
     let round_1_result = round_1_randomized_air_with_preprocessing::<F, A, _>(
@@ -580,18 +579,18 @@ where
         &round_1_result.rap_challenges,
     );
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let elapsed1 = timer1.elapsed();
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("  Time spent: {:?}", elapsed1);
 
     // ===================================
     // ==========|   Round 2   |==========
     // ===================================
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("- Started round 2: Compute composition polynomial");
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let timer2 = Instant::now();
 
     // <<<< Receive challenges: 𝛼_j^B
@@ -635,18 +634,18 @@ where
     // >>>> Send commitments: [H₁], [H₂]
     transcript.append(&round_2_result.composition_poly_root);
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let elapsed2 = timer2.elapsed();
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("  Time spent: {:?}", elapsed2);
 
     // ===================================
     // ==========|   Round 3   |==========
     // ===================================
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("- Started round 3: Evaluate polynomial in out of domain elements");
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let timer3 = Instant::now();
 
     // <<<< Receive challenge: z
@@ -684,18 +683,18 @@ where
         }
     }
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let elapsed3 = timer3.elapsed();
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("  Time spent: {:?}", elapsed3);
 
     // ===================================
     // ==========|   Round 4   |==========
     // ===================================
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("- Started round 4: FRI");
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let timer4 = Instant::now();
 
     // Part of this round is running FRI, which is an interactive
@@ -711,12 +710,12 @@ where
         &mut transcript,
     );
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     let elapsed4 = timer4.elapsed();
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     println!("  Time spent: {:?}", elapsed4);
 
-    #[cfg(feature = "instruments")]
+    #[cfg(Felt252ature = "instruments")]
     {
         let total_time = elapsed1 + elapsed2 + elapsed3 + elapsed4;
         println!(
@@ -769,8 +768,9 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        example::simple_fibonacci::{self, FibonacciPublicInputs},
-        proof::options::ProofOptions, FE,
+        examples::simple_fibonacci::{self, FibonacciPublicInputs},
+        proof::options::ProofOptions,
+        Felt252,
     };
 
     use super::*;
@@ -785,10 +785,10 @@ mod tests {
     #[test]
     fn test_domain_constructor() {
         let pub_inputs = FibonacciPublicInputs {
-            a0: FE::one(),
-            a1: FE::one(),
+            a0: Felt252::one(),
+            a1: Felt252::one(),
         };
-        let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
+        let trace = simple_fibonacci::fibonacci_trace([Felt252::from(1), Felt252::from(1)], 8);
         let trace_length = trace.n_rows();
         let coset_offset = 3;
         let blowup_factor: usize = 2;
@@ -834,10 +834,10 @@ mod tests {
 
     #[test]
     fn test_evaluate_polynomial_on_lde_domain_on_trace_polys() {
-        let trace = simple_fibonacci::fibonacci_trace([FE::from(1), FE::from(1)], 8);
+        let trace = simple_fibonacci::fibonacci_trace([Felt252::from(1), Felt252::from(1)], 8);
         let trace_length = trace.n_rows();
         let trace_polys = trace.compute_trace_polys();
-        let coset_offset = FE::from(3);
+        let coset_offset = Felt252::from(3);
         let blowup_factor: usize = 2;
         let domain_size = 8;
 
@@ -862,15 +862,15 @@ mod tests {
 
     #[test]
     fn test_evaluate_polynomial_on_lde_domain_edge_case() {
-        let poly = Polynomial::new_monomial(FE::one(), 8);
+        let poly = Polynomial::new_monomial(Felt252::one(), 8);
         let blowup_factor: usize = 4;
         let domain_size: usize = 8;
-        let offset = FE::from(3);
+        let offset = Felt252::from(3);
         let evaluations =
             evaluate_polynomial_on_lde_domain(&poly, blowup_factor, domain_size, &offset).unwrap();
         assert_eq!(evaluations.len(), domain_size * blowup_factor);
 
-        let primitive_root: FE = Stark252PrimeField::get_primitive_root_of_unity(
+        let primitive_root: Felt252 = Stark252PrimeField::get_primitive_root_of_unity(
             (domain_size * blowup_factor).trailing_zeros() as u64,
         )
         .unwrap();
