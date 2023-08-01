@@ -5,6 +5,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use lambdaworks_stark::{
     cairo::{
         air::generate_cairo_proof,
+        cairo_layout::CairoLayout,
         runner::run::{generate_prover_args, CairoVersion},
     },
     starks::proof::options::{self, SecurityLevel},
