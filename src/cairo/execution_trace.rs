@@ -158,7 +158,7 @@ fn fill_rc_holes(trace: &mut TraceTable<Stark252PrimeField>, holes: &[FE]) {
     offsets.sort_by_key(|x| x.representative());
     let greatest_offset = offsets.last().unwrap();
     (holes.len()..trace.n_rows()).for_each(|i| {
-        add_to_column(i, trace, &greatest_offset, RC_HOLES);
+        add_to_column(i, trace, greatest_offset, RC_HOLES);
     });
 }
 
@@ -598,7 +598,6 @@ mod test {
     use crate::cairo::{
         cairo_layout::CairoLayout,
         runner::run::{run_program, CairoVersion},
-        tests::utils::cairo0_program_path,
     };
 
     use super::*;

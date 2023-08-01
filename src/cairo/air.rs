@@ -496,11 +496,11 @@ pub struct CairoRAPChallenges {
 }
 
 fn add_pub_memory_in_public_input_section(
-    addresses: &Vec<FE>,
+    addresses: &[FE],
     values: &[FE],
     public_input: &PublicInputs,
 ) -> (Vec<FE>, Vec<FE>) {
-    let mut a_aux = addresses.clone();
+    let mut a_aux = addresses.to_owned();
     let mut v_aux = values.to_owned();
 
     let output_range = public_input.memory_segments.get(&MemorySegment::Output);
@@ -512,7 +512,7 @@ fn add_pub_memory_in_public_input_section(
     for (i, a) in a_aux.iter_mut().enumerate() {
         if a == &FE::zero() {
             if let Some(pub_addr) = pub_addrs_iter.next() {
-                *a = pub_addr.clone();
+                *a = *pub_addr;
                 v_aux[i] = *public_input.public_memory.get(pub_addr).unwrap();
             } else {
                 break;

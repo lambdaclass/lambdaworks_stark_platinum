@@ -4,6 +4,7 @@ use criterion::{
 use lambdaworks_stark::{
     cairo::{
         air::generate_cairo_proof,
+        cairo_layout::CairoLayout,
         runner::run::{generate_prover_args, CairoVersion},
     },
     starks::proof::options::{ProofOptions, SecurityLevel},
@@ -31,11 +32,13 @@ fn cairo_benches(c: &mut Criterion) {
         &mut group,
         "fibonacci/500",
         &cairo0_program_path("fibonacci_500.json"),
+        CairoLayout::Plain,
     );
     run_cairo_bench(
         &mut group,
         "fibonacci/1000",
         &cairo0_program_path("fibonacci_1000.json"),
+        CairoLayout::Plain,
     );
 }
 
@@ -46,11 +49,16 @@ fn cairo0_program_path(program_name: &str) -> String {
     program_base_path + program_name
 }
 
-fn run_cairo_bench(group: &mut BenchmarkGroup<'_, WallTime>, benchname: &str, program_path: &str) {
+fn run_cairo_bench(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    benchname: &str,
+    program_path: &str,
+    layout: CairoLayout,
+) {
     let program_content = std::fs::read(program_path).unwrap();
     let proof_options = ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
     let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+        generate_prover_args(&program_content, &CairoVersion::V0, &None, layout).unwrap();
     println!("Generated main trace with {} rows", main_trace.n_rows());
 
     group.bench_function(benchname, |bench| {

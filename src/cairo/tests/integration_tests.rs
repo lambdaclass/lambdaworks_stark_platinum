@@ -9,10 +9,7 @@ use crate::{
         cairo_layout::CairoLayout,
         execution_trace::build_main_trace,
         runner::run::{generate_prover_args, run_program, CairoVersion},
-        tests::utils::{
-            cairo0_program_path, cairo1_program_path, test_prove_cairo1_program,
-            test_prove_cairo_program,
-        },
+        tests::utils::{cairo0_program_path, test_prove_cairo_program},
     },
     starks::{
         debug::validate_trace,
@@ -36,15 +33,6 @@ fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None, layout);
 }
 
-// #[test_log::test]
-// fn test_prove_cairo_fibonacci_5_proof_mode() {
-//     test_prove_cairo_program(
-//         &cairo0_program_path("fibonacci_5_proof_mode.json"),
-//         &None,
-//         true,
-//     );
-// }
-
 // #[cfg_attr(feature = "metal", ignore)]
 // #[test_log::test]
 // fn test_prove_cairo_fibonacci_casm() {
@@ -64,15 +52,6 @@ fn test_prove_cairo_lt_comparison() {
     test_prove_cairo_program(&cairo0_program_path("lt_comparison.json"), &None, layout);
 }
 
-// #[test_log::test]
-// fn test_prove_cairo_lt_comparison_proof_mode() {
-//     test_prove_cairo_program(
-//         &cairo0_program_path("lt_comparison_proof_mode.json"),
-//         &None,
-//         true,
-//     );
-// }
-
 #[cfg_attr(feature = "metal", ignore)]
 #[test_log::test]
 fn test_prove_cairo_compare_lesser_array() {
@@ -84,16 +63,6 @@ fn test_prove_cairo_compare_lesser_array() {
     );
 }
 
-// #[cfg_attr(feature = "metal", ignore)]
-// #[test_log::test]
-// fn test_prove_cairo_compare_lesser_array_proof_mode() {
-//     test_prove_cairo_program(
-//         &cairo0_program_path("compare_lesser_array_proof_mode.json"),
-//         &None,
-//         true,
-//     );
-// }
-
 #[test_log::test]
 fn test_prove_cairo_output_and_rc_program() {
     let layout = CairoLayout::Small;
@@ -103,15 +72,6 @@ fn test_prove_cairo_output_and_rc_program() {
         layout,
     );
 }
-
-// #[test_log::test]
-// fn test_prove_cairo_output_and_rc_program_proof_mode() {
-//     test_prove_cairo_program(
-//         &cairo0_program_path("signed_div_rem_proof_mode.json"),
-//         &Some(297..301),
-//         true,
-//     );
-// }
 
 #[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
