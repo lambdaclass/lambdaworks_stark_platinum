@@ -4,7 +4,6 @@ use lambdaworks_math::field::{
 
 pub mod constraints;
 pub mod context;
-#[cfg(debug_assertions)]
 pub mod debug;
 pub mod domain;
 pub mod examples;

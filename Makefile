@@ -68,10 +68,10 @@ docker_build_cairo_compiler:
 docker_compile_cairo:
 	docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(OUTPUT)
 
-target/release/lambdaworks-stark: 
+cairo_prover/target/release/lambdaworks-cairo-platinum: 
 	cargo build --release
 	
-docker_compile_and_run_all: target/release/lambdaworks-stark
+docker_compile_and_run_all: cairo_prover/target/release/lambdaworks-cairo-platinum
 	@echo "Compiling program with docker"
 	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
@@ -82,7 +82,7 @@ docker_compile_and_prove: target/release/lambdaworks-stark
 	@echo "Compiling program with docker"
 	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
+	@cargo run --bin lambdaworks-platinum-prover --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
 	@rm $(PROGRAM).json
 
 compile_and_run_all: target/release/lambdaworks-stark

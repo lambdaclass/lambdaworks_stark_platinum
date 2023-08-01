@@ -22,8 +22,6 @@ use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use crate::debug::validate_trace;
 use crate::transcript::sample_z_ood;
 
-//use crate::constraints::boundary::BoundaryConstraint;
-#[cfg(debug_assertions)]
 use super::config::{BatchedMerkleTree, Commitment};
 use super::constraints::evaluator::ConstraintEvaluator;
 use super::domain::Domain;
