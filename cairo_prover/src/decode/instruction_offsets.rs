@@ -1,4 +1,4 @@
-use crate::FE;
+use crate::Felt252;
 use lambdaworks_math::field::{element::FieldElement, traits::IsField};
 
 use super::instruction_flags::aux_get_last_nim_of_field_element;
@@ -16,7 +16,7 @@ pub struct InstructionOffsets {
 }
 
 impl InstructionOffsets {
-    pub fn new(mem_value: &FE) -> Self {
+    pub fn new(mem_value: &Felt252) -> Self {
         Self {
             off_dst: Self::decode_offset(mem_value, OFF_DST_OFF),
             off_op0: Self::decode_offset(mem_value, OFF_OP0_OFF),
@@ -24,7 +24,7 @@ impl InstructionOffsets {
         }
     }
 
-    pub fn decode_offset(mem_value: &FE, instruction_offset: u32) -> i32 {
+    pub fn decode_offset(mem_value: &Felt252, instruction_offset: u32) -> i32 {
         let offset = aux_get_last_nim_of_field_element(mem_value) >> instruction_offset & OFFX_MASK;
         let vectorized_offset = offset.to_le_bytes();
         let aux = [
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn assert_opcode_flag_is_correct_1() {
         // Instruction A
-        let value = FE::from(0x480680017fff8000);
+        let value = Felt252::from(0x480680017fff8000);
         let instruction_offsets = InstructionOffsets::new(&value);
 
         assert_eq!(instruction_offsets.off_dst, 0);
@@ -73,7 +73,7 @@ mod tests {
     #[test]
     fn assert_opcode_flag_is_correct_2() {
         // Instruction A
-        let value = FE::from(0x208b7fff7fff7ffe);
+        let value = Felt252::from(0x208b7fff7fff7ffe);
         let instruction_offsets = InstructionOffsets::new(&value);
 
         assert_eq!(instruction_offsets.off_dst, -2);
@@ -84,7 +84,7 @@ mod tests {
     #[test]
     fn assert_opcode_flag_is_correct_3() {
         // Instruction A
-        let value = FE::from(0x48327ffc7ffa8000);
+        let value = Felt252::from(0x48327ffc7ffa8000);
         let instruction_offsets = InstructionOffsets::new(&value);
 
         assert_eq!(instruction_offsets.off_dst, 0);

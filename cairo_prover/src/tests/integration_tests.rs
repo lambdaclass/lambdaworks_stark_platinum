@@ -1,3 +1,23 @@
+use stark_platinum_prover::{
+    proof::options::{ProofOptions, SecurityLevel},
+    trace::TraceTable,
+};
+
+use crate::{
+    air::{
+        generate_cairo_proof, verify_cairo_proof, MemorySegment, MemorySegmentMap, PublicInputs,
+        FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR, FRAME_PC,
+    },
+    cairo_layout::CairoLayout,
+    execution_trace::build_main_trace,
+    runner::run::{generate_prover_args, run_program, CairoVersion},
+    tests::utils::{
+        cairo0_program_path, cairo1_program_path, test_prove_cairo1_program,
+        test_prove_cairo_program,
+    },
+    Felt252,
+};
+
 #[test_log::test]
 fn test_prove_cairo_simple_program() {
     test_prove_cairo_program(&cairo0_program_path("simple_program.json"), &None);
@@ -36,38 +56,6 @@ fn test_prove_cairo_output_and_rc_program() {
 }
 
 #[test_log::test]
-fn test_prove_rap_fib() {
-    let steps = 16;
-    let trace = fibonacci_rap_trace([FE::from(1), FE::from(1)], steps);
-
-    let proof_options = ProofOptions::default_test_options();
-
-    let pub_inputs = FibonacciRAPPublicInputs {
-        steps,
-        a0: FE::one(),
-        a1: FE::one(),
-    };
-
-    let proof = prove::<F, FibonacciRAP<F>>(&trace, &pub_inputs, &proof_options).unwrap();
-    assert!(verify::<F, FibonacciRAP<F>>(
-        &proof,
-        &pub_inputs,
-        &proof_options
-    ));
-}
-
-#[test_log::test]
-fn test_prove_dummy() {
-    let trace_length = 16;
-    let trace = dummy_air::dummy_trace(trace_length);
-
-    let proof_options = ProofOptions::default_test_options();
-
-    let proof = prove::<F, DummyAIR>(&trace, &(), &proof_options).unwrap();
-    assert!(verify::<F, DummyAIR>(&proof, &(), &proof_options));
-}
-
-#[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
     let (main_trace, mut pub_input) =
@@ -79,8 +67,8 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 
     // We modify the original program and verify using this new "corrupted" version
     let mut corrupted_program = pub_input.public_memory.clone();
-    corrupted_program.insert(FE::one(), FE::from(5));
-    corrupted_program.insert(FE::from(3), FE::from(5));
+    corrupted_program.insert(Felt252::one(), Felt252::from(5));
+    corrupted_program.insert(Felt252::from(3), Felt252::from(5));
 
     // Here we use the corrupted version of the program in the public inputs
     pub_input.public_memory = corrupted_program;
@@ -114,7 +102,7 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
     // The malicious value, we change the previous value to a 35.
-    let malicious_rc_value = FE::from(35);
+    let malicious_rc_value = Felt252::from(35);
 
     let proof_options = ProofOptions::default_test_options();
 
@@ -134,7 +122,7 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
     // In this test we manually insert a value greater than 2^128 in the range-check builtin segment.
 
     // This value is greater than 2^128, and the verifier should reject the proof built with it.
-    let overflowing_rc_value = FE::from_hex("0x100000000000000000000000000000001").unwrap();
+    let overflowing_rc_value = Felt252::from_hex("0x100000000000000000000000000000001").unwrap();
     let program_content = std::fs::read(cairo0_program_path("rc_program.json")).unwrap();
     let (register_states, mut malicious_memory, program_size, _) = run_program(
         None,
@@ -172,14 +160,14 @@ fn test_verifier_rejects_proof_with_changed_output() {
         generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
 
     // The malicious value, we change the previous value to a 100.
-    let malicious_output_value = FE::from(100);
+    let malicious_output_value = Felt252::from(100);
 
     let mut output_col_idx = None;
     let mut output_row_idx = None;
     for (i, row) in main_trace.rows().iter().enumerate() {
         let output_col_found = [FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR]
             .iter()
-            .find(|&&col_idx| row[col_idx] != FE::from(19));
+            .find(|&&col_idx| row[col_idx] != Felt252::from(19));
         if output_col_found.is_some() {
             output_col_idx = output_col_found;
             output_row_idx = Some(i);

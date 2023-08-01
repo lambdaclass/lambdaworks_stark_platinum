@@ -8,21 +8,19 @@ use lambdaworks_math::{
     },
     traits::{ByteConversion, Deserializable, Serializable},
 };
-
-use crate::{
-    starks::{
-        constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
-        context::AirContext,
-        frame::Frame,
-        proof::{options::ProofOptions, stark::StarkProof},
-        prover::{prove, ProvingError},
-        trace::TraceTable,
-        traits::AIR,
-        transcript::transcript_to_field,
-        verifier::verify,
-    },
-    FE,
+use stark_platinum_prover::{
+    constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
+    context::AirContext,
+    frame::Frame,
+    proof::{options::ProofOptions, stark::StarkProof},
+    prover::{prove, ProvingError},
+    trace::TraceTable,
+    traits::AIR,
+    transcript::transcript_to_field,
+    verifier::verify,
 };
+
+use crate::Felt252;
 
 use super::{cairo_mem::CairoMemory, register_states::RegisterStates};
 
@@ -163,11 +161,11 @@ pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
 
 #[derive(Debug, Clone)]
 pub struct PublicInputs {
-    pub pc_init: FE,
-    pub ap_init: FE,
-    pub fp_init: FE,
-    pub pc_final: FE,
-    pub ap_final: FE,
+    pub pc_init: Felt252,
+    pub ap_init: Felt252,
+    pub fp_init: Felt252,
+    pub pc_final: Felt252,
+    pub ap_final: Felt252,
     // These are Option because they're not known until
     // the trace is obtained. They represent the minimum
     // and maximum offsets used during program execution.
@@ -178,7 +176,7 @@ pub struct PublicInputs {
     pub range_check_max: Option<u16>,
     // Range-check builtin address range
     pub memory_segments: MemorySegmentMap,
-    pub public_memory: HashMap<FE, FE>,
+    pub public_memory: HashMap<Felt252, Felt252>,
     pub num_steps: usize, // number of execution steps
 }
 
@@ -195,20 +193,20 @@ impl PublicInputs {
         let output_range = memory_segments.get(&MemorySegment::Output);
 
         let mut public_memory = (1..=program_size as u64)
-            .map(|i| (FE::from(i), *memory.get(&i).unwrap()))
-            .collect::<HashMap<FE, FE>>();
+            .map(|i| (Felt252::from(i), *memory.get(&i).unwrap()))
+            .collect::<HashMap<Felt252, Felt252>>();
 
         if let Some(output_range) = output_range {
             for addr in output_range.clone() {
-                public_memory.insert(FE::from(addr), *memory.get(&addr).unwrap());
+                public_memory.insert(Felt252::from(addr), *memory.get(&addr).unwrap());
             }
         };
         let last_step = &register_states.rows[register_states.steps() - 1];
 
         PublicInputs {
-            pc_init: FE::from(register_states.rows[0].pc),
-            ap_init: FE::from(register_states.rows[0].ap),
-            fp_init: FE::from(register_states.rows[0].fp),
+            pc_init: Felt252::from(register_states.rows[0].pc),
+            ap_init: Felt252::from(register_states.rows[0].ap),
+            fp_init: Felt252::from(register_states.rows[0].fp),
             pc_final: FieldElement::from(last_step.pc),
             ap_final: FieldElement::from(last_step.ap),
             range_check_min: None,
@@ -289,31 +287,31 @@ impl Deserializable for PublicInputs {
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
         bytes = &bytes[8..];
-        let pc_init = FE::from_bytes_be(
+        let pc_init = Felt252::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
-        let ap_init = FE::from_bytes_be(
+        let ap_init = Felt252::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
-        let fp_init = FE::from_bytes_be(
+        let fp_init = Felt252::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
-        let pc_final = FE::from_bytes_be(
+        let pc_final = Felt252::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?,
         )?;
         bytes = &bytes[felt_len..];
-        let ap_final = FE::from_bytes_be(
+        let ap_final = Felt252::from_bytes_be(
             bytes
                 .get(..felt_len)
                 .ok_or(DeserializationError::InvalidAmountOfBytes)?,
@@ -410,13 +408,13 @@ impl Deserializable for PublicInputs {
         );
         bytes = &bytes[8..];
         for _ in 0..public_memory_length {
-            let address = FE::from_bytes_be(
+            let address = Felt252::from_bytes_be(
                 bytes
                     .get(..felt_len)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?,
             )?;
             bytes = &bytes[felt_len..];
-            let value = FE::from_bytes_be(
+            let value = Felt252::from_bytes_be(
                 bytes
                     .get(..felt_len)
                     .ok_or(DeserializationError::InvalidAmountOfBytes)?,
@@ -473,10 +471,10 @@ pub struct CairoRAPChallenges {
 }
 
 fn add_pub_memory_in_public_input_section(
-    addresses: &Vec<FE>,
-    values: &[FE],
+    addresses: &Vec<Felt252>,
+    values: &[Felt252],
     public_input: &PublicInputs,
-) -> (Vec<FE>, Vec<FE>) {
+) -> (Vec<Felt252>, Vec<Felt252>) {
     let mut a_aux = addresses.clone();
     let mut v_aux = values.to_owned();
 
@@ -516,19 +514,22 @@ fn get_pub_memory_addrs(
     }
 }
 
-fn sort_columns_by_memory_address(adresses: Vec<FE>, values: Vec<FE>) -> (Vec<FE>, Vec<FE>) {
+fn sort_columns_by_memory_address(
+    adresses: Vec<Felt252>,
+    values: Vec<Felt252>,
+) -> (Vec<Felt252>, Vec<Felt252>) {
     let mut tuples: Vec<_> = adresses.into_iter().zip(values).collect();
     tuples.sort_by(|(x, _), (y, _)| x.representative().cmp(&y.representative()));
     tuples.into_iter().unzip()
 }
 
 fn generate_memory_permutation_argument_column(
-    addresses_original: Vec<FE>,
-    values_original: Vec<FE>,
-    addresses_sorted: &[FE],
-    values_sorted: &[FE],
+    addresses_original: Vec<Felt252>,
+    values_original: Vec<Felt252>,
+    addresses_sorted: &[Felt252],
+    values_sorted: &[Felt252],
     rap_challenges: &CairoRAPChallenges,
-) -> Vec<FE> {
+) -> Vec<Felt252> {
     let z = &rap_challenges.z_memory;
     let alpha = &rap_challenges.alpha_memory;
 
@@ -543,18 +544,18 @@ fn generate_memory_permutation_argument_column(
         .iter()
         .zip(&values_original)
         .zip(&denom)
-        .scan(FE::one(), |product, ((a_i, v_i), den_i)| {
+        .scan(Felt252::one(), |product, ((a_i, v_i), den_i)| {
             let ret = *product;
             *product = &ret * ((z - (a_i + alpha * v_i)) * den_i);
             Some(*product)
         })
-        .collect::<Vec<FE>>()
+        .collect::<Vec<Felt252>>()
 }
 fn generate_range_check_permutation_argument_column(
-    offset_column_original: &[FE],
-    offset_column_sorted: &[FE],
+    offset_column_original: &[Felt252],
+    offset_column_sorted: &[Felt252],
     rap_challenges: &CairoRAPChallenges,
-) -> Vec<FE> {
+) -> Vec<Felt252> {
     let z = &rap_challenges.z_range_check;
 
     let mut denom: Vec<_> = offset_column_sorted.iter().map(|x| z - x).collect();
@@ -563,12 +564,12 @@ fn generate_range_check_permutation_argument_column(
     offset_column_original
         .iter()
         .zip(&denom)
-        .scan(FE::one(), |product, (num_i, den_i)| {
+        .scan(Felt252::one(), |product, (num_i, den_i)| {
             let ret = *product;
             *product = &ret * (z - num_i) * den_i;
             Some(*product)
         })
-        .collect::<Vec<FE>>()
+        .collect::<Vec<Felt252>>()
 }
 
 impl AIR for CairoAIR {
@@ -748,7 +749,7 @@ impl AIR for CairoAIR {
         let builtin_offset = self.get_builtin_offset();
 
         let mut constraints: Vec<FieldElement<Self::Field>> =
-            vec![FE::zero(); self.num_transition_constraints()];
+            vec![Felt252::zero(); self.num_transition_constraints()];
 
         compute_instr_constraints(&mut constraints, frame);
         compute_operand_constraints(&mut constraints, frame);
@@ -866,21 +867,21 @@ impl AIR for CairoAIR {
 }
 
 /// From the Cairo whitepaper, section 9.10
-fn compute_instr_constraints(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
+fn compute_instr_constraints(constraints: &mut [Felt252], frame: &Frame<Stark252PrimeField>) {
     // These constraints are only applied over elements of the same row.
     let curr = frame.get_row(0);
 
     // Bit constraints
     for (i, flag) in curr[0..16].iter().enumerate() {
         constraints[i] = match i {
-            0..=14 => flag * (flag - FE::one()),
+            0..=14 => flag * (flag - Felt252::one()),
             15 => *flag,
             _ => panic!("Unknown flag offset"),
         };
     }
 
     // Instruction unpacking
-    let two = FE::from(2);
+    let two = Felt252::from(2);
     let b16 = two.pow(16u32);
     let b32 = two.pow(32u32);
     let b48 = two.pow(48u32);
@@ -889,14 +890,14 @@ fn compute_instr_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prime
     let f0_squiggle = &curr[0..15]
         .iter()
         .rev()
-        .fold(FE::zero(), |acc, flag| flag + &two * acc);
+        .fold(Felt252::zero(), |acc, flag| flag + &two * acc);
 
     constraints[INST] =
         (&curr[OFF_DST]) + b16 * (&curr[OFF_OP0]) + b32 * (&curr[OFF_OP1]) + b48 * f0_squiggle
             - &curr[FRAME_INST];
 }
 
-fn compute_operand_constraints(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
+fn compute_operand_constraints(constraints: &mut [Felt252], frame: &Frame<Stark252PrimeField>) {
     // These constraints are only applied over elements of the same row.
     let curr = frame.get_row(0);
 
@@ -904,8 +905,8 @@ fn compute_operand_constraints(constraints: &mut [FE], frame: &Frame<Stark252Pri
     let fp = &curr[FRAME_FP];
     let pc = &curr[FRAME_PC];
 
-    let one = FE::one();
-    let b15 = FE::from(2).pow(15u32);
+    let one = Felt252::one();
+    let b15 = Felt252::from(2).pow(15u32);
 
     constraints[DST_ADDR] =
         &curr[F_DST_FP] * fp + (&one - &curr[F_DST_FP]) * ap + (&curr[OFF_DST] - &b15)
@@ -923,12 +924,12 @@ fn compute_operand_constraints(constraints: &mut [FE], frame: &Frame<Stark252Pri
         - &curr[FRAME_OP1_ADDR];
 }
 
-fn compute_register_constraints(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
+fn compute_register_constraints(constraints: &mut [Felt252], frame: &Frame<Stark252PrimeField>) {
     let curr = frame.get_row(0);
     let next = frame.get_row(1);
 
-    let one = FE::one();
-    let two = FE::from(2);
+    let one = Felt252::one();
+    let two = Felt252::from(2);
 
     // ap and fp constraints
     constraints[NEXT_AP] = &curr[FRAME_AP]
@@ -958,9 +959,9 @@ fn compute_register_constraints(constraints: &mut [FE], frame: &Frame<Stark252Pr
     constraints[T1] = &curr[FRAME_T0] * &curr[FRAME_RES] - &curr[FRAME_T1];
 }
 
-fn compute_opcode_constraints(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
+fn compute_opcode_constraints(constraints: &mut [Felt252], frame: &Frame<Stark252PrimeField>) {
     let curr = frame.get_row(0);
-    let one = FE::one();
+    let one = Felt252::one();
 
     constraints[MUL_1] = &curr[FRAME_MUL] - (&curr[FRAME_OP0] * &curr[FRAME_OP1]);
 
@@ -977,7 +978,7 @@ fn compute_opcode_constraints(constraints: &mut [FE], frame: &Frame<Stark252Prim
     constraints[ASSERT_EQ] = &curr[F_OPC_AEQ] * (&curr[FRAME_DST] - &curr[FRAME_RES]);
 }
 
-fn enforce_selector(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
+fn enforce_selector(constraints: &mut [Felt252], frame: &Frame<Stark252PrimeField>) {
     let curr = frame.get_row(0);
     for result_cell in constraints.iter_mut().take(ASSERT_EQ + 1).skip(INST) {
         *result_cell = *result_cell * curr[FRAME_SELECTOR];
@@ -985,7 +986,7 @@ fn enforce_selector(constraints: &mut [FE], frame: &Frame<Stark252PrimeField>) {
 }
 
 fn memory_is_increasing(
-    constraints: &mut [FE],
+    constraints: &mut [Felt252],
     frame: &Frame<Stark252PrimeField>,
     builtin_offset: usize,
 ) {
@@ -1043,7 +1044,7 @@ fn memory_is_increasing(
 }
 
 fn permutation_argument(
-    constraints: &mut [FE],
+    constraints: &mut [Felt252],
     frame: &Frame<Stark252PrimeField>,
     rap_challenges: &CairoRAPChallenges,
     builtin_offset: usize,
@@ -1090,7 +1091,7 @@ fn permutation_argument(
 }
 
 fn permutation_argument_range_check(
-    constraints: &mut [FE],
+    constraints: &mut [Felt252],
     frame: &Frame<Stark252PrimeField>,
     rap_challenges: &CairoRAPChallenges,
     builtin_offset: usize,
@@ -1134,8 +1135,8 @@ fn permutation_argument_range_check(
     constraints[RANGE_CHECK_2] = (z - ap0_next) * p0_next - (z - a0_next) * p2;
 }
 
-fn frame_inst_size(frame_row: &[FE]) -> FE {
-    &frame_row[F_OP_1_VAL] + FE::one()
+fn frame_inst_size(frame_row: &[Felt252]) -> Felt252 {
+    &frame_row[F_OP_1_VAL] + Felt252::one()
 }
 
 fn range_check_builtin(
@@ -1147,15 +1148,15 @@ fn range_check_builtin(
     constraints[RANGE_CHECK_BUILTIN] = evaluate_range_check_builtin_constraint(curr)
 }
 
-fn evaluate_range_check_builtin_constraint(curr: &[FE]) -> FE {
+fn evaluate_range_check_builtin_constraint(curr: &[Felt252]) -> Felt252 {
     &curr[RC_0]
-        + &curr[RC_1] * &FE::from_hex("10000").unwrap()
-        + &curr[RC_2] * &FE::from_hex("100000000").unwrap()
-        + &curr[RC_3] * &FE::from_hex("1000000000000").unwrap()
-        + &curr[RC_4] * &FE::from_hex("10000000000000000").unwrap()
-        + &curr[RC_5] * &FE::from_hex("100000000000000000000").unwrap()
-        + &curr[RC_6] * &FE::from_hex("1000000000000000000000000").unwrap()
-        + &curr[RC_7] * &FE::from_hex("10000000000000000000000000000").unwrap()
+        + &curr[RC_1] * &Felt252::from_hex("10000").unwrap()
+        + &curr[RC_2] * &Felt252::from_hex("100000000").unwrap()
+        + &curr[RC_3] * &Felt252::from_hex("1000000000000").unwrap()
+        + &curr[RC_4] * &Felt252::from_hex("10000000000000000").unwrap()
+        + &curr[RC_5] * &Felt252::from_hex("100000000000000000000").unwrap()
+        + &curr[RC_6] * &Felt252::from_hex("1000000000000000000000000").unwrap()
+        + &curr[RC_7] * &Felt252::from_hex("10000000000000000000000000000").unwrap()
         - &curr[RC_VALUE]
 }
 
@@ -1184,11 +1185,14 @@ pub fn verify_cairo_proof(
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
-    use crate::{
-        cairo::runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
-        starks::{debug::validate_trace, domain::Domain},
-    };
+
     use proptest::{prelude::*, prop_compose, proptest};
+    use stark_platinum_prover::{debug::validate_trace, domain::Domain};
+
+    use crate::{
+        runner::run::{generate_prover_args, CairoVersion},
+        tests::utils::cairo0_program_path,
+    };
 
     use super::*;
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -1196,23 +1200,26 @@ mod test {
 
     #[test]
     fn range_check_eval_works() {
-        let mut row: Vec<FE> = Vec::new();
+        let mut row: Vec<Felt252> = Vec::new();
 
         for _ in 0..61 {
-            row.push(FE::zero());
+            row.push(Felt252::zero());
         }
 
-        row[super::RC_0] = FE::one();
-        row[super::RC_1] = FE::one();
-        row[super::RC_2] = FE::one();
-        row[super::RC_3] = FE::one();
-        row[super::RC_4] = FE::one();
-        row[super::RC_5] = FE::one();
-        row[super::RC_6] = FE::one();
-        row[super::RC_7] = FE::one();
+        row[super::RC_0] = Felt252::one();
+        row[super::RC_1] = Felt252::one();
+        row[super::RC_2] = Felt252::one();
+        row[super::RC_3] = Felt252::one();
+        row[super::RC_4] = Felt252::one();
+        row[super::RC_5] = Felt252::one();
+        row[super::RC_6] = Felt252::one();
+        row[super::RC_7] = Felt252::one();
 
-        row[super::RC_VALUE] = FE::from_hex("00010001000100010001000100010001").unwrap();
-        assert_eq!(evaluate_range_check_builtin_constraint(&row), FE::zero());
+        row[super::RC_VALUE] = Felt252::from_hex("00010001000100010001000100010001").unwrap();
+        assert_eq!(
+            evaluate_range_check_builtin_constraint(&row),
+            Felt252::zero()
+        );
     }
 
     #[test]
@@ -1452,8 +1459,8 @@ mod test {
     }
 
     prop_compose! {
-        fn some_felt()(base in any::<u64>(), exponent in any::<u128>()) -> FE {
-            FE::from(base).pow(exponent)
+        fn some_felt()(base in any::<u64>(), exponent in any::<u128>()) -> Felt252 {
+            Felt252::from(base).pow(exponent)
         }
     }
 
@@ -1469,7 +1476,7 @@ mod test {
             range_check_min in proptest::option::of(any::<u16>()),
             num_steps in any::<usize>(),
         ) -> PublicInputs {
-            let public_memory = public_memory.iter().map(|(k, v)| (FE::from(*k), FE::from(*v))).collect();
+            let public_memory = public_memory.iter().map(|(k, v)| (Felt252::from(*k), Felt252::from(*v))).collect();
             let memory_segments = MemorySegmentMap::from([(MemorySegment::Output, 10u64..16u64), (MemorySegment::RangeCheck, 20u64..71u64)]);
             PublicInputs {
                 pc_init,
@@ -1506,7 +1513,6 @@ mod test {
             prop_assert_eq!(public_inputs.memory_segments, deserialized.memory_segments);
         }
     }
-
 
     #[test]
     fn deserialize_and_verify() {

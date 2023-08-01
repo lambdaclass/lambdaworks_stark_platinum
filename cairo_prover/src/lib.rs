@@ -1,3 +1,7 @@
+use lambdaworks_math::field::{
+    element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+};
+
 pub mod air;
 pub mod cairo_layout;
 pub mod cairo_mem;
@@ -7,5 +11,8 @@ pub mod execution_trace;
 pub mod register_states;
 pub mod runner;
 
+#[cfg(test)]
+pub mod tests;
+
 pub type PrimeField = Stark252PrimeField;
-pub type FE = FieldElement<PrimeField>;
+pub type Felt252 = FieldElement<PrimeField>;

@@ -85,7 +85,13 @@ impl RegisterStates {
 
 #[cfg(test)]
 mod tests {
-    use crate::{cairo::decode::instruction_flags::*, FE};
+
+    use crate::{
+        decode::instruction_flags::{
+            ApUpdate, CairoOpcode, DstReg, Op0Reg, Op1Src, PcUpdate, ResLogic,
+        },
+        Felt252,
+    };
 
     use super::*;
     use std::collections::HashMap;
@@ -154,6 +160,7 @@ mod tests {
     #[test]
     fn loads_mul_trace_from_file_correctly() {
         let base_dir = env!("CARGO_MANIFEST_DIR");
+
         dbg!(base_dir);
         let dir = base_dir.to_owned() + "/tests/data/mul_trace.out";
 
@@ -187,8 +194,8 @@ mod tests {
     #[test]
     fn decode_instruction_flags_and_offsets() {
         let data = HashMap::from([
-            (1u64, FE::from(0x480680017fff8000)),
-            (2u64, FE::from(0x1104800180018000)),
+            (1u64, Felt252::from(0x480680017fff8000)),
+            (2u64, Felt252::from(0x1104800180018000)),
         ]);
 
         let memory = CairoMemory::new(data);

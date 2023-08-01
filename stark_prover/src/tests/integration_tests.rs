@@ -5,7 +5,9 @@ use lambdaworks_math::field::fields::{
 
 use crate::{
     examples::{
+        dummy_air::{self, DummyAIR},
         fibonacci_2_columns::{self, Fibonacci2ColsAIR},
+        fibonacci_rap::{fibonacci_rap_trace, FibonacciRAP, FibonacciRAPPublicInputs},
         quadratic_air::{self, QuadraticAIR, QuadraticPublicInputs},
         simple_fibonacci::{self, FibonacciAIR, FibonacciPublicInputs},
     },
@@ -112,4 +114,47 @@ fn test_prove_quadratic() {
             &proof_options
         )
     );
+}
+
+#[test_log::test]
+fn test_prove_rap_fib() {
+    let steps = 16;
+    let trace = fibonacci_rap_trace([Felt252::from(1), Felt252::from(1)], steps);
+
+    let proof_options = ProofOptions::default_test_options();
+
+    let pub_inputs = FibonacciRAPPublicInputs {
+        steps,
+        a0: Felt252::one(),
+        a1: Felt252::one(),
+    };
+
+    let proof = prove::<Stark252PrimeField, FibonacciRAP<Stark252PrimeField>>(
+        &trace,
+        &pub_inputs,
+        &proof_options,
+    )
+    .unwrap();
+    assert!(
+        verify::<Stark252PrimeField, FibonacciRAP<Stark252PrimeField>>(
+            &proof,
+            &pub_inputs,
+            &proof_options
+        )
+    );
+}
+
+#[test_log::test]
+fn test_prove_dummy() {
+    let trace_length = 16;
+    let trace = dummy_air::dummy_trace(trace_length);
+
+    let proof_options = ProofOptions::default_test_options();
+
+    let proof = prove::<Stark252PrimeField, DummyAIR>(&trace, &(), &proof_options).unwrap();
+    assert!(verify::<Stark252PrimeField, DummyAIR>(
+        &proof,
+        &(),
+        &proof_options
+    ));
 }

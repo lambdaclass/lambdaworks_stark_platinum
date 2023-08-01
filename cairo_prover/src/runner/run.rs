@@ -1,5 +1,7 @@
+use crate::air::{MemorySegment, MemorySegmentMap, PublicInputs};
 use crate::cairo_layout::CairoLayout;
 use crate::cairo_mem::CairoMemory;
+use crate::execution_trace::build_main_trace;
 use crate::register_states::RegisterStates;
 
 use super::vec_writer::VecWriter;
@@ -15,6 +17,7 @@ use cairo_vm::vm::errors::{
 use cairo_vm::vm::runners::cairo_runner::{CairoArg, CairoRunner, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
+use stark_platinum_prover::trace::TraceTable;
 use std::ops::Range;
 use thiserror::Error;
 
@@ -260,6 +263,22 @@ pub fn generate_prover_args(
     Ok((main_trace, pub_inputs))
 }
 
+fn create_memory_segment_map(
+    range_check_builtin_range: Option<Range<u64>>,
+    output_range: &Option<Range<u64>>,
+) -> MemorySegmentMap {
+    let mut memory_segments = MemorySegmentMap::new();
+
+    if let Some(range_check_builtin_range) = range_check_builtin_range {
+        memory_segments.insert(MemorySegment::RangeCheck, range_check_builtin_range);
+    }
+    if let Some(output_range) = output_range {
+        memory_segments.insert(MemorySegment::Output, output_range.clone());
+    }
+
+    memory_segments
+}
+
 #[cfg(test)]
 mod tests {
     use crate::execution_trace::build_cairo_execution_trace;
@@ -276,7 +295,7 @@ mod tests {
     #[test]
     fn test_parse_cairo_file() {
         let base_dir = env!("CARGO_MANIFEST_DIR");
-        let json_filename = base_dir.to_owned() + "/src/cairo/runner/program.json";
+        let json_filename = base_dir.to_owned() + "/cairo_prover/src/runner/program.json";
 
         let program_content = std::fs::read(json_filename).unwrap();
 

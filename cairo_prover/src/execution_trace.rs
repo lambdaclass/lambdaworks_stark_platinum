@@ -1,6 +1,3 @@
-use std::{iter, ops::Range};
-
-use crate::{cairo::air::*, starks::trace::TraceTable, FE};
 use lambdaworks_math::{
     field::{
         element::FieldElement,
@@ -10,6 +7,16 @@ use lambdaworks_math::{
     unsigned_integer::element::UnsignedInteger,
 };
 use num_integer::div_ceil;
+use stark_platinum_prover::trace::TraceTable;
+use std::{iter, ops::Range};
+
+use crate::{
+    air::{
+        MemorySegment, PublicInputs, FRAME_DST, FRAME_DST_ADDR, FRAME_INST, FRAME_OP0,
+        FRAME_OP0_ADDR, FRAME_OP1, FRAME_OP1_ADDR, FRAME_PC, OFF_DST, OFF_OP0, OFF_OP1,
+    },
+    Felt252,
+};
 
 use super::{
     cairo_mem::CairoMemory,
@@ -192,7 +199,7 @@ fn fill_rc_holes<F: IsFFTField>(trace: &mut TraceTable<F>, holes: Vec<FieldEleme
 ///
 /// * `sorted_addrs` - Vector of sorted memory addresses.
 /// * `codelen` - the length of the Cairo program instructions.
-fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
+fn get_memory_holes(sorted_addrs: &[Felt252], codelen: usize) -> Vec<Felt252> {
     let mut memory_holes = Vec::new();
     let mut prev_addr = &sorted_addrs[0];
 
@@ -202,17 +209,17 @@ fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
         // If the candidate memory hole has an address belonging to the program segment (public
         // memory), that is not accounted here since public memory is added in a posterior step of
         // the protocol.
-        if addr_diff != FE::one()
-            && addr_diff != FE::zero()
+        if addr_diff != Felt252::one()
+            && addr_diff != Felt252::zero()
             && addr.representative() > (codelen as u64).into()
         {
-            let mut hole_addr = prev_addr + FE::one();
+            let mut hole_addr = prev_addr + Felt252::one();
 
             while hole_addr.representative() < addr.representative() {
                 if hole_addr.representative() > (codelen as u64).into() {
                     memory_holes.push(hole_addr);
                 }
-                hole_addr += FE::one();
+                hole_addr += Felt252::one();
             }
         }
         prev_addr = addr;
@@ -222,9 +229,9 @@ fn get_memory_holes(sorted_addrs: &[FE], codelen: usize) -> Vec<FE> {
 }
 
 /// Fill memory holes in each address column of the trace with the missing address, depending on the
-/// trace column. If the trace column refers to memory addresses, it will be filled with the missing
+/// trace column. If the trace column reFelt252rs to memory addresses, it will be filled with the missing
 /// addresses.
-fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut [FE]) {
+fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut [Felt252]) {
     let last_row = trace.last_row().to_vec();
 
     // This number represents the amount of times we have to pad to fill the memory
@@ -255,7 +262,7 @@ fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &
 }
 
 /// Receives the raw Cairo trace and memory as outputted from the Cairo VM and returns
-/// the trace table used to feed the Cairo STARK prover.
+/// the trace table used to Felt252ed the Cairo STARK prover.
 /// The constraints of the Cairo AIR are defined over this trace rather than the raw trace
 /// obtained from the Cairo VM, this is why this function is needed.
 pub fn build_cairo_execution_trace(
@@ -274,11 +281,11 @@ pub fn build_cairo_execution_trace(
         .unzip();
 
     // dst, op0, op1 and res are computed from flags and offsets
-    let (dst_addrs, mut dsts): (Vec<FE>, Vec<FE>) =
+    let (dst_addrs, mut dsts): (Vec<Felt252>, Vec<Felt252>) =
         compute_dst(&flags, &offsets, raw_trace, memory);
-    let (op0_addrs, mut op0s): (Vec<FE>, Vec<FE>) =
+    let (op0_addrs, mut op0s): (Vec<Felt252>, Vec<Felt252>) =
         compute_op0(&flags, &offsets, raw_trace, memory);
-    let (op1_addrs, op1s): (Vec<FE>, Vec<FE>) =
+    let (op1_addrs, op1s): (Vec<Felt252>, Vec<Felt252>) =
         compute_op1(&flags, &offsets, raw_trace, memory, &op0s);
     let mut res = compute_res(&flags, &op0s, &op1s, &dsts);
 
@@ -287,34 +294,34 @@ pub fn build_cairo_execution_trace(
 
     // Flags and offsets are transformed to a bit representation. This is needed since
     // the flag constraints of the Cairo AIR are defined over bit representations of these
-    let trace_repr_flags: Vec<[FE; 16]> = flags
+    let trace_repr_flags: Vec<[Felt252; 16]> = flags
         .iter()
         .map(CairoInstructionFlags::to_trace_representation)
         .collect();
-    let trace_repr_offsets: Vec<[FE; 3]> = offsets
+    let trace_repr_offsets: Vec<[Felt252; 3]> = offsets
         .iter()
         .map(InstructionOffsets::to_trace_representation)
         .collect();
 
     // ap, fp, pc and instruction columns are computed
-    let aps: Vec<FE> = raw_trace.rows.iter().map(|t| FE::from(t.ap)).collect();
-    let fps: Vec<FE> = raw_trace.rows.iter().map(|t| FE::from(t.fp)).collect();
-    let pcs: Vec<FE> = raw_trace.rows.iter().map(|t| FE::from(t.pc)).collect();
-    let instructions: Vec<FE> = raw_trace
+    let aps: Vec<Felt252> = raw_trace.rows.iter().map(|t| Felt252::from(t.ap)).collect();
+    let fps: Vec<Felt252> = raw_trace.rows.iter().map(|t| Felt252::from(t.fp)).collect();
+    let pcs: Vec<Felt252> = raw_trace.rows.iter().map(|t| Felt252::from(t.pc)).collect();
+    let instructions: Vec<Felt252> = raw_trace
         .rows
         .iter()
         .map(|t| *memory.get(&t.pc).unwrap())
         .collect();
 
-    // t0, t1 and mul derived values are constructed. For details refer to
+    // t0, t1 and mul derived values are constructed. For details reFelt252r to
     // section 9.1 of the Cairo whitepaper
-    let t0: Vec<FE> = trace_repr_flags
+    let t0: Vec<Felt252> = trace_repr_flags
         .iter()
         .zip(&dsts)
         .map(|(repr_flags, dst)| repr_flags[9] * dst)
         .collect();
-    let t1: Vec<FE> = t0.iter().zip(&res).map(|(t, r)| t * r).collect();
-    let mul: Vec<FE> = op0s.iter().zip(&op1s).map(|(op0, op1)| op0 * op1).collect();
+    let t1: Vec<Felt252> = t0.iter().zip(&res).map(|(t, r)| t * r).collect();
+    let mul: Vec<Felt252> = op0s.iter().zip(&op1s).map(|(op0, op1)| op0 * op1).collect();
 
     // A structure change of the flags and offsets representations to fit into the arguments
     // expected by the TraceTable constructor. A vector of columns of the representations
@@ -322,11 +329,11 @@ pub fn build_cairo_execution_trace(
     let trace_repr_flags = rows_to_cols(&trace_repr_flags);
     let trace_repr_offsets = rows_to_cols(&trace_repr_offsets);
 
-    let mut selector = vec![FE::one(); n_steps];
-    selector[n_steps - 1] = FE::zero();
+    let mut selector = vec![Felt252::one(); n_steps];
+    selector[n_steps - 1] = Felt252::zero();
 
     // Build Cairo trace columns to instantiate TraceTable struct as defined in the trace layout
-    let mut trace_cols: Vec<Vec<FE>> = Vec::new();
+    let mut trace_cols: Vec<Vec<Felt252>> = Vec::new();
     (0..trace_repr_flags.len()).for_each(|n| trace_cols.push(trace_repr_flags[n].clone()));
     trace_cols.push(res);
     trace_cols.push(aps);
@@ -357,29 +364,35 @@ pub fn build_cairo_execution_trace(
 
 // Build range-check builtin columns: rc_0, rc_1, ... , rc_7, rc_value
 fn add_rc_builtin_columns(
-    trace_cols: &mut Vec<Vec<FE>>,
+    trace_cols: &mut Vec<Vec<Felt252>>,
     range_check_builtin_range: Range<u64>,
     memory: &CairoMemory,
 ) {
-    let range_checked_values: Vec<&FE> = range_check_builtin_range
+    let range_checked_values: Vec<&Felt252> = range_check_builtin_range
         .map(|addr| memory.get(&addr).unwrap())
         .collect();
     let mut rc_trace_columns = decompose_rc_values_into_trace_columns(&range_checked_values);
 
     // rc decomposition columns are appended with zeros and then pushed to the trace table
     rc_trace_columns.iter_mut().for_each(|column| {
-        column.resize(trace_cols[0].len(), FE::zero());
+        column.resize(trace_cols[0].len(), Felt252::zero());
         trace_cols.push(column.to_vec())
     });
 
-    let mut rc_values_dereferenced: Vec<FE> = range_checked_values.iter().map(|&x| *x).collect();
-    rc_values_dereferenced.resize(trace_cols[0].len(), FE::zero());
+    let mut rc_values_dereferenced: Vec<Felt252> =
+        range_checked_values.iter().map(|&x| *x).collect();
+    rc_values_dereferenced.resize(trace_cols[0].len(), Felt252::zero());
 
     trace_cols.push(rc_values_dereferenced);
 }
 
 /// Returns the vector of res values.
-fn compute_res(flags: &[CairoInstructionFlags], op0s: &[FE], op1s: &[FE], dsts: &[FE]) -> Vec<FE> {
+fn compute_res(
+    flags: &[CairoInstructionFlags],
+    op0s: &[Felt252],
+    op1s: &[Felt252],
+    dsts: &[Felt252],
+) -> Vec<Felt252> {
     /*
     Cairo whitepaper, page 33 - https://eprint.iacr.org/2021/1063.pdf
     # Compute res.
@@ -415,7 +428,7 @@ fn compute_res(flags: &[CairoInstructionFlags], op0s: &[FE], op1s: &[FE], dsts: 
                             // This is important for the calculation of the `t1` virtual column
                             // values later on.
                             // See section 9.5 of the Cairo whitepaper, page 53.
-                            if dst == &FE::zero() {
+                            if dst == &Felt252::zero() {
                                 *dst
                             } else {
                                 dst.inv()
@@ -447,7 +460,7 @@ fn compute_dst(
     offsets: &[InstructionOffsets],
     register_states: &RegisterStates,
     memory: &CairoMemory,
-) -> (Vec<FE>, Vec<FE>) {
+) -> (Vec<Felt252>, Vec<Felt252>) {
     /* Cairo whitepaper, page 33 - https://eprint.iacr.org/2021/1063.pdf
 
     # Compute dst
@@ -463,11 +476,11 @@ fn compute_dst(
         .map(|((f, o), t)| match f.dst_reg {
             DstReg::AP => {
                 let addr = t.ap.checked_add_signed(o.off_dst.into()).unwrap();
-                (FE::from(addr), *memory.get(&addr).unwrap())
+                (Felt252::from(addr), *memory.get(&addr).unwrap())
             }
             DstReg::FP => {
                 let addr = t.fp.checked_add_signed(o.off_dst.into()).unwrap();
-                (FE::from(addr), *memory.get(&addr).unwrap())
+                (Felt252::from(addr), *memory.get(&addr).unwrap())
             }
         })
         .unzip()
@@ -481,7 +494,7 @@ fn compute_op0(
     offsets: &[InstructionOffsets],
     register_states: &RegisterStates,
     memory: &CairoMemory,
-) -> (Vec<FE>, Vec<FE>) {
+) -> (Vec<Felt252>, Vec<Felt252>) {
     /* Cairo whitepaper, page 33 - https://eprint.iacr.org/2021/1063.pdf
 
     # Compute op0.
@@ -497,11 +510,11 @@ fn compute_op0(
         .map(|((f, o), t)| match f.op0_reg {
             Op0Reg::AP => {
                 let addr = t.ap.checked_add_signed(o.off_op0.into()).unwrap();
-                (FE::from(addr), *memory.get(&addr).unwrap())
+                (Felt252::from(addr), *memory.get(&addr).unwrap())
             }
             Op0Reg::FP => {
                 let addr = t.fp.checked_add_signed(o.off_op0.into()).unwrap();
-                (FE::from(addr), *memory.get(&addr).unwrap())
+                (Felt252::from(addr), *memory.get(&addr).unwrap())
             }
         })
         .unzip()
@@ -515,8 +528,8 @@ fn compute_op1(
     offsets: &[InstructionOffsets],
     register_states: &RegisterStates,
     memory: &CairoMemory,
-    op0s: &[FE],
-) -> (Vec<FE>, Vec<FE>) {
+    op0s: &[Felt252],
+) -> (Vec<Felt252>, Vec<Felt252>) {
     /* Cairo whitepaper, page 33 - https://eprint.iacr.org/2021/1063.pdf
     # Compute op1 and instruction_size.
     switch op1_src:
@@ -546,22 +559,22 @@ fn compute_op1(
                 let addr = aux_get_last_nim_of_field_element(op0)
                     .checked_add_signed(offset.off_op1.into())
                     .unwrap();
-                (FE::from(addr), *memory.get(&addr).unwrap())
+                (Felt252::from(addr), *memory.get(&addr).unwrap())
             }
             Op1Src::Imm => {
                 let pc = trace_state.pc;
                 let addr = pc.checked_add_signed(offset.off_op1.into()).unwrap();
-                (FE::from(addr), *memory.get(&addr).unwrap())
+                (Felt252::from(addr), *memory.get(&addr).unwrap())
             }
             Op1Src::AP => {
                 let ap = trace_state.ap;
                 let addr = ap.checked_add_signed(offset.off_op1.into()).unwrap();
-                (FE::from(addr), *memory.get(&addr).unwrap())
+                (Felt252::from(addr), *memory.get(&addr).unwrap())
             }
             Op1Src::FP => {
                 let fp = trace_state.fp;
                 let addr = fp.checked_add_signed(offset.off_op1.into()).unwrap();
-                (FE::from(addr), *memory.get(&addr).unwrap())
+                (Felt252::from(addr), *memory.get(&addr).unwrap())
             }
         })
         .unzip()
@@ -572,9 +585,9 @@ fn compute_op1(
 fn update_values(
     flags: &[CairoInstructionFlags],
     register_states: &RegisterStates,
-    op0s: &mut [FE],
-    dst: &mut [FE],
-    res: &mut [FE],
+    op0s: &mut [Felt252],
+    dst: &mut [Felt252],
+    res: &mut [Felt252],
 ) {
     for (i, f) in flags.iter().enumerate() {
         if f.opcode == CairoOpcode::Call {
@@ -593,26 +606,30 @@ fn update_values(
 
 /// Utility function to change from a rows representation to a columns
 /// representation of a slice of arrays.   
-fn rows_to_cols<const N: usize>(rows: &[[FE; N]]) -> Vec<Vec<FE>> {
+fn rows_to_cols<const N: usize>(rows: &[[Felt252; N]]) -> Vec<Vec<Felt252>> {
     let n_cols = rows[0].len();
 
     (0..n_cols)
-        .map(|col_idx| rows.iter().map(|elem| elem[col_idx]).collect::<Vec<FE>>())
-        .collect::<Vec<Vec<FE>>>()
+        .map(|col_idx| {
+            rows.iter()
+                .map(|elem| elem[col_idx])
+                .collect::<Vec<Felt252>>()
+        })
+        .collect::<Vec<Vec<Felt252>>>()
 }
 
-fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
+fn decompose_rc_values_into_trace_columns(rc_values: &[&Felt252]) -> [Vec<Felt252>; 8] {
     let mask = UnsignedInteger::from_hex("FFFF").unwrap();
     let mut rc_base_types: Vec<UnsignedInteger<4>> =
         rc_values.iter().map(|x| x.representative()).collect();
 
-    let mut decomposition_columns: Vec<Vec<FE>> = Vec::new();
+    let mut decomposition_columns: Vec<Vec<Felt252>> = Vec::new();
 
     for _ in 0..8 {
         decomposition_columns.push(
             rc_base_types
                 .iter()
-                .map(|&x| FE::from(&(x & mask)))
+                .map(|&x| Felt252::from(&(x & mask)))
                 .collect(),
         );
 
@@ -625,9 +642,11 @@ fn decompose_rc_values_into_trace_columns(rc_values: &[&FE]) -> [Vec<FE>; 8] {
 
 #[cfg(test)]
 mod test {
-    use crate::cairo::{
+    use crate::{
+        air::{MemorySegmentMap, FRAME_SELECTOR},
         cairo_layout::CairoLayout,
-        runner::run::{cairo0_program_path, run_program, CairoVersion},
+        runner::run::{run_program, CairoVersion},
+        tests::utils::cairo0_program_path,
     };
 
     use super::*;
@@ -635,26 +654,26 @@ mod test {
 
     #[test]
     fn test_rc_decompose() {
-        let fifteen = FE::from_hex("000F000F000F000F000F000F000F000F").unwrap();
-        let sixteen = FE::from_hex("00100010001000100010001000100010").unwrap();
-        let one_two_three = FE::from_hex("00010002000300040005000600070008").unwrap();
+        let fifteen = Felt252::from_hex("000F000F000F000F000F000F000F000F").unwrap();
+        let sixteen = Felt252::from_hex("00100010001000100010001000100010").unwrap();
+        let one_two_three = Felt252::from_hex("00010002000300040005000600070008").unwrap();
 
         let decomposition_columns =
             decompose_rc_values_into_trace_columns(&[&fifteen, &sixteen, &one_two_three]);
 
         for row in &decomposition_columns {
-            assert_eq!(row[0], FE::from_hex("F").unwrap());
-            assert_eq!(row[1], FE::from_hex("10").unwrap());
+            assert_eq!(row[0], Felt252::from_hex("F").unwrap());
+            assert_eq!(row[1], Felt252::from_hex("10").unwrap());
         }
 
-        assert_eq!(decomposition_columns[0][2], FE::from_hex("8").unwrap());
-        assert_eq!(decomposition_columns[1][2], FE::from_hex("7").unwrap());
-        assert_eq!(decomposition_columns[2][2], FE::from_hex("6").unwrap());
-        assert_eq!(decomposition_columns[3][2], FE::from_hex("5").unwrap());
-        assert_eq!(decomposition_columns[4][2], FE::from_hex("4").unwrap());
-        assert_eq!(decomposition_columns[5][2], FE::from_hex("3").unwrap());
-        assert_eq!(decomposition_columns[6][2], FE::from_hex("2").unwrap());
-        assert_eq!(decomposition_columns[7][2], FE::from_hex("1").unwrap());
+        assert_eq!(decomposition_columns[0][2], Felt252::from_hex("8").unwrap());
+        assert_eq!(decomposition_columns[1][2], Felt252::from_hex("7").unwrap());
+        assert_eq!(decomposition_columns[2][2], Felt252::from_hex("6").unwrap());
+        assert_eq!(decomposition_columns[3][2], Felt252::from_hex("5").unwrap());
+        assert_eq!(decomposition_columns[4][2], Felt252::from_hex("4").unwrap());
+        assert_eq!(decomposition_columns[5][2], Felt252::from_hex("3").unwrap());
+        assert_eq!(decomposition_columns[6][2], Felt252::from_hex("2").unwrap());
+        assert_eq!(decomposition_columns[7][2], Felt252::from_hex("1").unwrap());
     }
 
     #[test]
@@ -691,77 +710,93 @@ mod test {
         // This trace is obtained from Giza when running the prover for the mentioned program.
         let expected_trace = TraceTable::new_from_cols(&vec![
             // col 0
-            vec![FE::zero(), FE::zero(), FE::one()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::one()],
             // col 1
-            vec![FE::one(), FE::one(), FE::one()],
+            vec![Felt252::one(), Felt252::one(), Felt252::one()],
             // col 2
-            vec![FE::one(), FE::one(), FE::zero()],
+            vec![Felt252::one(), Felt252::one(), Felt252::zero()],
             // col 3
-            vec![FE::zero(), FE::zero(), FE::one()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::one()],
             // col 4
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 5
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 6
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 7
-            vec![FE::zero(), FE::zero(), FE::one()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::one()],
             // col 8
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 9
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 10
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 11
-            vec![FE::one(), FE::zero(), FE::zero()],
+            vec![Felt252::one(), Felt252::zero(), Felt252::zero()],
             // col 12
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 13
-            vec![FE::zero(), FE::zero(), FE::one()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::one()],
             // col 14
-            vec![FE::one(), FE::one(), FE::zero()],
+            vec![Felt252::one(), Felt252::one(), Felt252::zero()],
             // col 15
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 16
-            vec![FE::from(3), FE::from(3), FE::from(9)],
+            vec![Felt252::from(3), Felt252::from(3), Felt252::from(9)],
             // col 17
-            vec![FE::from(8), FE::from(9), FE::from(9)],
+            vec![Felt252::from(8), Felt252::from(9), Felt252::from(9)],
             // col 18
-            vec![FE::from(8), FE::from(8), FE::from(8)],
+            vec![Felt252::from(8), Felt252::from(8), Felt252::from(8)],
             // col 19
-            vec![FE::from(1), FE::from(3), FE::from(5)],
+            vec![Felt252::from(1), Felt252::from(3), Felt252::from(5)],
             // col 20
-            vec![FE::from(8), FE::from(8), FE::from(6)],
+            vec![Felt252::from(8), Felt252::from(8), Felt252::from(6)],
             // col 21
-            vec![FE::from(7), FE::from(7), FE::from(7)],
+            vec![Felt252::from(7), Felt252::from(7), Felt252::from(7)],
             // col 22
-            vec![FE::from(2), FE::from(4), FE::from(7)],
+            vec![Felt252::from(2), Felt252::from(4), Felt252::from(7)],
             // col 23
             vec![
-                FE::from(0x480680017fff8000),
-                FE::from(0x400680017fff7fff),
-                FE::from(0x208b7fff7fff7ffe),
+                Felt252::from(0x480680017fff8000),
+                Felt252::from(0x400680017fff7fff),
+                Felt252::from(0x208b7fff7fff7ffe),
             ],
             // col 24
-            vec![FE::from(3), FE::from(3), FE::from(9)],
+            vec![Felt252::from(3), Felt252::from(3), Felt252::from(9)],
             // col 25
-            vec![FE::from(9), FE::from(9), FE::from(9)],
+            vec![Felt252::from(9), Felt252::from(9), Felt252::from(9)],
             // col 26
-            vec![FE::from(3), FE::from(3), FE::from(9)],
+            vec![Felt252::from(3), Felt252::from(3), Felt252::from(9)],
             // col 27
-            vec![FE::from(0x8000), FE::from(0x7fff), FE::from(0x7ffe)],
+            vec![
+                Felt252::from(0x8000),
+                Felt252::from(0x7fff),
+                Felt252::from(0x7ffe),
+            ],
             // col 28
-            vec![FE::from(0x7fff), FE::from(0x7fff), FE::from(0x7fff)],
+            vec![
+                Felt252::from(0x7fff),
+                Felt252::from(0x7fff),
+                Felt252::from(0x7fff),
+            ],
             // col 29
-            vec![FE::from(0x8001), FE::from(0x8001), FE::from(0x7fff)],
+            vec![
+                Felt252::from(0x8001),
+                Felt252::from(0x8001),
+                Felt252::from(0x7fff),
+            ],
             // col 30
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 31
-            vec![FE::zero(), FE::zero(), FE::zero()],
+            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
             // col 32
-            vec![FE::from(0x1b), FE::from(0x1b), FE::from(0x51)],
+            vec![
+                Felt252::from(0x1b),
+                Felt252::from(0x1b),
+                Felt252::from(0x51),
+            ],
             // col 33 - Selector column
-            vec![FE::one(), FE::one(), FE::zero()],
+            vec![Felt252::one(), Felt252::one(), Felt252::zero()],
         ]);
 
         assert_eq!(execution_trace.cols(), expected_trace.cols());
@@ -772,7 +807,7 @@ mod test {
         /*
         The following trace and memory files are obtained running the following Cairo program:
         ```
-        func mul(x: felt, y: felt) -> (res: felt) {
+        func mul(x: Felt252lt, y: Felt252lt) -> (res: Felt252lt) {
             return (res = x * y);
         }
 
@@ -811,349 +846,349 @@ mod test {
         let expected_trace = TraceTable::new_from_cols(&[
             // col 0
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::one(),
             ],
             // col 1
             vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::one(),
             ],
             // col 2
             vec![
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
             ],
             // col 3
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::one(),
             ],
             // col 4
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 5
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 6
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 7
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::one(),
             ],
             // col 8
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 9
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 10
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 11
             vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 12
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 13
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::one(),
             ],
             // col 14
             vec![
-                FE::one(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
-                FE::one(),
-                FE::zero(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
+                Felt252::one(),
+                Felt252::zero(),
             ],
             // col 15
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 16
             vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from_hex_unchecked(
+                Felt252::from(2),
+                Felt252::from(3),
+                Felt252::from_hex_unchecked(
                     "0800000000000010fffffffffffffffffffffffffffffffffffffffffffffffb",
                 ),
-                FE::from(6),
-                FE::from(9),
-                FE::from(6),
-                FE::from(19),
+                Felt252::from(6),
+                Felt252::from(9),
+                Felt252::from(6),
+                Felt252::from(19),
             ],
             // col 17
             vec![
-                FE::from(14),
-                FE::from(15),
-                FE::from(16),
-                FE::from(18),
-                FE::from(19),
-                FE::from(19),
-                FE::from(19),
+                Felt252::from(14),
+                Felt252::from(15),
+                Felt252::from(16),
+                Felt252::from(18),
+                Felt252::from(19),
+                Felt252::from(19),
+                Felt252::from(19),
             ],
             // col 18
             vec![
-                FE::from(14),
-                FE::from(14),
-                FE::from(14),
-                FE::from(18),
-                FE::from(18),
-                FE::from(14),
-                FE::from(14),
+                Felt252::from(14),
+                Felt252::from(14),
+                Felt252::from(14),
+                Felt252::from(18),
+                Felt252::from(18),
+                Felt252::from(14),
+                Felt252::from(14),
             ],
             // col 19
             vec![
-                FE::from(3),
-                FE::from(5),
-                FE::from(7),
-                FE::from(1),
-                FE::from(2),
-                FE::from(9),
-                FE::from(11),
+                Felt252::from(3),
+                Felt252::from(5),
+                Felt252::from(7),
+                Felt252::from(1),
+                Felt252::from(2),
+                Felt252::from(9),
+                Felt252::from(11),
             ],
             // col 20
             vec![
-                FE::from(14),
-                FE::from(15),
-                FE::from(16),
-                FE::from(18),
-                FE::from(16),
-                FE::from(18),
-                FE::from(12),
+                Felt252::from(14),
+                Felt252::from(15),
+                Felt252::from(16),
+                Felt252::from(18),
+                Felt252::from(16),
+                Felt252::from(18),
+                Felt252::from(12),
             ],
             // col 21
             vec![
-                FE::from(13),
-                FE::from(13),
-                FE::from(17),
-                FE::from(14),
-                FE::from(17),
-                FE::from(13),
-                FE::from(13),
+                Felt252::from(13),
+                Felt252::from(13),
+                Felt252::from(17),
+                Felt252::from(14),
+                Felt252::from(17),
+                Felt252::from(13),
+                Felt252::from(13),
             ],
             // col 22
             vec![
-                FE::from(4),
-                FE::from(6),
-                FE::from(8),
-                FE::from(15),
-                FE::from(17),
-                FE::from(10),
-                FE::from(13),
+                Felt252::from(4),
+                Felt252::from(6),
+                Felt252::from(8),
+                Felt252::from(15),
+                Felt252::from(17),
+                Felt252::from(10),
+                Felt252::from(13),
             ],
             // col 23
             vec![
-                FE::from(0x480680017fff8000),
-                FE::from(0x480680017fff8000),
-                FE::from(0x1104800180018000),
-                FE::from(0x484a7ffd7ffc8000),
-                FE::from(0x208b7fff7fff7ffe),
-                FE::from(0x400680017fff7fff),
-                FE::from(0x208b7fff7fff7ffe),
+                Felt252::from(0x480680017fff8000),
+                Felt252::from(0x480680017fff8000),
+                Felt252::from(0x1104800180018000),
+                Felt252::from(0x484a7ffd7ffc8000),
+                Felt252::from(0x208b7fff7fff7ffe),
+                Felt252::from(0x400680017fff7fff),
+                Felt252::from(0x208b7fff7fff7ffe),
             ],
             // col 24
             vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from(14),
-                FE::from(6),
-                FE::from(14),
-                FE::from(6),
-                FE::from(19),
+                Felt252::from(2),
+                Felt252::from(3),
+                Felt252::from(14),
+                Felt252::from(6),
+                Felt252::from(14),
+                Felt252::from(6),
+                Felt252::from(19),
             ],
             // col 25
             vec![
-                FE::from(19),
-                FE::from(19),
-                FE::from(9),
-                FE::from(2),
-                FE::from(9),
-                FE::from(19),
-                FE::from(19),
+                Felt252::from(19),
+                Felt252::from(19),
+                Felt252::from(9),
+                Felt252::from(2),
+                Felt252::from(9),
+                Felt252::from(19),
+                Felt252::from(19),
             ],
             // col 26
             vec![
-                FE::from(2),
-                FE::from(3),
-                FE::from_hex_unchecked(
+                Felt252::from(2),
+                Felt252::from(3),
+                Felt252::from_hex_unchecked(
                     "0800000000000010fffffffffffffffffffffffffffffffffffffffffffffffb",
                 ),
-                FE::from(3),
-                FE::from(9),
-                FE::from(6),
-                FE::from(19),
+                Felt252::from(3),
+                Felt252::from(9),
+                Felt252::from(6),
+                Felt252::from(19),
             ],
             // col 27
             vec![
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x8000),
-                FE::from(0x7ffe),
-                FE::from(0x7fff),
-                FE::from(0x7ffe),
+                Felt252::from(0x8000),
+                Felt252::from(0x8000),
+                Felt252::from(0x8000),
+                Felt252::from(0x8000),
+                Felt252::from(0x7ffe),
+                Felt252::from(0x7fff),
+                Felt252::from(0x7ffe),
             ],
             // col 28
             vec![
-                FE::from(0x7fff),
-                FE::from(0x7fff),
-                FE::from(0x8001),
-                FE::from(0x7ffc),
-                FE::from(0x7fff),
-                FE::from(0x7fff),
-                FE::from(0x7fff),
+                Felt252::from(0x7fff),
+                Felt252::from(0x7fff),
+                Felt252::from(0x8001),
+                Felt252::from(0x7ffc),
+                Felt252::from(0x7fff),
+                Felt252::from(0x7fff),
+                Felt252::from(0x7fff),
             ],
             // col 29
             vec![
-                FE::from(0x8001),
-                FE::from(0x8001),
-                FE::from(0x8001),
-                FE::from(0x7ffd),
-                FE::from(0x7fff),
-                FE::from(0x8001),
-                FE::from(0x7fff),
+                Felt252::from(0x8001),
+                Felt252::from(0x8001),
+                Felt252::from(0x8001),
+                Felt252::from(0x7ffd),
+                Felt252::from(0x7fff),
+                Felt252::from(0x8001),
+                Felt252::from(0x7fff),
             ],
             // col 30
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 31
             vec![
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
-                FE::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
+                Felt252::zero(),
             ],
             // col 32
             vec![
-                FE::from(38),
-                FE::from(57),
-                FE::from_hex_unchecked(
+                Felt252::from(38),
+                Felt252::from(57),
+                Felt252::from_hex_unchecked(
                     "0800000000000010ffffffffffffffffffffffffffffffffffffffffffffffcb",
                 ),
-                FE::from(6),
-                FE::from(81),
-                FE::from(114),
-                FE::from(0x169),
+                Felt252::from(6),
+                Felt252::from(81),
+                Felt252::from(114),
+                Felt252::from(0x169),
             ],
             // col 33 - Selector column
             vec![
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::one(),
-                FE::zero(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::one(),
+                Felt252::zero(),
             ],
         ]);
 
@@ -1224,19 +1259,19 @@ mod test {
         // We construct a sorted addresses list [1, 2, 3, 6, 7, 8, 9, 13, 14, 15], and
         // set codelen = 0. With this value of codelen, any holes present between
         // the min and max addresses should be returned by the function.
-        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
-        let addrs_extension: Vec<FE> = (6..10).map(FE::from).collect();
+        let mut addrs: Vec<Felt252> = (1..4).map(Felt252::from).collect();
+        let addrs_extension: Vec<Felt252> = (6..10).map(Felt252::from).collect();
         addrs.extend_from_slice(&addrs_extension);
-        let addrs_extension: Vec<FE> = (13..16).map(FE::from).collect();
+        let addrs_extension: Vec<Felt252> = (13..16).map(Felt252::from).collect();
         addrs.extend_from_slice(&addrs_extension);
         let codelen = 0;
 
         let expected_memory_holes = vec![
-            FE::from(4),
-            FE::from(5),
-            FE::from(10),
-            FE::from(11),
-            FE::from(12),
+            Felt252::from(4),
+            Felt252::from(5),
+            Felt252::from(10),
+            Felt252::from(11),
+            Felt252::from(12),
         ];
         let calculated_memory_holes = get_memory_holes(&addrs, codelen);
 
@@ -1249,13 +1284,13 @@ mod test {
         // set a codelen of 9. Since all the holes will be inside the
         // program segment (meaning from addresses 1 to 9), the function
         // should not return any of them.
-        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
-        let addrs_extension: Vec<FE> = (8..10).map(FE::from).collect();
+        let mut addrs: Vec<Felt252> = (1..4).map(Felt252::from).collect();
+        let addrs_extension: Vec<Felt252> = (8..10).map(Felt252::from).collect();
         addrs.extend_from_slice(&addrs_extension);
         let codelen = 9;
 
         let calculated_memory_holes = get_memory_holes(&addrs, codelen);
-        let expected_memory_holes: Vec<FE> = Vec::new();
+        let expected_memory_holes: Vec<Felt252> = Vec::new();
 
         assert_eq!(expected_memory_holes, calculated_memory_holes);
     }
@@ -1266,13 +1301,13 @@ mod test {
         // set a codelen of 6. The holes found inside the program section,
         // i.e. in the address range between 1 to 6, should not be returned.
         // So addresses 4, 5 and 6 will no be returned, only address 7.
-        let mut addrs: Vec<FE> = (1..4).map(FE::from).collect();
-        let addrs_extension: Vec<FE> = (8..10).map(FE::from).collect();
+        let mut addrs: Vec<Felt252> = (1..4).map(Felt252::from).collect();
+        let addrs_extension: Vec<Felt252> = (8..10).map(Felt252::from).collect();
         addrs.extend_from_slice(&addrs_extension);
         let codelen = 6;
 
         let calculated_memory_holes = get_memory_holes(&addrs, codelen);
-        let expected_memory_holes = vec![FE::from(7)];
+        let expected_memory_holes = vec![Felt252::from(7)];
 
         assert_eq!(expected_memory_holes, calculated_memory_holes);
     }
@@ -1282,31 +1317,31 @@ mod test {
         const TRACE_COL_LEN: usize = 2;
         const NUM_TRACE_COLS: usize = FRAME_SELECTOR + 1;
 
-        let mut trace_cols = vec![vec![FE::zero(); TRACE_COL_LEN]; NUM_TRACE_COLS];
-        trace_cols[FRAME_PC][0] = FE::one();
-        trace_cols[FRAME_DST_ADDR][0] = FE::from(2);
-        trace_cols[FRAME_OP0_ADDR][0] = FE::from(3);
-        trace_cols[FRAME_OP1_ADDR][0] = FE::from(5);
-        trace_cols[FRAME_PC][1] = FE::from(6);
-        trace_cols[FRAME_DST_ADDR][1] = FE::from(9);
-        trace_cols[FRAME_OP0_ADDR][1] = FE::from(10);
-        trace_cols[FRAME_OP1_ADDR][1] = FE::from(11);
+        let mut trace_cols = vec![vec![Felt252::zero(); TRACE_COL_LEN]; NUM_TRACE_COLS];
+        trace_cols[FRAME_PC][0] = Felt252::one();
+        trace_cols[FRAME_DST_ADDR][0] = Felt252::from(2);
+        trace_cols[FRAME_OP0_ADDR][0] = Felt252::from(3);
+        trace_cols[FRAME_OP1_ADDR][0] = Felt252::from(5);
+        trace_cols[FRAME_PC][1] = Felt252::from(6);
+        trace_cols[FRAME_DST_ADDR][1] = Felt252::from(9);
+        trace_cols[FRAME_OP0_ADDR][1] = Felt252::from(10);
+        trace_cols[FRAME_OP1_ADDR][1] = Felt252::from(11);
         let mut trace = TraceTable::new_from_cols(&trace_cols);
 
-        let mut memory_holes = vec![FE::from(4), FE::from(7), FE::from(8)];
+        let mut memory_holes = vec![Felt252::from(4), Felt252::from(7), Felt252::from(8)];
         fill_memory_holes(&mut trace, &mut memory_holes);
 
         let frame_pc = &trace.cols()[FRAME_PC];
         let dst_addr = &trace.cols()[FRAME_DST_ADDR];
         let op0_addr = &trace.cols()[FRAME_OP0_ADDR];
         let op1_addr = &trace.cols()[FRAME_OP1_ADDR];
-        assert_eq!(frame_pc[0], FE::one());
-        assert_eq!(dst_addr[0], FE::from(2));
-        assert_eq!(op0_addr[0], FE::from(3));
-        assert_eq!(op1_addr[0], FE::from(5));
-        assert_eq!(frame_pc[1], FE::from(6));
-        assert_eq!(dst_addr[1], FE::from(9));
-        assert_eq!(op0_addr[1], FE::from(10));
-        assert_eq!(op1_addr[1], FE::from(11));
+        assert_eq!(frame_pc[0], Felt252::one());
+        assert_eq!(dst_addr[0], Felt252::from(2));
+        assert_eq!(op0_addr[0], Felt252::from(3));
+        assert_eq!(op1_addr[0], Felt252::from(5));
+        assert_eq!(frame_pc[1], Felt252::from(6));
+        assert_eq!(dst_addr[1], Felt252::from(9));
+        assert_eq!(op0_addr[1], Felt252::from(10));
+        assert_eq!(op1_addr[1], Felt252::from(11));
     }
 }

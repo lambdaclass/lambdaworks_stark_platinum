@@ -1,2 +1,2 @@
-pub use integration_tests;
-pub use utils;
+pub mod integration_tests;
+pub mod utils;

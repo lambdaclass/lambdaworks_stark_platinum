@@ -1,3 +1,12 @@
+use std::ops::Range;
+
+use stark_platinum_prover::proof::options::ProofOptions;
+
+use crate::{
+    air::{generate_cairo_proof, verify_cairo_proof},
+    runner::run::{generate_prover_args, CairoVersion},
+};
+
 pub fn cairo0_program_path(program_name: &str) -> String {
     const CARGO_DIR: &str = env!("CARGO_MANIFEST_DIR");
     const CAIRO0_BASE_REL_PATH: &str = "/cairo_programs/cairo0/";
@@ -33,20 +42,4 @@ pub fn test_prove_cairo1_program(file_path: &str) {
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
 
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
-}
-
-fn create_memory_segment_map(
-    range_check_builtin_range: Option<Range<u64>>,
-    output_range: &Option<Range<u64>>,
-) -> MemorySegmentMap {
-    let mut memory_segments = MemorySegmentMap::new();
-
-    if let Some(range_check_builtin_range) = range_check_builtin_range {
-        memory_segments.insert(MemorySegment::RangeCheck, range_check_builtin_range);
-    }
-    if let Some(output_range) = output_range {
-        memory_segments.insert(MemorySegment::Output, output_range.clone());
-    }
-
-    memory_segments
 }
