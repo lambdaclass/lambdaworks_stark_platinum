@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn test_parse_cairo_file() {
         let base_dir = env!("CARGO_MANIFEST_DIR");
-        let json_filename = base_dir.to_owned() + "/cairo_prover/src/runner/program.json";
+        let json_filename = base_dir.to_owned() + "/src/runner/program.json";
 
         let program_content = std::fs::read(json_filename).unwrap();
 
