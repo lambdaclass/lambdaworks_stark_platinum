@@ -7,7 +7,9 @@ rust-version = "1.66"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "af0a479" }
+lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "af0a479", features = [
+    "lambdaworks-serde",
+] }
 lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "af0a479" }
 thiserror = "1.0.38"
 log = "0.4.17"
