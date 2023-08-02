@@ -23,7 +23,7 @@ use thiserror::Error;
 
 #[derive(Debug)]
 pub enum Error {
-    AnError
+    AnError,
 }
 /*
 #[derive(Debug)]
@@ -76,7 +76,6 @@ pub fn run_program(
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
-
     let (vm, runner) = match cairo_version {
         CairoVersion::V0 => {
             let trace_enabled = true;
@@ -110,7 +109,7 @@ pub fn run_program(
             let casm_contract: CasmContractClass = serde_json::from_slice(program_content).unwrap();
 
             let program: Program = casm_contract.clone().try_into().unwrap();
-            
+
             let mut runner = CairoRunner::new(
                 &(casm_contract.clone().try_into().unwrap()),
                 layout.as_str(),
@@ -179,7 +178,7 @@ pub fn run_program(
             ]);
             let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
 
-            let mut hint_processor = 
+            let mut hint_processor =
                 Cairo1HintProcessor::new(&casm_contract.hints, RunResources::default());
 
             // Run contract entrypoint

@@ -43,11 +43,16 @@ pub fn deserialize_proof_wasm(proof: &[u8]) -> Stark252PrimeFieldProof {
 }
 
 #[wasm_bindgen]
-pub fn new_proof_options(blowup_factor: u8, fri_number_of_queries: usize, coset_offset: usize, grinding_factor: u8) -> ProofOptions {
-    ProofOptions{
+pub fn new_proof_options(
+    blowup_factor: u8,
+    fri_number_of_queries: usize,
+    coset_offset: usize,
+    grinding_factor: u8,
+) -> ProofOptions {
+    ProofOptions {
         blowup_factor,
         fri_number_of_queries,
         coset_offset: coset_offset as u64,
-        grinding_factor
+        grinding_factor,
     }
 }
