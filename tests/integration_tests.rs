@@ -144,6 +144,11 @@ fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None);
 }
 
+#[test_log::test]
+fn test_prove_cairo_fibonacci_1000() {
+    test_prove_cairo_program(&cairo0_program_path("fibonacci_1000.json"), &None);
+}
+
 #[cfg_attr(feature = "metal", ignore)]
 #[test_log::test]
 fn test_prove_cairo_fibonacci_casm() {
