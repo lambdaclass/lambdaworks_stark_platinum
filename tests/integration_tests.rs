@@ -115,7 +115,6 @@ fn test_prove_quadratic() {
 }
 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
-
 pub fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64>>) {
     let proof_options = ProofOptions::default_test_options();
 

@@ -187,12 +187,6 @@ where
     // FRI query phase
     // <<<< Send challenges 𝜄ₛ (iota_s)
     let iota_max: usize = 2_usize.pow(domain.lde_root_order);
-
-    //println!("iota_max: {}", iota_max);
-
-    //let iota_max_debug = format!("iota_max {}", iota_max);
-    //web_sys::console::log_1(&iota_max_debug.into());
-
     let iotas: Vec<usize> = (0..air.options().fri_number_of_queries)
         .map(|_| (transcript_to_u32(transcript) as usize) % iota_max)
         .collect();
