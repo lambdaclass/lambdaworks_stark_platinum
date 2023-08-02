@@ -5,8 +5,6 @@ pub mod decode;
 pub mod errors;
 pub mod execution_trace;
 pub mod register_states;
-pub mod serialized;
-//pub mod serialized_proof;
-pub mod wasm_wrappers;
-
 pub mod runner;
+pub mod serialized;
+pub mod wasm_wrappers;
