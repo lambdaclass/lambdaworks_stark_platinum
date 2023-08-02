@@ -6,5 +6,5 @@ pub mod errors;
 pub mod execution_trace;
 pub mod register_states;
 pub mod runner;
-pub mod serialized;
+#[cfg(feature = "wasm")]
 pub mod wasm_wrappers;

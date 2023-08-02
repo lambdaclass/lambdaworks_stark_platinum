@@ -40,6 +40,12 @@ giza-core = { git = "https://github.com/lambdaclass/giza", branch = "remove_prin
 giza-prover = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
 giza-runner = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
 
+# wasm
+wasm-bindgen = "0.2"
+serde-wasm-bindgen = { version = "0.5", optional = true }
+web-sys = { version = "0.3.64", features = ['console'], optional = true }
+serde_cbor = { version = "0.11.1", optional = true }
+
 [dev-dependencies]
 hex = "0.4.3"
 criterion = { version = "0.4", default-features = false }
@@ -54,7 +60,7 @@ wasm-bindgen-test = "0.3.0"
 proptest = "1.2.0"
 
 [features]
-default = ["cairo"]
+default = ["cairo", "wasm"]
 test_fiat_shamir = []
 cairo = [
     "bincode",
@@ -68,6 +74,7 @@ instruments = []
 metal = ["lambdaworks-math/metal"]
 parallel = ["dep:rayon"]
 giza = ["dep:giza-core", "dep:giza-prover", "dep:giza-runner"]
+wasm = ["dep:serde-wasm-bindgen", "dep:web-sys", "dep:serde_cbor"]
 
 [[bench]]
 name = "criterion_prover"
