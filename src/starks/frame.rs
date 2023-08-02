@@ -1,3 +1,4 @@
+use super::trace::TraceTable;
 use lambdaworks_math::{
     errors::DeserializationError,
     field::{element::FieldElement, traits::IsFFTField},
@@ -5,9 +6,7 @@ use lambdaworks_math::{
     traits::{ByteConversion, Deserializable, Serializable},
 };
 
-use super::trace::TraceTable;
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Frame<F: IsFFTField> {
     // Vector of rows
     data: Vec<FieldElement<F>>,
@@ -156,8 +155,9 @@ where
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 #[cfg(test)]
-mod tests {
+mod prop_test {
     use lambdaworks_math::field::{
         element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
     };
