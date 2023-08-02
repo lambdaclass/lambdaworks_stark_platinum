@@ -155,7 +155,7 @@ pub const MEM_A_TRACE_OFFSET: usize = 19;
 // index.
 const BUILTIN_OFFSET: usize = 9;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum MemorySegment {
     RangeCheck,
     Output,
@@ -163,7 +163,7 @@ pub enum MemorySegment {
 
 pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PublicInputs {
     pub pc_init: FE,
     pub ap_init: FE,
