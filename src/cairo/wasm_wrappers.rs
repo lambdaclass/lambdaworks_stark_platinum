@@ -6,7 +6,6 @@ use crate::starks::{
 };
 use lambdaworks_math::field::element::FieldElement;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
-use lambdaworks_math::traits::Deserializable;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::Range;

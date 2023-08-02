@@ -8,8 +8,6 @@ use lambdaworks_math::{
     },
     traits::{ByteConversion, Deserializable, Serializable},
 };
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::wasm_bindgen;
 
 use crate::{
     starks::{
