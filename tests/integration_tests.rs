@@ -121,22 +121,12 @@ pub fn test_prove_cairo_program(file_path: &str, output_range: &Option<Range<u64
     let program_content = std::fs::read(file_path).unwrap();
     let (main_trace, pub_inputs) =
         generate_prover_args(&program_content, &CairoVersion::V0, output_range).unwrap();
-
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
-
-    //let ret_vec_proof = serde_cbor::to_vec(&proof).unwrap();
-    //println!("Proof bytes cbor:");
-    //println!("{:?}", ret_vec_proof);
-
-    //let ret_vec_pub_inputs = serde_cbor::to_vec(&pub_inputs).unwrap();
-    //println!("Pub inputs cbor:");
-    //println!("{:?}", ret_vec_pub_inputs);
 
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }
 
 /// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
-
 fn test_prove_cairo1_program(file_path: &str) {
     let proof_options = ProofOptions::default_test_options();
     let program_content = std::fs::read(file_path).unwrap();
@@ -144,26 +134,20 @@ fn test_prove_cairo1_program(file_path: &str) {
         generate_prover_args(&program_content, &CairoVersion::V1, &None).unwrap();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
 
-    println!("Proof bytes");
-    println!("{:?}", proof.serialize());
-
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
 }
 
 #[test_log::test]
-
 fn test_prove_cairo_simple_program() {
     test_prove_cairo_program(&cairo0_program_path("simple_program.json"), &None);
 }
 
 #[test_log::test]
-
 fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None);
 }
 
 #[test_log::test]
-
 fn test_prove_cairo_fibonacci_1000() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_1000.json"), &None);
 }
@@ -175,13 +159,11 @@ fn test_prove_cairo_fibonacci_casm() {
 }
 
 #[test_log::test]
-
 fn test_prove_cairo_rc_program() {
     test_prove_cairo_program(&cairo0_program_path("rc_program.json"), &None);
 }
 
 #[test_log::test]
-
 fn test_prove_cairo_lt_comparison() {
     test_prove_cairo_program(&cairo0_program_path("lt_comparison.json"), &None);
 }
@@ -193,7 +175,6 @@ fn test_prove_cairo_compare_lesser_array() {
 }
 
 #[test_log::test]
-
 fn test_prove_cairo_output_and_rc_program() {
     test_prove_cairo_program(&cairo0_program_path("signed_div_rem.json"), &Some(289..293));
 }
@@ -231,7 +212,6 @@ fn test_prove_dummy() {
 }
 
 #[test_log::test]
-
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
     let (main_trace, mut pub_input) =
@@ -252,7 +232,6 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 }
 
 #[test_log::test]
-
 fn test_verifier_rejects_proof_with_different_range_bounds() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
     let (main_trace, mut pub_inputs) =
@@ -270,7 +249,6 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
 }
 
 #[test_log::test]
-
 fn test_verifier_rejects_proof_with_changed_range_check_value() {
     // In this test we change the range-check value in the trace, so the constraint
     // that asserts that the sum of the rc decomposed values is equal to the
@@ -296,7 +274,6 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
 }
 
 #[test_log::test]
-
 fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
     // In this test we manually insert a value greater than 2^128 in the range-check builtin segment.
 
@@ -333,7 +310,6 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 }
 
 #[test_log::test]
-
 fn test_verifier_rejects_proof_with_changed_output() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
     let (main_trace, pub_inputs) =
