@@ -1,15 +1,13 @@
+use cairo_platinum_prover::air::{verify_cairo_proof, PublicInputs};
 use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
 use lambdaworks_math::{
     field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField, traits::Deserializable,
 };
-use lambdaworks_stark::{
-    cairo::air::{verify_cairo_proof, PublicInputs},
-    starks::proof::{
-        options::{ProofOptions, SecurityLevel},
-        stark::StarkProof,
-    },
+use stark_platinum_prover::proof::{
+    options::{ProofOptions, SecurityLevel},
+    stark::StarkProof,
 };
 
 pub mod functions;

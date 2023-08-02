@@ -1,14 +1,7 @@
 #[cfg(feature = "giza")]
 use criterion::{black_box, measurement::WallTime, BenchmarkGroup};
 use criterion::{criterion_group, criterion_main, Criterion};
-#[cfg(feature = "giza")]
-use lambdaworks_stark::{
-    cairo::{
-        air::generate_cairo_proof,
-        runner::run::{generate_prover_args, CairoVersion},
-    },
-    starks::proof::options::{self, SecurityLevel},
-};
+// #[cfg(feature = "giza")]
 #[cfg(feature = "giza")]
 pub mod functions;
 
@@ -75,7 +68,7 @@ fn cairo0_program_path(program_name: &str) -> String {
     program_base_path + program_name
 }
 
-#[cfg(feature = "giza")]
+// #[cfg(feature = "giza")]
 fn run_lambdaworks_bench(
     group: &mut BenchmarkGroup<'_, WallTime>,
     proof_options: &options::ProofOptions,

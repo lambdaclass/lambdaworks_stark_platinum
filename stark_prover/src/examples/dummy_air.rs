@@ -63,9 +63,9 @@ impl AIR for DummyAIR {
         let second_row = frame.get_row(1);
         let third_row = frame.get_row(2);
 
-        let f_constraint = &first_row[0] * (&first_row[0] - FieldElement::one());
+        let f_constraint = first_row[0] * (first_row[0] - FieldElement::one());
 
-        let fib_constraint = &third_row[1] - &second_row[1] - &first_row[1];
+        let fib_constraint = third_row[1] - second_row[1] - first_row[1];
 
         vec![f_constraint, fib_constraint]
     }

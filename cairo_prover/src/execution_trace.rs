@@ -78,10 +78,10 @@ pub fn build_main_trace(
     public_input.range_check_max = Some(rc_max);
     fill_rc_holes(&mut main_trace, rc_holes);
 
-    let mut memory_holes = get_memory_holes(&address_cols, public_input.public_memory.len());
+    let memory_holes = get_memory_holes(&address_cols, public_input.public_memory.len());
 
     if !memory_holes.is_empty() {
-        fill_memory_holes(&mut main_trace, &mut memory_holes);
+        fill_memory_holes(&mut main_trace, &memory_holes);
     }
 
     add_pub_memory_dummy_accesses(&mut main_trace, public_input.public_memory.len());
@@ -231,7 +231,7 @@ fn get_memory_holes(sorted_addrs: &[Felt252], codelen: usize) -> Vec<Felt252> {
 /// Fill memory holes in each address column of the trace with the missing address, depending on the
 /// trace column. If the trace column reFelt252rs to memory addresses, it will be filled with the missing
 /// addresses.
-fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &mut [Felt252]) {
+fn fill_memory_holes(trace: &mut TraceTable<Stark252PrimeField>, memory_holes: &[Felt252]) {
     let last_row = trace.last_row().to_vec();
 
     // This number represents the amount of times we have to pad to fill the memory
@@ -1328,8 +1328,8 @@ mod test {
         trace_cols[FRAME_OP1_ADDR][1] = Felt252::from(11);
         let mut trace = TraceTable::new_from_cols(&trace_cols);
 
-        let mut memory_holes = vec![Felt252::from(4), Felt252::from(7), Felt252::from(8)];
-        fill_memory_holes(&mut trace, &mut memory_holes);
+        let memory_holes = vec![Felt252::from(4), Felt252::from(7), Felt252::from(8)];
+        fill_memory_holes(&mut trace, &memory_holes);
 
         let frame_pc = &trace.cols()[FRAME_PC];
         let dst_addr = &trace.cols()[FRAME_DST_ADDR];

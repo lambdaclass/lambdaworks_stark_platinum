@@ -853,7 +853,7 @@ mod tests {
             for (i, evaluation) in lde_evaluation.iter().enumerate() {
                 assert_eq!(
                     *evaluation,
-                    poly.evaluate(&(&coset_offset * primitive_root.pow(i)))
+                    poly.evaluate(&(coset_offset * primitive_root.pow(i)))
                 );
             }
         }
@@ -874,7 +874,7 @@ mod tests {
         )
         .unwrap();
         for (i, eval) in evaluations.iter().enumerate() {
-            assert_eq!(*eval, poly.evaluate(&(&offset * &primitive_root.pow(i))));
+            assert_eq!(*eval, poly.evaluate(&(offset * primitive_root.pow(i))));
         }
     }
 }

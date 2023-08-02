@@ -1,13 +1,11 @@
+use cairo_platinum_prover::{
+    air::generate_cairo_proof,
+    runner::run::{generate_prover_args, CairoVersion},
+};
 use criterion::{
     black_box, criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
-use lambdaworks_stark::{
-    cairo::{
-        air::generate_cairo_proof,
-        runner::run::{generate_prover_args, CairoVersion},
-    },
-    starks::proof::options::{ProofOptions, SecurityLevel},
-};
+use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
 
 pub mod functions;
 

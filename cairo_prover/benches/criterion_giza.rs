@@ -1,14 +1,14 @@
 #[cfg(feature = "giza")]
+use cairo_platinum_prover::{
+    air::generate_cairo_proof,
+    runner::run::{generate_prover_args, CairoVersion},
+};
+#[cfg(feature = "giza")]
 use criterion::{black_box, measurement::WallTime, BenchmarkGroup};
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "giza")]
-use lambdaworks_stark::{
-    cairo::{
-        air::generate_cairo_proof,
-        runner::run::{generate_prover_args, CairoVersion},
-    },
-    starks::proof::options::{self, SecurityLevel},
-};
+use stark_platinum_prover::proof::options::{self, SecurityLevel};
+
 #[cfg(feature = "giza")]
 pub mod functions;
 
