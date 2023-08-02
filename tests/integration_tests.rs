@@ -1,11 +1,8 @@
 use std::ops::Range;
 
-use lambdaworks_math::{
-    field::fields::{
-        fft_friendly::stark_252_prime_field::Stark252PrimeField as F,
-        u64_prime_field::{F17, FE17},
-    },
-    traits::{Deserializable, Serializable},
+use lambdaworks_math::field::fields::{
+    fft_friendly::stark_252_prime_field::Stark252PrimeField as F,
+    u64_prime_field::{F17, FE17},
 };
 use lambdaworks_stark::{
     cairo::{
