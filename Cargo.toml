@@ -1,6 +1,7 @@
 [workspace]
 members = ["stark_prover", "cairo_prover"]
 exclude = ["ensure-no_std"]
+resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
@@ -18,3 +19,13 @@ lambdaworks-cairo-platinum = { path = "./cairo_prover" }
 lto = true
 codegen-units = 1
 opt-level = 3
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+
+[profile.test]
+lto = "thin"
+opt-level = 3
+debug = 2

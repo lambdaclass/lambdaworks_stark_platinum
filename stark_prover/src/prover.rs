@@ -19,6 +19,7 @@ use log::info;
 #[cfg(Felt252ature = "parallel")]
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 
+#[cfg(debug_assertions)]
 use crate::debug::validate_trace;
 use crate::transcript::sample_z_ood;
 

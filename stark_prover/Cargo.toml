@@ -32,8 +32,3 @@ test_fiat_shamir = []
 instruments = []                   # This enables timing prints in prover and verifier
 metal = ["lambdaworks-math/metal"]
 parallel = ["dep:rayon"]
-
-[profile.release]
-lto = true
-opt-level = 3
-codegen-units = 1

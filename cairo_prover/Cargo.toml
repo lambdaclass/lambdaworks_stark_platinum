@@ -6,6 +6,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "cairo-platinum"
+path = "src/main.rs"
+
 [dependencies]
 rand = "0.8.5"
 lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "a17b951" }
@@ -63,14 +67,3 @@ harness = false
 [[bench]]
 name = "criterion_giza"
 harness = false
-
-
-[profile.release]
-lto = true
-opt-level = 3
-codegen-units = 1
-
-[profile.test]
-lto = "thin"
-opt-level = 3
-debug = 2
