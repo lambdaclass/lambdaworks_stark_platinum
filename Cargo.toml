@@ -8,10 +8,10 @@ rust-version = "1.66"
 
 [dependencies]
 rand = "0.8.5"
-lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "9d3cde6", features = [
+lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "af0a479", features = [
     "lambdaworks-serde",
 ] }
-lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "9d3cde6" }
+lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "af0a479" }
 thiserror = "1.0"
 log = "0.4.17"
 sha3 = "0.10.6"
