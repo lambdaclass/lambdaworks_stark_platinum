@@ -11,10 +11,9 @@ use crate::starks::{
     fri::fri_decommit::FriDecommitment,
     utils::{deserialize_proof, serialize_proof},
 };
-
 use core::mem;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DeepPolynomialOpenings<F: IsFFTField> {
     pub lde_composition_poly_proof: Proof<Commitment>,
     pub lde_composition_poly_even_evaluation: FieldElement<F>,
@@ -23,7 +22,7 @@ pub struct DeepPolynomialOpenings<F: IsFFTField> {
     pub lde_trace_evaluations: Vec<FieldElement<F>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct StarkProof<F: IsFFTField> {
     // Length of the execution trace
     pub trace_length: usize,
@@ -437,8 +436,11 @@ where
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 #[cfg(test)]
-mod test {
+mod prop_test {
+    use crate::cairo::air::{generate_cairo_proof, verify_cairo_proof};
+    use crate::cairo::runner::run::{cairo0_program_path, generate_prover_args, CairoVersion};
     use lambdaworks_crypto::merkle_tree::proof::Proof;
     use lambdaworks_math::{
         errors::DeserializationError,
@@ -448,17 +450,11 @@ mod test {
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
-    use crate::{
-        cairo::{
-            air::{generate_cairo_proof, verify_cairo_proof},
-            runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
-        },
-        starks::{
-            config::{Commitment, COMMITMENT_SIZE},
-            frame::Frame,
-            fri::fri_decommit::FriDecommitment,
-            proof::options::ProofOptions,
-        },
+    use crate::starks::{
+        config::{Commitment, COMMITMENT_SIZE},
+        frame::Frame,
+        fri::fri_decommit::FriDecommitment,
+        proof::options::ProofOptions,
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
 
