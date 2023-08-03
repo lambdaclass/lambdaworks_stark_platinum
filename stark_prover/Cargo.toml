@@ -7,12 +7,13 @@ license.workspace = true
 
 [dependencies]
 rand = "0.8.5"
-lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "a17b951" }
-lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "a17b951" }
+lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "af0a479", features = ["lambdaworks-serde"]}
+lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "af0a479" }
 thiserror = "1.0.38"
 log = "0.4.17"
 bincode = { version = "2.0.0-rc.2", tag = "v2.0.0-rc.2", git = "https://github.com/bincode-org/bincode.git" }
 sha3 = "0.10.6"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 num-integer = "0.1.45"
 itertools = "0.11.0"

@@ -25,7 +25,7 @@ use super::{
     grinding::hash_transcript_with_int_and_get_leading_zeros,
     proof::{options::ProofOptions, stark::StarkProof},
     traits::AIR,
-    transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_usize},
+    transcript::{batch_sample_challenges, sample_z_ood, transcript_to_field, transcript_to_u32},
 };
 
 #[cfg(feature = "test_fiat_shamir")]
@@ -186,9 +186,9 @@ where
 
     // FRI query phase
     // <<<< Send challenges 𝜄ₛ (iota_s)
-    let iota_max = 2_usize.pow(domain.lde_root_order);
-    let iotas = (0..air.options().fri_number_of_queries)
-        .map(|_| transcript_to_usize(transcript) % iota_max)
+    let iota_max: usize = 2_usize.pow(domain.lde_root_order);
+    let iotas: Vec<usize> = (0..air.options().fri_number_of_queries)
+        .map(|_| (transcript_to_u32(transcript) as usize) % iota_max)
         .collect();
 
     Challenges {

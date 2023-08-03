@@ -11,10 +11,9 @@ use crate::{
     fri::fri_decommit::FriDecommitment,
     utils::{deserialize_proof, serialize_proof},
 };
-
 use core::mem;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DeepPolynomialOpenings<F: IsFFTField> {
     pub lde_composition_poly_proof: Proof<Commitment>,
     pub lde_composition_poly_even_evaluation: FieldElement<F>,
@@ -23,7 +22,7 @@ pub struct DeepPolynomialOpenings<F: IsFFTField> {
     pub lde_trace_evaluations: Vec<FieldElement<F>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct StarkProof<F: IsFFTField> {
     // Length of the execution trace
     pub trace_length: usize,
@@ -437,8 +436,10 @@ where
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 #[cfg(test)]
-mod test {
+mod prop_test {
+
     use lambdaworks_crypto::merkle_tree::proof::Proof;
     use lambdaworks_math::field::{
         element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
