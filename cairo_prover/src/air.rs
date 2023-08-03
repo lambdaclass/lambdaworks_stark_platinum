@@ -1182,14 +1182,11 @@ pub fn verify_cairo_proof(
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
-
-    use proptest::{prelude::*, prop_compose, proptest};
-    use stark_platinum_prover::{debug::validate_trace, domain::Domain};
-
     use crate::{
         runner::run::{generate_prover_args, CairoVersion},
         tests::utils::cairo0_program_path,
     };
+    use stark_platinum_prover::{debug::validate_trace, domain::Domain};
 
     use super::*;
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
