@@ -21,7 +21,7 @@ trace.
 ## Construction details
 
 The execution trace is built in two stages. In the first one, the information of the files 
-described in the previous section is aggregated in order to build a main trace table or matrix.
+described in the previous section is aggregated in order to build a main trace table.
 In the second stage, there is an interaction with the verifier in order to add some extension
 columns to the main trace.
 
@@ -44,7 +44,7 @@ Each letter from A to G represents some subsection of columns, and the number sp
 columns correspond to that subsection.
 
 The pointers (section **C**) and the column `pc` from section **D**, are the most trivial. For each 
-step of the register states, the corresponding values are added to the columns, which are all pointers
+step of the register states, the corresponding values are added to the columns, which are pointers
 to some memory cell in the VM memory. 
 The `inst` column, is obtained by fetching in memory the value stored at pointer `pc`, which 
 corresponds to a 63 bit Cairo instruction.
@@ -68,8 +68,19 @@ Structure of the 63-bit that form the first word of each instruction:
  └─────┴─────┴───┴───┴───┴───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴────┘
  ```
 
- The flags section (**A**) correspond to the 16 bit that represent the configuration of the `dst_reg`,
- `op0_reg`, `op1_src`, `res_logic`, `pc_update`, `ap_update` and `opcode` flags, and the zero flag. So
- we have one column for each bit of the flags decomposition. 
+#### Flags
+The flags section **A** corresponds to the 16 bits that represent the configuration of the `dst_reg`,
+`op0_reg`, `op1_src`, `res_logic`, `pc_update`, `ap_update` and `opcode` flags, as well as the zero flag.
+So there is one column for each bit of the flags decomposition. 
 
-`dst_addr`, `op0_addr` and `op1_addr` are obtained from
+#### Offsets
+These columns represent integer values that are used to construct addresses `dst_addr`, `op0_addr` and 
+`op1_addr` and are decoded directly from the instruction.
+
+#### Memory addresses
+Columns `dst_addr`, `op0_addr` and `op1_addr` from section **D** are addresses constructed from pointers
+stored at `ap` or `fp` and their respective offsets `off_dst`, `off_op0` and `off_op1`. The exact way these
+are computed depends on the particular values of the flags for each instruction.
+
+#### Memory values
+Columns `dst`, `op0` and `op1` are computed by fetching in memory by their respective address.
