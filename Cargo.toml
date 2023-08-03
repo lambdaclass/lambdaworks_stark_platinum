@@ -29,6 +29,7 @@ rayon = { version = "1.7.0", optional = true }
 giza-core = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
 giza-prover = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
 giza-runner = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
+dhat = { version = "0.3.2", optional = true }
 
 [dev-dependencies]
 proptest = "1.2.0"
@@ -50,21 +51,23 @@ instruments = []
 metal = ["lambdaworks-math/metal"]
 parallel = ["dep:rayon"]
 giza = ["dep:giza-core", "dep:giza-prover", "dep:giza-runner"]
+heap_profiling = ["dep:dhat"]
 
 [[bench]]
 name = "criterion_prover"
 harness = false
-metal = ["lambdaworks-math/metal"]
 
 [[bench]]
 name = "criterion_prover_70k"
 harness = false
-metal = ["lambdaworks-math/metal"]
+
+[[bench]]
+name = "criterion_prover_security"
+harness = false
 
 [[bench]]
 name = "criterion_verifier"
 harness = false
-metal = ["lambdaworks-math/metal"]
 
 [[bench]]
 name = "criterion_verifier_70k"
@@ -74,11 +77,24 @@ harness = false
 name = "criterion_giza"
 harness = false
 
+[[bench]]
+name = "criterion_verifier_security"
+harness = false
+
+[[bench]]
+name = "criterion_table"
+harness = false
+
+[[bench]]
+name = "dhat_prover"
+harness = false
+required-features = ["heap_profiling"]
 
 [profile.release]
 lto = true
 opt-level = 3
 codegen-units = 1
+debug = 1
 
 [profile.test]
 lto = "thin"

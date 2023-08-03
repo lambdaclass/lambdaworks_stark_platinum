@@ -12,8 +12,7 @@ Cargo.lock
 **/proptest-regressions
 /output.txt
 flamegraph.svg
-**/*.trace
-**/*.memory
+dhat-heap.json
 
 **/.DS_Store
 **/*.swp

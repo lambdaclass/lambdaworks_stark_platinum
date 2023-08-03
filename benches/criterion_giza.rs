@@ -10,6 +10,8 @@ use lambdaworks_stark::{
     starks::proof::options::{self, SecurityLevel},
 };
 #[cfg(feature = "giza")]
+pub mod criterion_utils;
+#[cfg(feature = "giza")]
 pub mod functions;
 
 #[cfg(not(feature = "giza"))]
