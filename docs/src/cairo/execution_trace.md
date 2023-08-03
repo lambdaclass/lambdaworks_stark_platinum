@@ -91,3 +91,8 @@ In some cases, `res` is unused in the instruction and the value for (`dst`)^(-1)
 place as an optimization.
 
 #### Derived
+In order to have constraints of max degree two, some more columns are derived from the already calculated,
+`t0`, `t1` and `mul`:
+* `t0` is the product of the values of `dst` and the `PC_JNZ` flag for each step. 
+* `t1` is the product of `t0` and `res` for each step.
+* `mul` is the product of `op0` and `op1` for each step.
