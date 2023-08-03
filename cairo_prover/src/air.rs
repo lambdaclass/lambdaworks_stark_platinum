@@ -1459,10 +1459,20 @@ mod test {
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 #[cfg(test)]
 mod prop_test {
-    use lambdaworks_math::traits::{Deserializable, Serializable};
+    use lambdaworks_math::{
+        errors::DeserializationError,
+        field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+        traits::{Deserializable, Serializable},
+    };
     use proptest::{prelude::*, prop_compose, proptest};
+    use stark_platinum_prover::proof::{options::ProofOptions, stark::StarkProof};
 
-    use crate::FE;
+    use crate::{
+        air::{generate_cairo_proof, verify_cairo_proof},
+        runner::run::{generate_prover_args, CairoVersion},
+        tests::utils::cairo0_program_path,
+        Felt252,
+    };
 
     use super::{MemorySegment, MemorySegmentMap, PublicInputs};
 
