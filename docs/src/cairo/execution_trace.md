@@ -68,31 +68,40 @@ Structure of the 63-bit that form the first word of each instruction:
  └─────┴─────┴───┴───┴───┴───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴────┘
  ```
 
-#### Flags
+
+#### Columns
+##### Flags
 The flags section **A** corresponds to the 16 bits that represent the configuration of the `dst_reg`,
 `op0_reg`, `op1_src`, `res_logic`, `pc_update`, `ap_update` and `opcode` flags, as well as the zero flag.
 So there is one column for each bit of the flags decomposition. 
 
-#### Offsets
+##### Offsets
 These columns represent integer values that are used to construct addresses `dst_addr`, `op0_addr` and 
 `op1_addr` and are decoded directly from the instruction.
 
-#### Memory addresses
+##### Memory addresses
 Columns `dst_addr`, `op0_addr` and `op1_addr` from section **D** are addresses constructed from pointers
 stored at `ap` or `fp` and their respective offsets `off_dst`, `off_op0` and `off_op1`. The exact way these
 are computed depends on the particular values of the flags for each instruction.
 
-#### Memory values
+##### Memory values
 Columns `dst`, `op0` and `op1` are computed by fetching in memory by their respective address.
 
-#### Res
+##### Res
 This column is computed depending on the decoded `opcode` and `res_logic` of every instruction.
 In some cases, `res` is unused in the instruction and the value for (`dst`)^(-1) is used in that
 place as an optimization.
 
-#### Derived
+##### Derived
 In order to have constraints of max degree two, some more columns are derived from the already calculated,
 `t0`, `t1` and `mul`:
 * `t0` is the product of the values of `dst` and the `PC_JNZ` flag for each step. 
 * `t1` is the product of `t0` and `res` for each step.
 * `mul` is the product of `op0` and `op1` for each step.
+
+
+#### Memory holes
+
+#### Dummy memory accesses
+
+#### Range-check holes
