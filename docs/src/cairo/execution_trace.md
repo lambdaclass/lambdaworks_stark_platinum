@@ -84,3 +84,8 @@ are computed depends on the particular values of the flags for each instruction.
 
 #### Memory values
 Columns `dst`, `op0` and `op1` are computed by fetching in memory by their respective address.
+
+# Res
+This column is computed depending on the decoded `opcode` and `res_logic` of every instruction.
+In some cases, `res` is unused in the instruction and the value for (`dst`)^(-1) is used in that
+place as an optimization.
