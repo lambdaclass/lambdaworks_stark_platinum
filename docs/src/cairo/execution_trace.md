@@ -43,23 +43,11 @@ The layout of the main execution trace is as follows:
 Each letter from A to G represents some subsection of columns, and the number specifies how many
 columns correspond to that subsection.
 
-#### Columns
-##### Section A - Flags
-The flags section **A** corresponds to the 16 bits that represent the configuration of the `dst_reg`,
-`op0_reg`, `op1_src`, `res_logic`, `pc_update`, `ap_update` and `opcode` flags, as well as the zero 
-flag. So there is one column for each bit of the flags decomposition. 
-
-
-##### Section C - Temporary memory pointers
-The two columns in this section, as well as the `pc` column from section **D**, are the most trivial.
-For each step of the register states, the corresponding values are added to the columns, which are 
-pointers to some memory cell in the VM's memory. 
-
-##### Section D - Memory addresses
-As already mentioned, the first column of this section, `pc`, is trivially obtained from the register 
-states for each cycle. The memory addresses stored in this column hold the program instructions that
-were executed. Pretty much all the other columns, with the exception of the derived (section **G**), 
-are obtained from the instruction decoding at each cycle of the program execution. 
+#### Cairo instructions 
+It is important to have in mind the information that each executed Cairo instruction holds, since it
+is a key component of the construction of the execution trace. For a detailed explanation of how the
+building components of the instruction interact in order to change the VM state, refer to the Cairo
+whitepaper, sections 4.4 and 4.5.
 
 Structure of the 63-bit that form the first word of each instruction:
 ```
@@ -77,26 +65,40 @@ Structure of the 63-bit that form the first word of each instruction:
  └─────┴─────┴───┴───┴───┴───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴────┘
  ```
 
-##### Offsets
-These columns represent integer values that are used to construct addresses `dst_addr`, `op0_addr` and 
-`op1_addr` and are decoded directly from the instruction.
+#### Columns
+##### Section A - Flags
+The flags section **A** corresponds to the 16 bits that represent the configuration of the `dst_reg`,
+`op0_reg`, `op1_src`, `res_logic`, `pc_update`, `ap_update` and `opcode` flags, as well as the zero 
+flag. So there is one column for each bit of the flags decomposition. 
 
-##### Memory addresses
+##### Section C - Temporary memory pointers
+The two columns in this section, as well as the `pc` column from section **D**, are the most trivial.
+For each step of the register states, the corresponding values are added to the columns, which are 
+pointers to some memory cell in the VM's memory. 
+
+##### Section D - Memory addresses
+As already mentioned, the first column of this section, `pc`, is trivially obtained from the register 
+states for each cycle.  
 Columns `dst_addr`, `op0_addr` and `op1_addr` from section **D** are addresses constructed from pointers
 stored at `ap` or `fp` and their respective offsets `off_dst`, `off_op0` and `off_op1`. The exact way these
 are computed depends on the particular values of the flags for each instruction.
 
-##### Memory values
+##### Section E - Memory values 
 The `inst` column, is obtained by fetching in memory the value stored at pointer `pc`, which 
 corresponds to a 63 bit Cairo instruction.
-Columns `dst`, `op0` and `op1` are computed by fetching in memory by their respective address.
+Columns `dst`, `op0` and `op1` are computed by fetching in memory by their respective addresses.
 
-##### Res
+##### Section F - Offsets/Range-checked values
+These columns represent integer values that are used to construct addresses `dst_addr`, `op0_addr` and 
+`op1_addr` and are decoded directly from the instruction. 
+These values have the property to be numbers in the range from 0 to 2^16.
+
+##### Section B - Res
 This column is computed depending on the decoded `opcode` and `res_logic` of every instruction.
 In some cases, `res` is unused in the instruction and the value for (`dst`)^(-1) is used in that
 place as an optimization.
 
-##### Derived
+##### Section G - Derived
 In order to have constraints of max degree two, some more columns are derived from the already calculated,
 `t0`, `t1` and `mul`:
 * `t0` is the product of the values of `dst` and the `PC_JNZ` flag for each step. 
@@ -104,6 +106,7 @@ In order to have constraints of max degree two, some more columns are derived fr
 * `mul` is the product of `op0` and `op1` for each step.
 
 ---
+**TODO**:
 #### Memory holes
 
 #### Dummy memory accesses
