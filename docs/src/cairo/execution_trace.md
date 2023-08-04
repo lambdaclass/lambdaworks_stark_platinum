@@ -66,6 +66,9 @@ Structure of the 63-bit that form the first word of each instruction:
  ```
 
 #### Columns
+The construction of the following columns corresponds to a colloquial explanation of what is done in
+the `build_cairo_execution_trace` function.
+
 ##### Section A - Flags
 The flags section **A** corresponds to the 16 bits that represent the configuration of the `dst_reg`,
 `op0_reg`, `op1_src`, `res_logic`, `pc_update`, `ap_update` and `opcode` flags, as well as the zero 
