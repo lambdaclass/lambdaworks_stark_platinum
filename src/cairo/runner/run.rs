@@ -71,7 +71,7 @@ pub fn run_program(
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
-    let args = [];
+    // let args = [];
 
     let (vm, runner) = match cairo_version {
         CairoVersion::V0 => {
@@ -103,12 +103,7 @@ pub fn run_program(
         CairoVersion::V1 => {
             let casm_contract: CasmContractClass = serde_json::from_slice(program_content).unwrap();
             let program: Program = casm_contract.clone().try_into().unwrap();
-            let mut runner = CairoRunner::new(
-                &(casm_contract.clone().try_into().unwrap()),
-                layout.as_str(),
-                false,
-            )
-            .unwrap();
+            let mut runner = CairoRunner::new(&program, layout.as_str(), false).unwrap();
             let mut vm = VirtualMachine::new(true);
 
             runner
@@ -154,7 +149,7 @@ pub fn run_program(
 
             // Load calldata
             let calldata_start = vm.add_memory_segment();
-            let calldata_end = vm.load_data(calldata_start, &args.to_vec()).unwrap();
+            // let calldata_end = vm.load_data(calldata_start, &args.to_vec()).unwrap();
 
             // Create entrypoint_args
 
@@ -164,7 +159,8 @@ pub fn run_program(
                 .collect();
             entrypoint_args.extend([
                 MaybeRelocatable::from(calldata_start).into(),
-                MaybeRelocatable::from(calldata_end).into(),
+                // MaybeRelocatable::from(calldata_end).into(),
+                MaybeRelocatable::from(calldata_start).into(),
             ]);
             let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
 

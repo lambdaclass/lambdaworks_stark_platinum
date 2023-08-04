@@ -9,7 +9,10 @@ use crate::{
         cairo_layout::CairoLayout,
         execution_trace::build_main_trace,
         runner::run::{generate_prover_args, run_program, CairoVersion},
-        tests::utils::{cairo0_program_path, test_prove_cairo_program},
+        tests::utils::{
+            cairo0_program_path, cairo1_program_path, test_prove_cairo1_program,
+            test_prove_cairo_program,
+        },
     },
     starks::{
         debug::validate_trace,
@@ -33,12 +36,12 @@ fn test_prove_cairo_fibonacci_5() {
     test_prove_cairo_program(&cairo0_program_path("fibonacci_5.json"), &None, layout);
 }
 
-// #[cfg_attr(feature = "metal", ignore)]
-// #[test_log::test]
-// fn test_prove_cairo_fibonacci_casm() {
-//     let layout = CairoLayout::Plain;
-//     test_prove_cairo1_program(&cairo1_program_path("fibonacci_cairo1.casm"), layout);
-// }
+#[cfg_attr(feature = "metal", ignore)]
+#[test_log::test]
+fn test_prove_cairo_fibonacci_casm() {
+    let layout = CairoLayout::Plain;
+    test_prove_cairo1_program(&cairo1_program_path("fibonacci_cairo1_mod.casm"), layout);
+}
 
 #[test_log::test]
 fn test_prove_cairo_rc_program() {
