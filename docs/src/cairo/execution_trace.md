@@ -43,14 +43,23 @@ The layout of the main execution trace is as follows:
 Each letter from A to G represents some subsection of columns, and the number specifies how many
 columns correspond to that subsection.
 
-The pointers (section **C**) and the column `pc` from section **D**, are the most trivial. For each 
-step of the register states, the corresponding values are added to the columns, which are pointers
-to some memory cell in the VM memory. 
-The `inst` column, is obtained by fetching in memory the value stored at pointer `pc`, which 
-corresponds to a 63 bit Cairo instruction.
+#### Columns
+##### Section A - Flags
+The flags section **A** corresponds to the 16 bits that represent the configuration of the `dst_reg`,
+`op0_reg`, `op1_src`, `res_logic`, `pc_update`, `ap_update` and `opcode` flags, as well as the zero 
+flag. So there is one column for each bit of the flags decomposition. 
 
-Pretty much all the other columns, with the exception of the derived (section **G**), are obtained from
-the instruction decoding at each cycle of the program execution.
+
+##### Section C - Temporary memory pointers
+The two columns in this section, as well as the `pc` column from section **D**, are the most trivial.
+For each step of the register states, the corresponding values are added to the columns, which are 
+pointers to some memory cell in the VM's memory. 
+
+##### Section D - Memory addresses
+As already mentioned, the first column of this section, `pc`, is trivially obtained from the register 
+states for each cycle. The memory addresses stored in this column hold the program instructions that
+were executed. Pretty much all the other columns, with the exception of the derived (section **G**), 
+are obtained from the instruction decoding at each cycle of the program execution. 
 
 Structure of the 63-bit that form the first word of each instruction:
 ```
@@ -68,13 +77,6 @@ Structure of the 63-bit that form the first word of each instruction:
  └─────┴─────┴───┴───┴───┴───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴────┘
  ```
 
-
-#### Columns
-##### Flags
-The flags section **A** corresponds to the 16 bits that represent the configuration of the `dst_reg`,
-`op0_reg`, `op1_src`, `res_logic`, `pc_update`, `ap_update` and `opcode` flags, as well as the zero flag.
-So there is one column for each bit of the flags decomposition. 
-
 ##### Offsets
 These columns represent integer values that are used to construct addresses `dst_addr`, `op0_addr` and 
 `op1_addr` and are decoded directly from the instruction.
@@ -85,6 +87,8 @@ stored at `ap` or `fp` and their respective offsets `off_dst`, `off_op0` and `of
 are computed depends on the particular values of the flags for each instruction.
 
 ##### Memory values
+The `inst` column, is obtained by fetching in memory the value stored at pointer `pc`, which 
+corresponds to a 63 bit Cairo instruction.
 Columns `dst`, `op0` and `op1` are computed by fetching in memory by their respective address.
 
 ##### Res
@@ -99,9 +103,12 @@ In order to have constraints of max degree two, some more columns are derived fr
 * `t1` is the product of `t0` and `res` for each step.
 * `mul` is the product of `op0` and `op1` for each step.
 
-
+---
 #### Memory holes
 
 #### Dummy memory accesses
 
 #### Range-check holes
+
+
+## Trace extension
