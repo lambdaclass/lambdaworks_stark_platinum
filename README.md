@@ -1,6 +1,8 @@
-# Lambdaworks Stark Platinum Prover 
+# 🌟 Lambdaworks Stark Platinum Prover 🌟
 
 <img src="https://github.com/lambdaclass/lambdaworks_stark_platinum/assets/569014/ad8d7943-f011-49b5-a0c5-f07e5ef4133e" alt="drawing" width="300"/>
+
+An open-source STARK prover, drop-in replacement for Winterfell.
 
 This prover is still in development and may contain bugs. It is not intended to be used in production yet. 
 
@@ -11,6 +13,13 @@ Output builtin is finished, and range check is supported but it's not sound yet.
 We expect to have something working in a good state by mid August 2023.
 
 CLI currently runs with 100 bits of conjecturable security
+
+- [Main Building Blocks](#main-building-blocks)
+- [Requirements](#requirements)
+- [Trying it](#how-to-try-it)
+- [Prove and verify](#prove-and-verify)
+- [Fuzzers](#running-fuzzers)
+- [Using cairo-compile for Cairo 0 programs](#using-cairo-compile-for-cairo-0-programs)
 
 ## Main building blocks
 
@@ -185,4 +194,3 @@ if you don´t have the tools for fuzzing installed use
 ```
 make fuzzer_tools
 ```
-
