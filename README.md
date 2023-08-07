@@ -24,6 +24,7 @@ CLI currently runs with 100 bits of conjecturable security
 - [Prove and verify](#prove-and-verify)
 - [Fuzzers](#running-fuzzers)
 - [Using cairo-compile for Cairo 0 programs](#using-cairo-compile-for-cairo-0-programs)
+- [References](#references)
 
 ## Main building blocks
 
@@ -198,3 +199,16 @@ if you don´t have the tools for fuzzing installed use
 ```
 make fuzzer_tools
 ```
+
+## References
+
+- [Winterfell](https://github.com/facebook/winterfell)
+- [Anatomy of a Stark](https://aszepieniec.github.io/stark-anatomy/overview)
+- [Giza](https://github.com/maxgillett/giza)
+- [Ministark](https://github.com/andrewmilson/ministark)
+- [STARK-101](https://starkware.co/stark-101/)
+- [Summary on FRI low degree test](https://eprint.iacr.org/2022/1216)
+- [STARKs paper](https://eprint.iacr.org/2018/046)
+- [DEEP FRI](https://eprint.iacr.org/2019/336)
+- [BrainSTARK](https://aszepieniec.github.io/stark-brainfuck/)
+- [Thank goodness it's FRIday](https://vitalik.ca/general/2017/11/22/starks_part_2.html)
