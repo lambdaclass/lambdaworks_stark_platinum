@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub enum CairoImportError {
     /// Bytes should be a multiple of 24 for trace or 40 for memory

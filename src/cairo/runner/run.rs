@@ -28,34 +28,33 @@ pub enum Error {
     Trace(TraceError),
 }
 
-
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
-       Error::IO(err)
+        Error::IO(err)
     }
 }
 
 impl From<CairoRunError> for Error {
     fn from(err: CairoRunError) -> Error {
-       Error::Runner(err)
+        Error::Runner(err)
     }
 }
 
 impl From<EncodeTraceError> for Error {
     fn from(err: EncodeTraceError) -> Error {
-       Error::EncodeTrace(err)
+        Error::EncodeTrace(err)
     }
 }
 
 impl From<VirtualMachineError> for Error {
     fn from(err: VirtualMachineError) -> Error {
-       Error::VirtualMachine(err)
+        Error::VirtualMachine(err)
     }
 }
 
 impl From<TraceError> for Error {
     fn from(err: TraceError) -> Error {
-       Error::Trace(err)
+        Error::Trace(err)
     }
 }
 
