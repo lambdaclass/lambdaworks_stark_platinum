@@ -145,32 +145,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          components: clippy
           
       - name: Set up cargo cache
         uses: Swatinem/rust-cache@v2
-
-      - name: Install testing tools
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest,cargo-llvm-cov
-
-      - name: Python3 build
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-          cache: 'pip'
-
-      - name: Install cairo-lang toolchain and dependencies
-        run: pip install -r requirements.txt
-
-      - name: Install wasm-pack 
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install Node.js
         uses: actions/setup-node@v2
         with: 
           node-version: "14.x"
+
+      - name: Install wasm-pack 
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Run wasm-pack test
         run: wasm-pack test --node -- --features wasm 
