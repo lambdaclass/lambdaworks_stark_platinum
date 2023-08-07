@@ -3,6 +3,8 @@ use lambdaworks_stark::{
     cairo::wasm_wrappers::{deserialize_proof_wasm, verify_cairo_proof_wasm},
     starks::proof::options::ProofOptions,
 };
+
+#[cfg(feature = "wasm")]
 use wasm_bindgen_test::*;
 
 #[cfg(feature = "wasm")]
