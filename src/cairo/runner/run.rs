@@ -7,6 +7,7 @@ use crate::cairo::register_states::RegisterStates;
 use crate::starks::trace::TraceTable;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
+use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
 use cairo_vm::hint_processor::cairo_1_hint_processor::hint_processor::Cairo1HintProcessor;
 use cairo_vm::serde::deserialize_program::BuiltinName;
@@ -18,7 +19,6 @@ use cairo_vm::vm::runners::cairo_runner::{CairoArg, CairoRunner, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use std::ops::Range;
-use cairo_vm::felt::Felt252;
 
 #[derive(Debug)]
 pub enum Error {
@@ -128,12 +128,7 @@ pub fn run_program(
 
             let program: Program = casm_contract.clone().try_into().unwrap();
 
-            let mut runner = CairoRunner::new(
-                &(program),
-                layout.as_str(),
-                false,
-            )
-            .unwrap();
+            let mut runner = CairoRunner::new(&(program), layout.as_str(), false).unwrap();
             let mut vm = VirtualMachine::new(true);
 
             runner

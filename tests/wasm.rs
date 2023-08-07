@@ -1,4 +1,3 @@
-
 #[cfg(feature = "wasm")]
 use lambdaworks_stark::{
     cairo::wasm_wrappers::{deserialize_proof_wasm, verify_cairo_proof_wasm},
