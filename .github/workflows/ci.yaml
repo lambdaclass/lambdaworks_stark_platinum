@@ -21,6 +21,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          targets: wasm32-unknown-unknown
 
       - name: Set up cargo cache
         uses: Swatinem/rust-cache@v2
@@ -31,7 +32,7 @@ jobs:
 
       - name: Run cargo check wasm
         uses: dtolnay/rust-toolchain@stable
-      - run: cargo check --features wasm
+      - run: cargo check --features wasm --target wasm32-unkown-unkown
 
       # For giza benchmarks
       - name: Rustup toolchain nightly install
