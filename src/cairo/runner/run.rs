@@ -84,7 +84,8 @@ pub enum CairoVersion {
 /// - cairo_mem
 /// - data_len
 /// - range_check: an Option<(usize, usize)> containing the start and end of range check.
-/// `Error` indicating the type of error.#[allow(clippy::type_complexity)]
+/// `Error` indicating the type of error.
+#[allow(clippy::type_complexity)]
 pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
