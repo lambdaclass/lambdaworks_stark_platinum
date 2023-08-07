@@ -153,7 +153,7 @@ pub const MEM_A_TRACE_OFFSET: usize = 19;
 // index.
 const BUILTIN_OFFSET: usize = 9;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum MemorySegment {
     RangeCheck,
     Output,
@@ -161,7 +161,7 @@ pub enum MemorySegment {
 
 pub type MemorySegmentMap = HashMap<MemorySegment, Range<u64>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PublicInputs {
     pub pc_init: FE,
     pub ap_init: FE,
@@ -1188,7 +1188,6 @@ mod test {
         cairo::runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
         starks::{debug::validate_trace, domain::Domain},
     };
-    use proptest::{prelude::*, prop_compose, proptest};
 
     use super::*;
     use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
@@ -1450,6 +1449,17 @@ mod test {
             ]
         );
     }
+}
+
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+#[cfg(test)]
+mod prop_test {
+    use lambdaworks_math::traits::{Deserializable, Serializable};
+    use proptest::{prelude::*, prop_compose, proptest};
+
+    use crate::FE;
+
+    use super::{MemorySegment, MemorySegmentMap, PublicInputs};
 
     prop_compose! {
         fn some_felt()(base in any::<u64>(), exponent in any::<u128>()) -> FE {
@@ -1492,8 +1502,8 @@ mod test {
         fn test_public_inputs_serialization(
             public_inputs in some_public_inputs(),
         ){
-            let serialized = public_inputs.serialize();
-            let deserialized = PublicInputs::deserialize(&serialized).unwrap();
+            let serialized = Serializable::serialize(&public_inputs);
+            let deserialized: PublicInputs = Deserializable::deserialize(&serialized).unwrap();
             prop_assert_eq!(public_inputs.pc_init, deserialized.pc_init);
             prop_assert_eq!(public_inputs.ap_init, deserialized.ap_init);
             prop_assert_eq!(public_inputs.fp_init, deserialized.fp_init);

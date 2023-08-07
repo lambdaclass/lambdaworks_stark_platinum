@@ -436,8 +436,11 @@ where
     }
 }
 
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 #[cfg(test)]
-mod test {
+mod prop_test {
+    use crate::cairo::air::{generate_cairo_proof, verify_cairo_proof};
+    use crate::cairo::runner::run::{cairo0_program_path, generate_prover_args, CairoVersion};
     use lambdaworks_crypto::merkle_tree::proof::Proof;
     use lambdaworks_math::{
         errors::DeserializationError,
@@ -447,17 +450,11 @@ mod test {
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
-    use crate::{
-        cairo::{
-            air::{generate_cairo_proof, verify_cairo_proof},
-            runner::run::{cairo0_program_path, generate_prover_args, CairoVersion},
-        },
-        starks::{
-            config::{Commitment, COMMITMENT_SIZE},
-            frame::Frame,
-            fri::fri_decommit::FriDecommitment,
-            proof::options::ProofOptions,
-        },
+    use crate::starks::{
+        config::{Commitment, COMMITMENT_SIZE},
+        frame::Frame,
+        fri::fri_decommit::FriDecommitment,
+        proof::options::ProofOptions,
     };
     use lambdaworks_math::traits::{Deserializable, Serializable};
 
