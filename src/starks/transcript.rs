@@ -42,12 +42,10 @@ where
     FieldElement::from_bytes_be(randomness).unwrap()
 }
 
-pub fn transcript_to_usize<T: Transcript>(transcript: &mut T) -> usize {
-    const CANT_BYTES_USIZE: usize = (usize::BITS / 8) as usize;
-    let value = transcript.challenge()[..CANT_BYTES_USIZE]
-        .try_into()
-        .unwrap();
-    usize::from_be_bytes(value)
+pub fn transcript_to_u32<T: Transcript>(transcript: &mut T) -> u32 {
+    const CANT_BYTES_U32: usize = (u32::BITS / 8) as usize;
+    let value = transcript.challenge()[..CANT_BYTES_U32].try_into().unwrap();
+    u32::from_be_bytes(value)
 }
 
 pub fn sample_z_ood<F: IsPrimeField, T: Transcript>(
@@ -154,7 +152,7 @@ mod tests {
 
         #[rustfmt::skip]
         let mut randomness: [u8; 32] = [
-            255, 255, 255, 1, 2, 3, 4, 5, 
+            255, 255, 255, 1, 2, 3, 4, 5,
             6, 7, 8, 1, 2, 3, 4, 5, 
             6, 7, 8, 1, 2, 3, 4, 5, 
             6, 7, 8, 1, 2, 3, 4, 5,
