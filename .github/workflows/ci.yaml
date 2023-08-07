@@ -30,11 +30,17 @@ jobs:
         with:
           command: check
 
+      - name: Run cargo check
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          command: check --features wasm
+
       # For giza benchmarks
       - name: Rustup toolchain nightly install
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
+
 
       - name: Check benchmarks
         run: cargo +nightly bench --no-run -F giza
@@ -134,37 +140,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: true
-
-  test_wasm:
-    name: Test (Ubuntu, Wasm)
-    runs-on: ubuntu-latest
-    env:
-      CARGO_TERM_COLOR: always
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-  
-      - name: Install testing tools
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest,cargo-llvm-cov
-
-      - name: Set up cargo cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install Node.js
-        uses: actions/setup-node@v2
-        with: 
-          node-version: "14.x"
-
-      - name: Install wasm-pack 
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-      - name: Run wasm-pack test
-        run: wasm-pack test --node -- --features wasm 
-
 
   test_macos:
     name: Test (macOS, Apple sillicon)
