@@ -18,6 +18,7 @@ use cairo_vm::vm::runners::cairo_runner::{CairoArg, CairoRunner, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use std::ops::Range;
+use cairo_vm::felt::Felt252;
 
 #[derive(Debug)]
 pub enum Error {
@@ -83,8 +84,7 @@ pub enum CairoVersion {
 /// - cairo_mem
 /// - data_len
 /// - range_check: an Option<(usize, usize)> containing the start and end of range check.
-/// `Error` indicating the type of error.
-#[allow(clippy::type_complexity)]
+/// `Error` indicating the type of error.#[allow(clippy::type_complexity)]
 pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
@@ -93,8 +93,6 @@ pub fn run_program(
 ) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
-
-    let args = [];
 
     let (vm, runner) = match cairo_version {
         CairoVersion::V0 => {
@@ -117,17 +115,21 @@ pub fn run_program(
                 Ok(runner) => runner,
                 Err(error) => {
                     eprintln!("{error}");
-                    return Err(Error::Runner(error));
+                    panic!();
                 }
             };
 
             (vm, runner)
         }
         CairoVersion::V1 => {
+            let args = [];
+
             let casm_contract: CasmContractClass = serde_json::from_slice(program_content).unwrap();
+
             let program: Program = casm_contract.clone().try_into().unwrap();
+
             let mut runner = CairoRunner::new(
-                &(casm_contract.clone().try_into().unwrap()),
+                &(program),
                 layout.as_str(),
                 false,
             )
@@ -170,8 +172,11 @@ pub fn run_program(
 
             // Load extra data
             let core_program_end_ptr = (runner.program_base.unwrap() + program.data_len()).unwrap();
+
+            let extra_data_i128 = i128::from_str_radix("208B7FFF7FFF7FFE", 16).unwrap();
+            let extra_data = Felt252::from(extra_data_i128);
             let program_extra_data: Vec<MaybeRelocatable> =
-                vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
+                vec![extra_data.into(), builtin_costs_ptr.into()];
             vm.load_data(core_program_end_ptr, &program_extra_data)
                 .unwrap();
 
@@ -191,17 +196,17 @@ pub fn run_program(
             ]);
             let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
 
-            let mut hint_processor = Cairo1HintProcessor::new(&casm_contract.hints);
+            let mut hint_processor =
+                Cairo1HintProcessor::new(casm_contract.hints.as_slice(), RunResources::default());
 
             // Run contract entrypoint
             // We assume entrypoint 0 for only one function
-            let mut run_resources = RunResources::default();
+            let _run_resources = RunResources::default();
 
             runner
                 .run_from_entrypoint(
                     0,
                     &entrypoint_args,
-                    &mut run_resources,
                     true,
                     Some(program.data_len() + program_extra_data.len()),
                     &mut vm,
@@ -215,7 +220,7 @@ pub fn run_program(
         }
     };
 
-    let relocated_trace = vm.get_relocated_trace()?;
+    let relocated_trace = vm.get_relocated_trace().unwrap();
 
     let mut trace_vec = Vec::<u8>::new();
     let mut trace_writer = VecWriter::new(&mut trace_vec);
@@ -227,8 +232,8 @@ pub fn run_program(
     let mut memory_writer = VecWriter::new(&mut memory_vec);
     memory_writer.write_encoded_memory(relocated_memory);
 
-    trace_writer.flush()?;
-    memory_writer.flush()?;
+    trace_writer.flush().unwrap();
+    memory_writer.flush().unwrap();
 
     //TO DO: Better error handling
     let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();

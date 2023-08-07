@@ -17,3 +17,6 @@ flamegraph.svg
 
 **/.DS_Store
 **/*.swp
+
+/pkg/*
+/fuzz/*

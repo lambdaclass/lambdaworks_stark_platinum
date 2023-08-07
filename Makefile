@@ -110,3 +110,9 @@ fuzzer:
 		
 fuzzer_tools: 
 		cargo install cargo-fuzz
+
+build_wasm:
+	wasm-pack build --target=web -- --features wasm
+
+test_wasm:
+	wasm-pack test --node -- --features wasm 

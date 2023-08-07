@@ -159,6 +159,12 @@ git checkout v1.1.0
   cargo run --bin starknet-sierra-compile -- /path/to/input.json /path/to/output.casm
   ```
 
+### Using WASM verifier
+
+To use the verifier in WASM, generate a npm package using `wasm-pack`
+
+As a shortcut, you can call
+`make build_wasm`
 ## Running tests
 To run tests, simply use
 ```

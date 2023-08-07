@@ -1,11 +1,12 @@
+
+#[cfg(feature = "wasm")]
 use lambdaworks_stark::{
     cairo::wasm_wrappers::{deserialize_proof_wasm, verify_cairo_proof_wasm},
     starks::proof::options::ProofOptions,
 };
 use wasm_bindgen_test::*;
 
-wasm_bindgen_test_configure!(run_in_browser);
-
+#[cfg(feature = "wasm")]
 #[wasm_bindgen_test]
 #[test]
 fn test_prove_cairo1_program_wasm() {
