@@ -2,7 +2,7 @@
 
 In this section we describe precisely the STARKs protocol used in Lambdaworks.
 
-We begin by fixng notation for most of the relevant objects and values to refer to them later on.
+We begin by fixing notation for most of the relevant objects and values to refer to them later on.
 
 ## General notation
 
@@ -26,6 +26,7 @@ These values are determined the program,  the specifications of the AIR being us
 - $P_k^T$ denote the transition constraint polynomials for $k=1,\dots,n_T$. We are assuming these are of degree at most 2.
 - $Z_j^T$ denote the transition constraint zerofiers for $k=1,\dots,n_T$.
 - $b=2^l$ is the *blowup factor*.
+- $c$ is the *grinding factor*.
 - $Q$ is number of FRI queries.
 - We assume there is a fixed hash function from $\mathbb{F}$ to binary strings. We also assume all Merkle trees are constructed using this hash function.
 
@@ -47,7 +48,9 @@ Both prover and verifier compute the following.
 
 ## Randomized AIR with Preprocessing (RAP)
 
-This the process in which the prover uses randomness from the verifier to complete the program trace with additional columns. This is specific to each RAP. See [here](https://hackmd.io/@aztec-network/plonk-arithmetiization-air) for more details.
+This the process in which the prover uses randomness from the verifier to complete the execution trace $T$ with additional columns. This is specific to each RAP. See [here](https://hackmd.io/@aztec-network/plonk-arithmetiization-air) for more details. 
+
+We consider it as part of the proving protocol. Check out [round 1](#round-12-commit-extended-trace).
 
 ## Vector commitment scheme
 
@@ -59,6 +62,20 @@ The operation $\text{Verify}(i,y,r,s)$ returns _Accept_ or _Reject_ depending on
 
 
 In our cases the sets $A$ will be of the form $A=(f(a), f(ab), f(ab^2), \dots, f(ab^L))$ for some elements $a,b\in\mathbb{F}$. It will be convenient to use the following abuse of notation. We will write $\text{Open}(A, ab^i)$ to mean $\text{Open}(A, i)$. Similarly, we will write $\text{Verify}(ab^i, y, r, s)$ instead of $\text{Verify}(i, y, r, s)$. Note that this is only notation and $\text{Verify}(ab^i, y, r, s)$ is only checking that the $y$ is the $i$-th element of the commited vector. 
+
+### Batch commitments
+Building Merkle trees to commit to a vector is an expensive operation. Often the protocol involves commiting to multiple vectors of the same length at the same time. Also all these commitments are opened at the same points. Luckily, there is an optimization to use a single Merkle tree to commit to all of them, and also use a single authentication path to open them all. It works as follows.
+
+Let $A_0, \dots, A_t$ be vectors where $A_i = (y_{0, i}, \dots, y_{N, i})$. From all of them build a single vector $A = (y_0, \dots, y_N)$ where $y_j$ is defined as $H(y_{j, 0}, \dots, y_{j,t})$ for some hash function $H$ that takes field elements to binary strings. The function $H$ is potentially different from the hash function that's used to build the Merkle tree.
+Then we can run $\text{Commit}(A)$ producing a single root $r$. To do so we only need one Merkle tree.
+
+To run the $\text{Open}$ protocol the verifier chooses some index $j$. Then the prover sends the elements $y_{j, 0}, \dots, y_{j,t}$ along with the authentication path $s$ from $H(y_{j, 0}, \dots, y_{j,t})$ to the Merkle root. The verifier has everything to run $\text{Verify}(j, H(y_{j, 0}, \dots, y_{j,t}), r, s)$.
+
+Below in the protocol we'll indicate where this optimization can be applied.
+
+## Grinding
+This is a technique to increase the soundness of the protocol by adding proof of work. It works as follows. At some fixed point in the protocol, the verifier sends a challenge $x$ to the prover. The prover needs to find a string $y$ such that $H(x || y)$ begins with a predefined number of zeroes. Here $x || y$ denotes the concatenation of $x$ and $y$, seen as bit strings.
+The number of zeroes is called the *grinding factor*. The hash function $H$ can be any hash function, independent of other hash functions used in the rest of the protocol. In Lambdaworks we use Keccak256.
 
 ## Transcript
 
@@ -75,10 +92,10 @@ The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume
 
 #### Round 1: Build RAP
 
-##### Round 1.1: Interpolate main trace
+##### Round 1.1: Commit main trace
 
-- For each column $M_j$ of the execution trace matrix $T$, interpolate its values at the domain $D_S$ and obtain polynomials $t_j$ such that $t_j(g^i)=M_{i,j}$.
-- Compute $[t_j] := \text{Commit}(t_j(D_{\text{LED}}))$ for all $j=1,\dots,m'$.
+- For each column $M_j$ of the execution trace matrix $T$, interpolate its values at the domain $D_S$ and obtain polynomials $t_j$ such that $t_j(g^i)=T_{i,j}$.
+- Compute $[t_j] := \text{Commit}(t_j(D_{\text{LED}}))$ for all $j=1,\dots,m'$ (*Batch commitment optimization applies here*).
 - Add $[t_j]$ to the transcript in increasing order.
 
 ##### Round 1.2: Commit extended trace
@@ -86,7 +103,7 @@ The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume
 - Sample random values $a_1,\dots,a_l$ in $\mathbb{F}$ from the transcript.
 - Use $a_1,\dots,a_l$ to build $M_{\text{RAP2}}\in\mathbb{F}^{2^n\times m''}$ following the specifications of the RAP process.
 - For each column $\hat M_j$ of the matrix $M_{\text{RAP2}}$, interpolate its values at the domain $D_S$ and obtain polynomials $t_{m'+1}, \dots, t_{m' + m''}$ such that $t_j(g^i)=\hat M_{i,j}$.
-- Compute $[t_j] := \text{Commit}(t_j(D_{\text{LED}}))$ for all $j=m'+1,\dots,m'+m''$.
+- Compute $[t_j] := \text{Commit}(t_j(D_{\text{LED}}))$ for all $j=m'+1,\dots,m'+m''$ (*Batch commitment optimization applies here*).
 - Add $[t_j]$ to the transcript in increasing order for all $j=m'+1,\dots,m'+m''$.
 
 #### Round 2: Compute composition polynomial
@@ -127,14 +144,19 @@ The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume
     - Add $[p_k]$ to the transcript.
 - $p_n$ is a constant polynomial and therefore $p_n\in\mathbb{F}$. Add $p_n$ to the transcript.
 
-##### Round 4.2: FRI query phase
+##### Round 4.2: Grinding
+- Sample $x$ from the transcript.
+- Compute $y$ such that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
+- Add $y$ to the transcript.
+
+##### Round 4.3: FRI query phase
 
 - For $s=0,\dots,Q-1$ do the following:
   - Sample random index $\iota_s \in [0, 2^{n+l}]$ from the transcript and let $\upsilon_s := \omega^{\iota_s}$.
   - Compute $\text{Open}(p_0(D_0), \upsilon_s)$.
   - Compute $\text{Open}(p_k(D_k), -\upsilon_s^{2^k})$ for all $k=0,\dots,n-1$.
 
-##### Round 4.3: Open deep composition polynomial components
+##### Round 4.4: Open deep composition polynomial components
 
 - Compute $\text{Open}(H_1(D_{\text{LDE}}), \upsilon_0)$, $\text{Open}(H_2(D_{\text{LDE}}), \upsilon_0)$.
 - Compute $\text{Open}(t_j(D_{\text{LDE}}), \upsilon_0)$ for all $j=1,\dots, m$.
@@ -149,6 +171,7 @@ The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume
   &[H_1], H_1(z^2),[H_2], H_2(z^2), \\
   &\{[p_k]: 0\leq k < n\}, \\
   &p_n, \\
+  &y, \\
   &\{\text{Open}(p_0(D_0), \upsilon_s): 0\leq s < Q\}), \\
   &\{\text{Open}(p_k(D_k), -\upsilon_s^{2^k}): 0\leq k< n, 0\leq s < Q\}, \\
   &\text{Open}(H_1(D_{\text{LDE}}), \upsilon_0), \\
@@ -175,6 +198,7 @@ $$
 &\mathbf{H}_1, \eta_1^{z^2},\mathbf{H}_2, \eta_2^{z^2}, \\
 &\{\mathbf{P}_k: 0\leq k < n\}, \\
 &\pi, \\
+&y, \\
 &\{(\pi_0^{\upsilon_s}, \mathfrak{P}_0): 0\leq s < Q\}, \\
 &\{(\pi_k^{-\upsilon_s^{2^k}}, \mathfrak{P}_k): 0\leq k< n, 0\leq s < Q\}, \\
 &(\eta_1^{\upsilon_0}, \mathfrak{H}_1)\\
@@ -202,8 +226,12 @@ $$
   - Sample $\zeta_{k-1}$
   - If $k < n$: add $\mathbf{P}_k$ to the transcript
 - Add $\pi$ to the transcript.
+- Sample $x$ from the transcript.
+- Add $y$ to the transcript.
 - For $s=0, \dots, Q-1$:
-  -- Sample random index $\iota_s \in [0, 2^{n+l}]$ from the transcript and let $\upsilon_s := \omega^{\iota_s}$.
+  - Sample random index $\iota_s \in [0, 2^{n+l}]$ from the transcript and let $\upsilon_s := \omega^{\iota_s}$.
+- Verify grinding: check that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
+
 
 #### Step 2: Verify claimed composition polynomial
 
