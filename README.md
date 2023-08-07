@@ -8,6 +8,8 @@ An open-source STARK prover, drop-in replacement for Winterfell.
 
 </div>
 
+## ⚠️ Disclaimer
+
 This prover is still in development and may contain bugs. It is not intended to be used in production yet. 
 
 Please check issues under security label, and wait for them to be resolved if they are relevant your project.
