@@ -1,8 +1,12 @@
+<div align="center">
+
 # 🌟 Lambdaworks Stark Platinum Prover 🌟
 
 <img src="https://github.com/lambdaclass/lambdaworks_stark_platinum/assets/569014/ad8d7943-f011-49b5-a0c5-f07e5ef4133e" alt="drawing" width="300"/>
 
 An open-source STARK prover, drop-in replacement for Winterfell.
+
+</div>
 
 This prover is still in development and may contain bugs. It is not intended to be used in production yet. 
 
