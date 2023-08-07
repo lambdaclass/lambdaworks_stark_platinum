@@ -88,7 +88,7 @@ impl ProofOptions {
         if security_target as usize
             >= grinding_factor as usize + num_bits_blowup_factor * fri_number_of_queries - 1
         {
-            return Err(InsecureOptionError::SecurityBits);
+            return Err(InsecureOptionError::LowSecurityBits);
         }
 
         Ok(ProofOptions {
@@ -116,7 +116,7 @@ impl ProofOptions {
         if (security_target as usize)
             < grinding_factor as usize + num_bits_blowup_factor * fri_number_of_queries / 2
         {
-            return Err(InsecureOptionError::SecurityBits);
+            return Err(InsecureOptionError::LowSecurityBits);
         }
 
         Ok(ProofOptions {
@@ -220,7 +220,7 @@ mod tests {
 
         assert!(matches!(
             insecure_options,
-            Err(InsecureOptionError::SecurityBits)
+            Err(InsecureOptionError::LowSecurityBits)
         ));
     }
 

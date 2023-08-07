@@ -1,9 +1,7 @@
-use thiserror::Error;
-
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum InsecureOptionError {
-    #[error("Field size is not large enough")]
+    /// Field Size is not big enough
     FieldSize,
-    #[error("The number of security bits is not large enough")]
-    SecurityBits,
+    /// Number of security bits is not enough
+    LowSecurityBits,
 }
