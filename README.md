@@ -25,6 +25,7 @@ CLI currently runs with 100 bits of conjecturable security
 - [Fuzzers](#running-fuzzers)
 - [Using cairo-compile for Cairo 0 programs](#using-cairo-compile-for-cairo-0-programs)
 - [References](#references)
+- [Related projects](#related-projects)
 
 ## Main building blocks
 
@@ -206,9 +207,22 @@ make fuzzer_tools
 - [Anatomy of a Stark](https://aszepieniec.github.io/stark-anatomy/overview)
 - [Giza](https://github.com/maxgillett/giza)
 - [Ministark](https://github.com/andrewmilson/ministark)
+- [Sandstorm](https://github.com/andrewmilson/sandstorm)
 - [STARK-101](https://starkware.co/stark-101/)
 - [Summary on FRI low degree test](https://eprint.iacr.org/2022/1216)
 - [STARKs paper](https://eprint.iacr.org/2018/046)
 - [DEEP FRI](https://eprint.iacr.org/2019/336)
 - [BrainSTARK](https://aszepieniec.github.io/stark-brainfuck/)
 - [Thank goodness it's FRIday](https://vitalik.ca/general/2017/11/22/starks_part_2.html)
+- [Diving DEEP FRI](https://blog.lambdaclass.com/diving-deep-fri/)
+- [Periodic constraints](https://blog.lambdaclass.com/periodic-constraints-and-recursion-in-zk-starks/)
+- [Chiplets Miden VM](https://wiki.polygon.technology/docs/miden/design/chiplets/main/)
+- [Valida](https://github.com/valida-xyz/valida/tree/main)
+
+## Related Projects
+
+- [CAIRO VM - Rust](https://github.com/lambdaclass/cairo-vm)
+- [CAIRO VM - Go](https://github.com/lambdaclass/cairo_vm.go)
+- [Lambdaworks](https://github.com/lambdaclass/lambdaworks)
+- [CAIRO native](https://github.com/lambdaclass/cairo_native/)
+- [StarkNet in Rust](https://github.com/lambdaclass/starknet_in_rust)
