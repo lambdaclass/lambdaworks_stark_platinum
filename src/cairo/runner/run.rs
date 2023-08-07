@@ -18,20 +18,44 @@ use cairo_vm::vm::runners::cairo_runner::{CairoArg, CairoRunner, RunResources};
 use cairo_vm::vm::vm_core::VirtualMachine;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use std::ops::Range;
-use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum Error {
-    #[error("Failed to interact with the file system")]
-    IO(#[from] std::io::Error),
-    #[error("The cairo program execution failed")]
-    Runner(#[from] CairoRunError),
-    #[error(transparent)]
-    EncodeTrace(#[from] EncodeTraceError),
-    #[error(transparent)]
-    VirtualMachine(#[from] VirtualMachineError),
-    #[error(transparent)]
-    Trace(#[from] TraceError),
+    IO(std::io::Error),
+    Runner(CairoRunError),
+    EncodeTrace(EncodeTraceError),
+    VirtualMachine(VirtualMachineError),
+    Trace(TraceError),
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::IO(err)
+    }
+}
+
+impl From<CairoRunError> for Error {
+    fn from(err: CairoRunError) -> Error {
+        Error::Runner(err)
+    }
+}
+
+impl From<EncodeTraceError> for Error {
+    fn from(err: EncodeTraceError) -> Error {
+        Error::EncodeTrace(err)
+    }
+}
+
+impl From<VirtualMachineError> for Error {
+    fn from(err: VirtualMachineError) -> Error {
+        Error::VirtualMachine(err)
+    }
+}
+
+impl From<TraceError> for Error {
+    fn from(err: TraceError) -> Error {
+        Error::Trace(err)
+    }
 }
 
 /// Indicates the version of the Cairo program.
