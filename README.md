@@ -18,6 +18,8 @@ We expect to have something working in a good state by mid August 2023.
 
 CLI currently runs with 100 bits of conjecturable security
 
+## Table of Contents
+
 - [Main Building Blocks](#main-building-blocks)
 - [Requirements](#requirements)
 - [Trying it](#how-to-try-it)
