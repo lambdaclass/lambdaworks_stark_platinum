@@ -222,6 +222,9 @@ make fuzzer_tools
 - [Periodic constraints](https://blog.lambdaclass.com/periodic-constraints-and-recursion-in-zk-starks/)
 - [Chiplets Miden VM](https://wiki.polygon.technology/docs/miden/design/chiplets/main/)
 - [Valida](https://github.com/valida-xyz/valida/tree/main)
+- [Solidity Verifier](https://github.com/starkware-libs/starkex-contracts/tree/master/evm-verifier/solidity/contracts/cpu)
+- [EthSTARK](https://github.com/starkware-libs/ethSTARK/tree/master)
+- [CAIRO whitepaper](https://eprint.iacr.org/2021/1063.pdf)
 
 ## 🌞 Related Projects
 
