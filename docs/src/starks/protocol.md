@@ -230,7 +230,9 @@ $$
 - Add $y$ to the transcript.
 - For $s=0, \dots, Q-1$:
   - Sample random index $\iota_s \in [0, 2^{n+l}]$ from the transcript and let $\upsilon_s := \omega^{\iota_s}$.
-- Verify grinding: check that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
+
+#### Verify grinding:
+Check that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
 
 
 #### Step 2: Verify claimed composition polynomial
