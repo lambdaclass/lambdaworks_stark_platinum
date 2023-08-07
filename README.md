@@ -4,7 +4,7 @@
 
 <img src="https://github.com/lambdaclass/lambdaworks_stark_platinum/assets/569014/ad8d7943-f011-49b5-a0c5-f07e5ef4133e" alt="drawing" width="300"/>
 
-An open-source STARK prover, drop-in replacement for Winterfell.
+## An open-source STARK prover, drop-in replacement for Winterfell.
 
 </div>
 
@@ -25,11 +25,11 @@ CLI currently runs with 100 bits of conjecturable security
 - [Main Building Blocks](#main-building-blocks)
 - [Requirements](#requirements)
 - [Trying it](#how-to-try-it)
-- [Prove and verify](#prove-and-verify)
+- [Prove and verify](#-prove-and-verify)
 - [Fuzzers](#running-fuzzers)
 - [Using cairo-compile for Cairo 0 programs](#using-cairo-compile-for-cairo-0-programs)
-- [References](#references)
-- [Related projects](#related-projects)
+- [References](#-references)
+- [Related projects](#-related-projects)
 
 ## Main building blocks
 
@@ -88,7 +88,7 @@ To be added:
 
 For the moment, only programs in Cairo 0 with no arguments and contracts in Cairo 1 with no arguments are supported.
 
-### Prove and verify
+### 🚀 Prove and verify
 
 To prove Cairo programs you can use:
 
@@ -205,7 +205,7 @@ if you don´t have the tools for fuzzing installed use
 make fuzzer_tools
 ```
 
-## References
+## 📚 References
 
 - [Winterfell](https://github.com/facebook/winterfell)
 - [Anatomy of a Stark](https://aszepieniec.github.io/stark-anatomy/overview)
@@ -223,7 +223,7 @@ make fuzzer_tools
 - [Chiplets Miden VM](https://wiki.polygon.technology/docs/miden/design/chiplets/main/)
 - [Valida](https://github.com/valida-xyz/valida/tree/main)
 
-## Related Projects
+## 🌞 Related Projects
 
 - [CAIRO VM - Rust](https://github.com/lambdaclass/cairo-vm)
 - [CAIRO VM - Go](https://github.com/lambdaclass/cairo_vm.go)
