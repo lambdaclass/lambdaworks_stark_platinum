@@ -213,6 +213,8 @@ make fuzzer_tools
 
 ## 📚 References
 
+The following links, repos and projects have been important in the development of this library and we want to thank and acknowledge them. 
+
 - [Winterfell](https://github.com/facebook/winterfell)
 - [Anatomy of a Stark](https://aszepieniec.github.io/stark-anatomy/overview)
 - [Giza](https://github.com/maxgillett/giza)
@@ -223,12 +225,15 @@ make fuzzer_tools
 - [STARKs paper](https://eprint.iacr.org/2018/046)
 - [DEEP FRI](https://eprint.iacr.org/2019/336)
 - [BrainSTARK](https://aszepieniec.github.io/stark-brainfuck/)
+- [Plonky2](https://github.com/mir-protocol/plonky2)
+- [Arkworks](https://github.com/arkworks-rs)
 - [Thank goodness it's FRIday](https://vitalik.ca/general/2017/11/22/starks_part_2.html)
 - [Diving DEEP FRI](https://blog.lambdaclass.com/diving-deep-fri/)
 - [Periodic constraints](https://blog.lambdaclass.com/periodic-constraints-and-recursion-in-zk-starks/)
 - [Chiplets Miden VM](https://wiki.polygon.technology/docs/miden/design/chiplets/main/)
 - [Valida](https://github.com/valida-xyz/valida/tree/main)
 - [Solidity Verifier](https://github.com/starkware-libs/starkex-contracts/tree/master/evm-verifier/solidity/contracts/cpu)
+- [CAIRO verifier](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/cairo/stark_verifier)
 - [EthSTARK](https://github.com/starkware-libs/ethSTARK/tree/master)
 - [CAIRO whitepaper](https://eprint.iacr.org/2021/1063.pdf)
 
@@ -239,3 +244,4 @@ make fuzzer_tools
 - [Lambdaworks](https://github.com/lambdaclass/lambdaworks)
 - [CAIRO native](https://github.com/lambdaclass/cairo_native/)
 - [StarkNet in Rust](https://github.com/lambdaclass/starknet_in_rust)
+- [StarkNet Stack](https://github.com/lambdaclass/starknet_stack)
