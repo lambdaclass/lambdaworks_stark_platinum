@@ -1,12 +1,11 @@
 use super::air::{CairoAIR, PublicInputs};
-use crate::cairo::air::MemorySegment;
-use crate::starks::{
-    proof::{options::ProofOptions, stark::StarkProof},
-    verifier::verify,
-};
+use crate::air::MemorySegment;
 use lambdaworks_math::field::element::FieldElement;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use serde::{Deserialize, Serialize};
+use stark_platinum_prover::proof::options::ProofOptions;
+use stark_platinum_prover::proof::stark::StarkProof;
+use stark_platinum_prover::verifier::verify;
 use std::collections::HashMap;
 use std::ops::Range;
 use wasm_bindgen::prelude::wasm_bindgen;
