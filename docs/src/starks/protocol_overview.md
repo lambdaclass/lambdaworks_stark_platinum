@@ -1,0 +1,49 @@
+# Protocol Overview
+
+The goal of the STARK protocol is to convince a verifier that a prover has executed a program. Programs in this context can always be expressed as a sequence of states. And a transition from one state to the next is considered valid if a system of constraints is satisfied. This system in turn determines a state in term of the preceeding states. The whole sequence evolves from an initial state. An example is the Fibonacci sequence. Here, the state represents the $i$th Fibonacci number, and the transition rule between two consecutive states is $S_i=S_{i-1}+S_{i-2}$. More complex set of states and transitions lead to more flexible systems. The Cairo virtual machine is such an example.
+
+We will refer to a sequence of states $S_i$ as a *trace* and usually denote it $T$. A trace can have several columns to store different aspects or features of a particular state. We will refer to the $j$-th column as $T_j$. You can think of a trace as a matrix $T$ where the entry $T_{ij}$ is the $j$-th element of the $i$-th state.
+
+# Arithmetization
+The main tool in most proving systems is that of polynomials over a finite field  $\mathbb{F}$. Each column $T_j$ of the trace $T$ will be interpeted as evaluations of such a polynomial $t_j$. A consequence of this is that any type of information about the states must be encoded somehow as an element in $\mathbb{F}$.
+
+To ease notation we will assume here and in the protocol that the constraints encoding transition rules depend only on a state and the previous ones. Everything can be easily generalized to transitions that depend on many preceeding states. But as such, they can be expressed as multivariate polynomials in $2m$ variables
+$$P_k^T(X_1, \dots, X_m, Y_1, \dots, Y_m)$$
+A transition from state $i$ to state $i+1$ will be valid if and only if when we plug row $i$ of $T$ in the first $m$ variables and row $i+1$ in the second $m$ variables of $P_k^T$ we get $0$ for all $k$. In mathematical notation, this is
+$$P_k^T(T_{i, 0}, \dots, T_{i, m}, T_{i+1, 0}, \dots, T_{i+1, m}) = 0 \text{    for all }k$$
+
+These are called *transition constraints* and they check local properties of the trace, where local means relative to a specific row. There is another type of constraint, called *boundary constraint* and denoted $P_j^B$. These enforce parts of the trace to take particular values. It is useful for example to set and verify the initial states.
+
+So far, these constraints can only express local properties of the trace. There are situations where global properties of the trace need to be checked for consistency. For example a column may need to take all values in a range but not in any predefined way. There are several methods to express these global properties as local by adding redundant columns. Usually they need to involve randomness from the verifier to make sense and they turn into an interactive protocol on their own called *Randomized AIR with Preprocessing*.
+
+# High level description of the protocol
+The protocol is split into rounds. Each round more or less represents an interaction with the verifier. This means that each round will generally start by sampling a challenge from the verifier. We will work over a multiplicative subgroup $D = \{\omega^i \}_{i=0}^{2^n-1} \subseteq \mathbb{F}$.
+
+## Round 1
+In **round 1**, the prover commits to the trace $T$. He does so by interpolating each column $j$ and obtaining univariate polynomials $t_j$. In this way, we have $T_{i,j}=t_j(\omega^i)$. From now on, the prover won't be able to change the values of the trace $T$. The verifier will leverage this and send challenges to the prover. The prover cannot know in advance what these challenges will be, thus he cannot handcraft a trace to deceive the verifier. 
+
+As mentioned before, if some constraints cannot be expressed locally, more columns can be added with the goal of making a constraint-friendly trace. This is done by first committing to the first set of columns, then sampling challenges from the verifier and repeating round 1. The sampling of challenges serves to add new constraints. These constraints will make sure the new columns have some common structure with the original trace. In the protocol this is referred to as the *RAP* (Randomized AIR with Preprocessing).
+
+## Round 2
+The goal of **round 2** is to craft a function $H$. This function will have the property that it is a polynomial if and only if the trace that the prover committed to at **round 1** is valid and satisfies the agreed polynomial constraints. That is, $H$ will be a polynomial if and only if $T$ is a trace that satisfies all the transition and boundary constraints.
+
+Note that we can compose the polynomials $t_j$, the ones that interpolate the columns of the trace $T$, with the multivariate constraint polynomials as follows.
+$$Q_k^T(x) = P_k^T(t_1(x), \dots, t_m(x), t_1(\omega x), \dots, t_m(\omega x))$$
+These result in univariate polynomials. And the same can be done for the boundary constraints. Since $T_{i,j} = t_j(\omega^i)$, we have that these univariate polynomials vanish at every element of $D$ if and only if the trace $T$ is valid.
+
+As we already mentioned, this is assuming that transitions only depend on the current and previous state. But it can be generalized to include *frames* with three or more rows or more context for each constraint. For example, in the Fibonacci case the most natural way is to encode it as one transition constraint that depend on a row and the two preceeding it as we already did in the Recap section. The STARK protocol checks whether the function $\frac{Q_k^T}{X^{2^n} - 1}$ is a polynomial instead of checking that the polynomial is zero over the domain $D =\{\omega_i\}_{i=0}^{2^n-1}$. The two statements are equivalent.
+
+The verifier could check that all $\frac{Q_k^T}{X^{2^n} - 1}$ are polynomials one by one, and the same for the polynomials coming from the boundary constraints. But this is inefficient and the same can be obtained with a single polynomial. To do this, the prover samples challenges and obtains a random linear combination of these polynomials. The result of this is denoted by $H$ and is called the composition polynomial. It integrates all the constraints by adding them up. So after computing $H$, the prover commits to it and sends the commitment to the verifier. The rest of the protocol are efforts to prove that $H$ was properly constructed and that it is in fact a polynomial, which can only be true if the prover actually has a valid extension of the original trace.
+## Round 3
+The verifier needs to check that $H$ was constructed according the the rules of the protocol. That is, $H$ has to be a linaer combination of all the functions $\frac{Q_k^T}{X^{2^n}-1}$ and the similar terms for the boundary constraints. To do so, in **round 3** the verifier chooses a random point $z\in\mathbb{F}$ and the prover computes $H(z)$, $t_j(z)$ and $t_j(\omega z)$ for all $j$. With all these the verifier can check that $H$ and the expected linaer combination coincide at least when evaluated at $z$. Since $z$ was chosen at random, this proves with overwhelming probability that $H$ was properly constructed.
+
+The problem with this is that the verifier still needs to check that the evaluations $H(z)$, $t_j(z)$ and $t_j(\omega z)$ were properly computed and correspond to the already commited functions. And after that, the problem of checking that $H$ is a polynomial still remains. All of this is achieved at the same time in the next round
+
+## Round 4
+This round makes an extensive use of the FRI protocol. This protocol is run to prove that a vector of evaluations is actually the vector of evaluations of a polynomial of at most a predefined degree. The two remaining checks will be validated using this. That is, that the evaluations at $z$ were properly computed and that all of them are polynomials of bounded degree.
+
+Suppose $f$ is any of the functions involved here. Either $H$, or $t_j$, or the shifts of the $t_j$. The prover has already commited to $f$ and gave the verifier also a value $y$ (at which supposedly $f(z) = y$). Further suppose the prover wants to convince the verifier that $f$ is a polynomial and that actually $f(z) = y$. Both of these are checked by running the FRI protocol over the function $$g(x) := \frac{f(x) - y}{x - z}.$$
+This is because if $g$ is a polynomial, then $f(x) = y + g(x) (x - z)$, which is then also a polynomial and evaluating that expression at $z$ we get $f(z) = y$.
+
+The prover and the verifier could engage in a FRI protocol for $f=H$, then again for $f=t_0$ and so on for $f=t_j$ for all $j$. But this is terribly inefficient. The random linear combination trick also can be used here to reduce this to a single FRI protocol for all of them. That random linear combination is the deep composition polynomial.
+
