@@ -275,5 +275,6 @@ $$
 
 ## Notes on Optimizations
 - Inversions of finite field elements are slow. There is a very well known trick to batch invert many elements at once replacing inversions by multiplications. See [here](https://en.wikipedia.org/wiki/Modular_multiplicative_inverse#Multiple_inverses) for the algorithm.
-- One of the most computationally intensive operations performed is polynomial division. These can be optimized by utilizing [Fast Fourier Transform](http://web.cecs.pdx.edu/~maier/cs584/Lectures/lect07b-11-MG.pdf) (FFT) to divide each field element in Lagrange form. In specific scenarios, such as dividing by a polynomial of the form (x-a), the Ruffini algorithm can be employed to further enhance performance.
+- One of the most computationally intensive operations performed is polynomial division. These can be optimized by utilizing [Fast Fourier Transform](http://web.cecs.pdx.edu/~maier/cs584/Lectures/lect07b-11-MG.pdf) (FFT) to divide each field element in Lagrange form.
+- In specific scenarios, such as dividing by a polynomial of the form (x-a), [Ruffini's rule](https://en.wikipedia.org/wiki/Ruffini%27s_rule) can be employed to further enhance performance.
 
