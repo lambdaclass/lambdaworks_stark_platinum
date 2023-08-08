@@ -33,7 +33,7 @@ serde_cbor = { version = "0.11.1", optional = true }
 [dev-dependencies]
 proptest = "1.2.0"
 hex = "0.4.3"
-criterion = "0.4"
+criterion = { version = "0.4", default-features = false }
 env_logger = "*"
 test-log = { version = "0.2.11", features = ["log"] }
 assert_matches = "1.5.0"
@@ -47,6 +47,9 @@ instruments = []                   # This enables timing prints in prover and ve
 metal = ["lambdaworks-math/metal"]
 parallel = ["dep:rayon"]
 wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen", "dep:web-sys", "dep:serde_cbor"]
+
+[target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dev-dependencies]
+proptest = "1.2.0"
 
 [package.metadata.wasm-pack.profile.dev]
 # Should `wasm-opt` be used to further optimize the wasm binary generated after

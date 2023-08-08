@@ -29,3 +29,4 @@ codegen-units = 1
 lto = "thin"
 opt-level = 3
 debug = 2
+
