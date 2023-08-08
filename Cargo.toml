@@ -13,9 +13,13 @@ lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", rev = "
 lambdaworks-crypto = { git = "https://github.com/lambdaclass/lambdaworks", rev = "af0a479" }
 log = "0.4.17"
 bincode = { version = "2.0.0-rc.2", tag = "v2.0.0-rc.2", git = "https://github.com/bincode-org/bincode.git" }
-cairo-vm = { version = "0.6.0", features = ["cairo-1-hints"] }
+cairo-vm = { git = "https://github.com/lambdaclass/cairo-vm", rev = "e763cef", default-features = false, features = [
+    "cairo-1-hints",
+]}
+
 sha3 = "0.10.6"
-cairo-lang-starknet = "1.1.0"
+cairo-lang-starknet = { version = "2.1.0-rc2", default-features = false }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 num-integer = "0.1.45"
 itertools = "0.11.0"
@@ -27,28 +31,35 @@ rayon = { version = "1.7.0", optional = true }
 giza-core = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
 giza-prover = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
 giza-runner = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
-serde = { version = "1.0", features = ["derive"] }
+
+# wasm
+wasm-bindgen = { version = "0.2", optional = true }
+serde-wasm-bindgen = { version = "0.5", optional = true }
+web-sys = { version = "0.3.64", features = ['console'], optional = true }
+serde_cbor = { version = "0.11.1", optional = true }
 
 [dev-dependencies]
-proptest = "1.2.0"
 hex = "0.4.3"
-criterion = "0.4"
+criterion = { version = "0.4", default-features = false }
 env_logger = "*"
 test-log = { version = "0.2.11", features = ["log"] }
 assert_matches = "1.5.0"
 rstest = "0.17.0"
 rand = "0.8.5"
+wasm-bindgen-test = "0.3.0"
 
 [target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dev-dependencies]
 proptest = "1.2.0"
 
 [features]
+default = []
 test_fiat_shamir = []
 # This enables timing prints in prover and verifier
 instruments = []
 metal = ["lambdaworks-math/metal"]
 parallel = ["dep:rayon"]
 giza = ["dep:giza-core", "dep:giza-prover", "dep:giza-runner"]
+wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen", "dep:web-sys", "dep:serde_cbor"]
 
 [[bench]]
 name = "criterion_prover"
@@ -83,3 +94,47 @@ codegen-units = 1
 lto = "thin"
 opt-level = 3
 debug = 2
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[package.metadata.wasm-pack.profile.dev]
+# Should `wasm-opt` be used to further optimize the wasm binary generated after
+# the Rust compiler has finished? Using `wasm-opt` can often further decrease
+# binary size or do clever tricks that haven't made their way into LLVM yet.
+#
+# Configuration is set to `false` by default for the dev profile, but it can
+# be set to an array of strings which are explicit arguments to pass to
+# `wasm-opt`. For example `['-Os']` would optimize for size while `['-O4']`
+# would execute very expensive optimizations passes
+wasm-opt = ['-O']
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+# Should we enable wasm-bindgen's debug assertions in its generated JS glue?
+debug-js-glue = true
+# Should wasm-bindgen demangle the symbols in the "name" custom section
+demangle-name-section = true
+# Should we emit the DWARF debug info custom sections
+dwarf-debug-info = false
+# Should we omit the default import path
+omit-default-module-path = false
+
+[package.metadata.wasm-pack.profile.profiling]
+wasm-opt = ['-O']
+
+[package.metadata.wasm-pack.profile.profiling.wasm-bindgen]
+debug-js-glue = false
+demangle-name-section = true
+dwarf-debug-info = false
+omit-default-module-path = false
+
+# `wasm-opt` is on by default in for the release profile, but it can be
+# disabled by setting it to `false`
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+debug-js-glue = false
+demangle-name-section = true
+dwarf-debug-info = false
+omit-default-module-path = false

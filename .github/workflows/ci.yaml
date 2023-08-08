@@ -21,14 +21,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          targets: wasm32-unknown-unknown
 
       - name: Set up cargo cache
         uses: Swatinem/rust-cache@v2
 
       - name: Run cargo check
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          command: check
+        run: cargo check
+
+      - name: Run cargo check wasm
+        run: cargo check --features wasm --target wasm32-unknown-unknown
 
       # For giza benchmarks
       - name: Rustup toolchain nightly install
@@ -38,6 +40,7 @@ jobs:
 
       - name: Check benchmarks
         run: cargo +nightly bench --no-run -F giza
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -56,6 +59,7 @@ jobs:
 
       - name: Run clippy
         run: make clippy
+
   test_sequential:
     name: Test (Ubuntu, Sequential)
     runs-on: ubuntu-latest
@@ -94,6 +98,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: true
+
   test_parallel:
     name: Test (Ubuntu, Parallel)
     runs-on: ubuntu-latest
@@ -132,6 +137,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: true
+
   test_macos:
     name: Test (macOS, Apple sillicon)
     runs-on: [self-hosted, macOS]
