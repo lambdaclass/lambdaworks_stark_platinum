@@ -4,7 +4,7 @@ use std::time::Instant;
 //use itertools::multizip;
 #[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
-use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
+use lambdaworks_crypto::{fiat_shamir::transcript::Transcript, merkle_tree::merkle::MerkleTree};
 use log::error;
 
 #[cfg(feature = "test_fiat_shamir")]
@@ -15,11 +15,12 @@ use lambdaworks_math::{
         element::FieldElement,
         traits::{IsFFTField, IsField},
     },
+    polynomial::Polynomial,
     traits::ByteConversion,
 };
 
 use super::{
-    config::{BatchedMerkleTreeBackend, FriMerkleTreeBackend},
+    config::{BatchedMerkleTreeBackend, Commitment, FriMerkleTreeBackend},
     domain::Domain,
     fri::fri_decommit::FriDecommitment,
     grinding::hash_transcript_with_int_and_get_leading_zeros,
@@ -172,9 +173,8 @@ where
             transcript_to_field(transcript)
         })
         .collect::<Vec<FieldElement<F>>>();
-
     // <<<< Receive value: pₙ
-    transcript.append(&proof.fri_last_value.to_bytes_be());
+    transcript.append(&proof.last_poly_root);
 
     // Receive grinding value
     // 1) Receive challenge from the transcript
@@ -450,8 +450,15 @@ fn verify_query_and_sym_openings<F: IsField + IsFFTField>(
     two_inv: &FieldElement<F>,
 ) -> bool
 where
+    F: IsField + IsFFTField,
     FieldElement<F>: ByteConversion,
 {
+    // First, we check that the last polynomial gives the correct commitment to it:
+    let root_from_last_poly: Commitment =
+        MerkleTree::<FriMerkleTreeBackend<F>>::build(&proof.fri_last_poly).root;
+    let check = root_from_last_poly == proof.last_poly_root;
+    let last_poly = Polynomial::new(&proof.fri_last_poly);
+
     let fri_layers_merkle_roots = &proof.fri_layers_merkle_roots;
     let evaluation_point_vec: Vec<FieldElement<F>> =
         core::iter::successors(Some(evaluation_point), |evaluation_point| {
@@ -483,7 +490,7 @@ where
         .zip(&fri_decommitment.layers_evaluations_sym)
         .zip(evaluation_point_vec)
         .fold(
-            true,
+            check,
             |result,
              (
                 (((((k, merkle_root), auth_path), evaluation), auth_path_sym), evaluation_sym),
@@ -516,7 +523,11 @@ where
                     let next_layer_evaluation = &fri_decommitment.layers_evaluations[k + 1];
                     result & (v == *next_layer_evaluation) & auth_point & auth_sym
                 } else {
-                    result & (v == proof.fri_last_value) & auth_point & auth_sym
+                    result
+                        & (v == last_poly
+                            .evaluate(&domain.lde_roots_of_unity_coset[iota].pow((1_u64) >> k)))
+                        & auth_point
+                        & auth_sym
                 }
             },
         )
@@ -587,6 +598,11 @@ where
     let grinding_factor = air.context().proof_options.grinding_factor;
     if challenges.leading_zeros_count < grinding_factor {
         error!("Grinding factor not satisfied");
+        return false;
+    }
+
+    if proof.fri_last_poly.len() > (air.context().proof_options.max_degree_fri - 1) as usize {
+        error!("Polynomial exceeds maximum degree");
         return false;
     }
 

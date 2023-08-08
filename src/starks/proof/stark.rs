@@ -40,7 +40,9 @@ pub struct StarkProof<F: IsFFTField> {
     // [pₖ]
     pub fri_layers_merkle_roots: Vec<Commitment>,
     // pₙ
-    pub fri_last_value: FieldElement<F>,
+    pub fri_last_poly: Vec<FieldElement<F>>,
+    // last root
+    pub last_poly_root: Commitment,
     // Open(p₀(D₀), 𝜐ₛ), Opwn(pₖ(Dₖ), −𝜐ₛ^(2ᵏ))
     pub query_list: Vec<FriDecommitment<F>>,
     // Open(H₁(D_LDE, 𝜐₀), Open(H₂(D_LDE, 𝜐₀), Open(tⱼ(D_LDE), 𝜐₀)
@@ -193,7 +195,15 @@ where
             bytes.extend(commitment);
         }
 
-        bytes.extend(self.fri_last_value.to_bytes_be());
+        bytes.extend(self.fri_last_poly.len().to_be_bytes());
+        for coefficient in &self.fri_last_poly {
+            let coefficient_bytes = coefficient.to_bytes_be();
+            bytes.extend(coefficient_bytes.len().to_be_bytes());
+            bytes.extend(coefficient_bytes);
+        }
+
+        bytes.extend(self.last_poly_root.len().to_be_bytes());
+        bytes.extend(self.last_poly_root);
 
         bytes.extend(self.query_list.len().to_be_bytes());
         for query in &self.query_list {
@@ -332,13 +342,48 @@ where
             bytes = &bytes[32..];
         }
 
-        let fri_last_value = FieldElement::from_bytes_be(
+        // TODO: implement deserialization for fri_last_poly
+        let last_poly_len = usize::from_be_bytes(
             bytes
-                .get(..felt_len)
-                .ok_or(DeserializationError::InvalidAmountOfBytes)?,
-        )?;
+                .get(..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
 
-        bytes = &bytes[felt_len..];
+        let mut fri_last_poly = vec![];
+
+        for _ in 0..last_poly_len {
+            let coeff_len = usize::from_be_bytes(
+                bytes
+                    .get(..8)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                    .try_into()
+                    .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+            );
+
+            bytes = &bytes[8..];
+
+            let coeff = FieldElement::from_bytes_be(
+                bytes
+                    .get(..coeff_len)
+                    .ok_or(DeserializationError::InvalidAmountOfBytes)?,
+            )?;
+
+            bytes = &bytes[coeff_len..];
+
+            fri_last_poly.push(coeff);
+        }
+
+        let last_poly_root = bytes
+            .get(..32)
+            .ok_or(DeserializationError::InvalidAmountOfBytes)?
+            .try_into()
+            .map_err(|_| DeserializationError::InvalidAmountOfBytes)?;
+
+        bytes = &bytes[32..];
+
+        // TODO: implement deserialization for last_root
 
         let query_list_len = usize::from_be_bytes(
             bytes
@@ -428,7 +473,8 @@ where
             composition_poly_even_ood_evaluation,
             composition_poly_odd_ood_evaluation,
             fri_layers_merkle_roots,
-            fri_last_value,
+            fri_last_poly,
+            last_poly_root,
             query_list,
             deep_poly_openings,
             nonce,
@@ -568,7 +614,8 @@ mod prop_test {
             composition_poly_even_ood_evaluation in some_felt(),
             composition_poly_odd_ood_evaluation in some_felt(),
             fri_layers_merkle_roots in commitment_vec(),
-            fri_last_value in some_felt(),
+            fri_last_poly in field_vec(),
+            last_poly_root in some_commitment(),
             query_list in fri_decommitment_vec(),
             deep_poly_openings in deep_polynomial_openings_vec()
 
@@ -581,7 +628,8 @@ mod prop_test {
                 composition_poly_even_ood_evaluation,
                 composition_poly_odd_ood_evaluation,
                 fri_layers_merkle_roots,
-                fri_last_value,
+                fri_last_poly,
+                last_poly_root,
                 query_list,
                 deep_poly_openings,
                 nonce: 0
@@ -645,7 +693,7 @@ mod prop_test {
                 stark_proof.fri_layers_merkle_roots,
                 deserialized.fri_layers_merkle_roots
             );
-            prop_assert_eq!(stark_proof.fri_last_value, deserialized.fri_last_value);
+            prop_assert_eq!(stark_proof.fri_last_poly, deserialized.fri_last_poly);
 
             for (a, b) in stark_proof
                 .query_list
