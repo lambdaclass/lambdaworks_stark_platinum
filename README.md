@@ -236,6 +236,7 @@ The following links, repos and projects have been important in the development o
 - [CAIRO verifier](https://github.com/starkware-libs/cairo-lang/tree/master/src/starkware/cairo/stark_verifier)
 - [EthSTARK](https://github.com/starkware-libs/ethSTARK/tree/master)
 - [CAIRO whitepaper](https://eprint.iacr.org/2021/1063.pdf)
+- [Gnark](https://github.com/Consensys/gnark)
 
 ## 🌞 Related Projects
 
