@@ -10,6 +10,8 @@ Output builtin is finished, and range check is supported but it's not sound yet.
 
 We expect to have something working in a good state by mid August 2023.
 
+CLI currently runs with 100 bits of conjecturable security
+
 ## Main building blocks
 
 - [STARKS](https://github.com/lambdaclass/lambdaworks_cairo_prover/tree/main/src/starks): Everything related to STARKs building blocks such as the prover, verifier and FRI.
@@ -157,6 +159,12 @@ git checkout v1.1.0
   cargo run --bin starknet-sierra-compile -- /path/to/input.json /path/to/output.casm
   ```
 
+### Using WASM verifier
+
+To use the verifier in WASM, generate a npm package using `wasm-pack`
+
+As a shortcut, you can call
+`make build_wasm`
 ## Running tests
 To run tests, simply use
 ```

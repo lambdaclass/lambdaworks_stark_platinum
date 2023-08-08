@@ -1,6 +1,8 @@
 use lambdaworks_math::field::traits::IsPrimeField;
 
 use super::errors::InsecureOptionError;
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::wasm_bindgen;
 
 pub enum SecurityLevel {
     Conjecturable80Bits,
@@ -17,6 +19,7 @@ pub enum SecurityLevel {
 /// - `fri_number_of_queries`: the number of queries for the FRI layer
 /// - `coset_offset`: the offset for the coset
 /// - `grinding_factor`: the number of leading zeros that we want for the Hash(hash || nonce)
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Clone, Debug)]
 pub struct ProofOptions {
     pub blowup_factor: u8,
@@ -88,7 +91,7 @@ impl ProofOptions {
         if security_target as usize
             >= grinding_factor as usize + num_bits_blowup_factor * fri_number_of_queries - 1
         {
-            return Err(InsecureOptionError::SecurityBits);
+            return Err(InsecureOptionError::LowSecurityBits);
         }
 
         Ok(ProofOptions {
@@ -116,7 +119,7 @@ impl ProofOptions {
         if (security_target as usize)
             < grinding_factor as usize + num_bits_blowup_factor * fri_number_of_queries / 2
         {
-            return Err(InsecureOptionError::SecurityBits);
+            return Err(InsecureOptionError::LowSecurityBits);
         }
 
         Ok(ProofOptions {
@@ -220,7 +223,7 @@ mod tests {
 
         assert!(matches!(
             insecure_options,
-            Err(InsecureOptionError::SecurityBits)
+            Err(InsecureOptionError::LowSecurityBits)
         ));
     }
 

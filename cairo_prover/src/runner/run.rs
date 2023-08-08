@@ -7,6 +7,7 @@ use crate::register_states::RegisterStates;
 use super::vec_writer::VecWriter;
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
+use cairo_vm::felt::Felt252;
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
 use cairo_vm::hint_processor::cairo_1_hint_processor::hint_processor::Cairo1HintProcessor;
 use cairo_vm::serde::deserialize_program::BuiltinName;
@@ -19,20 +20,44 @@ use cairo_vm::vm::vm_core::VirtualMachine;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use stark_platinum_prover::trace::TraceTable;
 use std::ops::Range;
-use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum Error {
-    #[error("Failed to interact with the file system")]
-    IO(#[from] std::io::Error),
-    #[error("The cairo program execution failed")]
-    Runner(#[from] CairoRunError),
-    #[error(transparent)]
-    EncodeTrace(#[from] EncodeTraceError),
-    #[error(transparent)]
-    VirtualMachine(#[from] VirtualMachineError),
-    #[error(transparent)]
-    Trace(#[from] TraceError),
+    IO(std::io::Error),
+    Runner(CairoRunError),
+    EncodeTrace(EncodeTraceError),
+    VirtualMachine(VirtualMachineError),
+    Trace(TraceError),
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::IO(err)
+    }
+}
+
+impl From<CairoRunError> for Error {
+    fn from(err: CairoRunError) -> Error {
+        Error::Runner(err)
+    }
+}
+
+impl From<EncodeTraceError> for Error {
+    fn from(err: EncodeTraceError) -> Error {
+        Error::EncodeTrace(err)
+    }
+}
+
+impl From<VirtualMachineError> for Error {
+    fn from(err: VirtualMachineError) -> Error {
+        Error::VirtualMachine(err)
+    }
+}
+
+impl From<TraceError> for Error {
+    fn from(err: TraceError) -> Error {
+        Error::Trace(err)
+    }
 }
 
 /// Indicates the version of the Cairo program.
@@ -71,8 +96,6 @@ pub fn run_program(
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
-    let args = [];
-
     let (vm, runner) = match cairo_version {
         CairoVersion::V0 => {
             let trace_enabled = true;
@@ -94,21 +117,20 @@ pub fn run_program(
                 Ok(runner) => runner,
                 Err(error) => {
                     eprintln!("{error}");
-                    return Err(Error::Runner(error));
+                    panic!();
                 }
             };
 
             (vm, runner)
         }
         CairoVersion::V1 => {
+            let args = [];
+
             let casm_contract: CasmContractClass = serde_json::from_slice(program_content).unwrap();
+
             let program: Program = casm_contract.clone().try_into().unwrap();
-            let mut runner = CairoRunner::new(
-                &(casm_contract.clone().try_into().unwrap()),
-                layout.as_str(),
-                false,
-            )
-            .unwrap();
+
+            let mut runner = CairoRunner::new(&(program), layout.as_str(), false).unwrap();
             let mut vm = VirtualMachine::new(true);
 
             runner
@@ -147,8 +169,11 @@ pub fn run_program(
 
             // Load extra data
             let core_program_end_ptr = (runner.program_base.unwrap() + program.data_len()).unwrap();
+
+            let extra_data_i128 = i128::from_str_radix("208B7FFF7FFF7FFE", 16).unwrap();
+            let extra_data = Felt252::from(extra_data_i128);
             let program_extra_data: Vec<MaybeRelocatable> =
-                vec![0x208B7FFF7FFF7FFE.into(), builtin_costs_ptr.into()];
+                vec![extra_data.into(), builtin_costs_ptr.into()];
             vm.load_data(core_program_end_ptr, &program_extra_data)
                 .unwrap();
 
@@ -168,17 +193,17 @@ pub fn run_program(
             ]);
             let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
 
-            let mut hint_processor = Cairo1HintProcessor::new(&casm_contract.hints);
+            let mut hint_processor =
+                Cairo1HintProcessor::new(casm_contract.hints.as_slice(), RunResources::default());
 
             // Run contract entrypoint
             // We assume entrypoint 0 for only one function
-            let mut run_resources = RunResources::default();
+            let _run_resources = RunResources::default();
 
             runner
                 .run_from_entrypoint(
                     0,
                     &entrypoint_args,
-                    &mut run_resources,
                     true,
                     Some(program.data_len() + program_extra_data.len()),
                     &mut vm,
@@ -192,7 +217,7 @@ pub fn run_program(
         }
     };
 
-    let relocated_trace = vm.get_relocated_trace()?;
+    let relocated_trace = vm.get_relocated_trace().unwrap();
 
     let mut trace_vec = Vec::<u8>::new();
     let mut trace_writer = VecWriter::new(&mut trace_vec);
@@ -204,8 +229,8 @@ pub fn run_program(
     let mut memory_writer = VecWriter::new(&mut memory_vec);
     memory_writer.write_encoded_memory(relocated_memory);
 
-    trace_writer.flush()?;
-    memory_writer.flush()?;
+    trace_writer.flush().unwrap();
+    memory_writer.flush().unwrap();
 
     //TO DO: Better error handling
     let cairo_mem = CairoMemory::from_bytes_le(&memory_vec).unwrap();

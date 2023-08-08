@@ -14,5 +14,8 @@ pub mod runner;
 #[cfg(test)]
 pub mod tests;
 
+#[cfg(feature = "wasm")]
+pub mod wasm_wrappers;
+
 pub type PrimeField = Stark252PrimeField;
 pub type Felt252 = FieldElement<PrimeField>;
