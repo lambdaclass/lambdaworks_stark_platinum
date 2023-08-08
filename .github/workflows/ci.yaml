@@ -30,7 +30,7 @@ jobs:
         run: cargo check
 
       - name: Run cargo check wasm
-        run: cargo check --features wasm --target
+        run: cargo check --features wasm --target wasm32-unknown-unknown
 
       # For giza benchmarks
       - name: Rustup toolchain nightly install
@@ -40,7 +40,7 @@ jobs:
 
       - name: Check benchmarks
         run: cargo +nightly bench --no-run -F giza
-        
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
