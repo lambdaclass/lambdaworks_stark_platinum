@@ -27,12 +27,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run cargo check
-        uses: dtolnay/rust-toolchain@stable
-      - run: cargo check
+        run: cargo check
 
       - name: Run cargo check wasm
-        uses: dtolnay/rust-toolchain@stable
-      - run: cargo check --features wasm --target wasm32-unkown-unkown
+        run: cargo check --features wasm --target
 
       # For giza benchmarks
       - name: Rustup toolchain nightly install
@@ -40,9 +38,9 @@ jobs:
         with:
           toolchain: nightly
 
-
       - name: Check benchmarks
         run: cargo +nightly bench --no-run -F giza
+        
   lint:
     name: Lint
     runs-on: ubuntu-latest
