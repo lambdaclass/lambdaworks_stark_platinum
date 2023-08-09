@@ -1,7 +1,7 @@
 use super::errors::InsecureOptionError;
 use lambdaworks_math::field::traits::IsPrimeField;
 
-// #[cfg(feature = "wasm")]
+#[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
 pub enum SecurityLevel {
