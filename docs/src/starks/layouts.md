@@ -41,12 +41,13 @@ Now, to do this, we will need to evaluate the multiple rows taking in account th
 
 The trace will now look like this:
 
-![#f03c15](A0)`#f03c15` 
+```diff
 
 | FlagA| FlagB| FlagB|
 |  --  |  --  | --   |
-|  ![#f03c15](A0)`#f03c15`  |  B0  |  C0  |
+|  ```diff
++ A0  |  B0  |  C0  ```
+|
 |  A1  |  B1  |  C1  |
 |  A2  |  B2  |  C2  |
 |  A3  |  B3  |  C3  |
-
