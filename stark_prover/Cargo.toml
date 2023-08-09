@@ -31,7 +31,6 @@ web-sys = { version = "0.3.64", features = ['console'], optional = true }
 serde_cbor = { version = "0.11.1", optional = true }
 
 [dev-dependencies]
-proptest = "1.2.0"
 hex = "0.4.3"
 criterion = { version = "0.4", default-features = false }
 env_logger = "*"
