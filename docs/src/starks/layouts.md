@@ -45,9 +45,7 @@ The trace will now look like this:
 
 | FlagA| FlagB| FlagB|
 |  --  |  --  | --   |
-|  ```diff
-+ A0  |  B0  |  C0  ```
-|
+|  ```diff + A0 ``` |  B0  |  C0  |
 |  A1  |  B1  |  C1  |
 |  A2  |  B2  |  C2  |
 |  A3  |  B3  |  C3  |
