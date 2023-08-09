@@ -119,7 +119,7 @@ In the second case, the evaluation would look like this:
 
 When generating the trace, we will evaluating over the points on the LDE, where the constraints wont' give 0, but we will use the same spacing. Assume we have three constraints for each flag, C0, C1, C2, and that they don't involve other trace cells. Let's call the index of the frame evaluation i, starting from 0.
 
-In the first case, the constraint C0,C1 and C2 would be applied over the same rows, giving an equation that looks like:
+In the first case, the constraint $C_{0}$, $C_{1}$ and $C_{2}$ would be applied over the same rows, giving an equation that looks like:
 
 $`C_{k}(w^i, w^i+1)`$
 
