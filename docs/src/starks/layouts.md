@@ -127,7 +127,3 @@ In the second case, the equations would look like:
 
 $$`C0(w^{i*4}, w^{i*4+1})`$$
 
-$$`C1(w^{i*4+1}, w^{i*4+2})`$$
-
-$$`C2(w^{i*4+2}, w^{i*4+3})`$$
-
