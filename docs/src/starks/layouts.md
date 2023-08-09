@@ -66,6 +66,8 @@ The size of the cycle where the constraints start repeating will determine the s
 
 First case: 
 
+```html
+
 <style>
     .wideTable1 {
         width: 70%;
@@ -193,3 +195,5 @@ Second case:
 |  D4  |
 
 </div>
+
+```
