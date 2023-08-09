@@ -121,9 +121,13 @@ When generating the trace, we will evaluating over the points on the LDE, where 
 
 In the first case, the constraint C0,C1 and C2 would be applied over the same rows, giving an equation that looks like:
 
-$$ Ck(w^i, w^i+1) $$
+$ C_{k}(w^i, w^i+1) $
 
 In the second case, the equations would look like:
 
 $`C_{0}(w^{i*4}, w^{i*4+1})`$
+
+$`C_{1}(w^{i*4+1}, w^{i*4+2})`$
+
+$`C_{2}(w^{i*4+2}, w^{i*4+3})`$
 
