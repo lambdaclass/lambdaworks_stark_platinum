@@ -29,6 +29,12 @@ jobs:
       - name: Run cargo check
         run: cargo check
 
+      - name: Run cargo check stark prover
+        run: cargo check --package stark-platinum-prover
+
+      - name: Run cargo check cairo prover
+        run: cargo check --package cairo-platinum-prover
+
       - name: Run cargo check wasm
         run: cargo check --features wasm --target wasm32-unknown-unknown
 
@@ -71,7 +77,7 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-          
+
       - name: Set up cargo cache
         uses: Swatinem/rust-cache@v2
 
@@ -84,7 +90,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
-          cache: 'pip'
+          cache: "pip"
 
       - name: Install cairo-lang toolchain and dependencies
         run: pip install -r requirements.txt
@@ -110,7 +116,7 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-          
+
       - name: Set up cargo cache
         uses: Swatinem/rust-cache@v2
 
@@ -123,7 +129,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
-          cache: 'pip'
+          cache: "pip"
 
       - name: Install cairo-lang toolchain and dependencies
         run: pip install -r requirements.txt
