@@ -1,6 +1,16 @@
-# Lambdaworks Starknet Stack Prover
-This prover is still in development and may contain bugs. It is not intended to be used in production yet. We're a few weeks away to have it ready.
+# Lambdaworks Stark Platinum Prover 
+
+<img src="https://github.com/lambdaclass/lambdaworks_stark_platinum/assets/569014/ad8d7943-f011-49b5-a0c5-f07e5ef4133e" alt="drawing" width="300"/>
+
+This prover is still in development and may contain bugs. It is not intended to be used in production yet. 
+
+Please check issues under security label, and wait for them to be resolved if they are relevant your project.
+
+Output builtin is finished, and range check is supported but it's not sound yet. 
+
 We expect to have something working in a good state by mid August 2023.
+
+CLI currently runs with 100 bits of conjecturable security
 
 ## Main building blocks
 
@@ -9,11 +19,47 @@ We expect to have something working in a good state by mid August 2023.
 
 To be added:
 
-- Grinding ✔️
-- Skipping FRI layers
-- Optimizing verifier operations
-- Range-check ✔️ and Pedersen built-ins
-- Different layouts
+-  Add winterfell api compatibility
+-  Add parameters for proving and verifying in the CLI / (Public inputs should be serialized and deserialized)
+-  Add Cairo compilation inside Rust, to prove and verify Cairo1/Cairo2 from the .cairo file, instead of the .casm file
+-  Add last constraint of Range Check Built In
+-  Add more parallelization
+-  Benchmarks and optimizations for Graviton
+-  Bitwise Builtin
+-  Cairo Verifier
+   - Batch verifier / For trees and N proofs
+-  Chiplet support
+-  Cuda with Icicle for FTT/NTT
+-  Different layouts
+-  DSL Plonk
+-  Extension fields in Starks
+-  Fix "enforce selector" security bug
+-  Fix benches against other Field libraries, so results are more stable
+-  HyperPlonk - Ultraplonk
+-  Improve profiling with multithread
+-  JSON serialization for proofs
+-  Optimizations
+  - Skip layers
+  - Stop FRI
+  - Batch FRI queries (improves proof size)
+  - Others
+-  Optimized backend for mini goldilocks
+-  Pedersen Builtin
+-  Pick hash configuration with ProofOptions
+-  Poseidon Builtin
+-  Poseidon Hash
+   - Poseidon Tree 
+   - Poseidon Batch Tree
+-  Proof of concept of Wasm application running the verifier
+-  Quality of life functions (to_decimal_string, from_decimal_string)
+-  Sha256 Builtin
+-  Sharp compatibility
+-  Solidity Verifier
+-  Support FFTx for CUDA
+-  Tracing tools
+-  Virtual columns
+-  Vulkan support for FFT
+-  Winterfell compatible API
 
 ## Requirements
 
@@ -113,6 +159,12 @@ git checkout v1.1.0
   cargo run --bin starknet-sierra-compile -- /path/to/input.json /path/to/output.casm
   ```
 
+### Using WASM verifier
+
+To use the verifier in WASM, generate a npm package using `wasm-pack`
+
+As a shortcut, you can call
+`make build_wasm`
 ## Running tests
 To run tests, simply use
 ```
