@@ -40,11 +40,10 @@ Now, to do this, we will need to evaluate the multiple rows taking in account th
 
 
 The trace will now look like this:
-```math
-\begin{array}{|l|c|}
-  \rowcolor[gray]{.5}\columncolor{red} one & two\\
-  \rowcolor{lightblue} three & four\\\hline
-  five & six \\
-  \rowcolor{magenta}seven & \cellcolor{green}eight
-\end{array}
+```mermaid
+  graph TD;
+      A-->B;
+      A-->C;
+      B-->D;
+      C-->D;
 ```
