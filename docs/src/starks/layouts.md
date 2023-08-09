@@ -121,7 +121,7 @@ When generating the trace, we will evaluating over the points on the LDE, where 
 
 In the first case, the constraint $C_{0}$, $C_{1}$ and $C_{2}$ would be applied over the same rows, giving an equation that looks like:
 
-$`C_{k}(w^i, w^i+1)`$
+$`C_{k}(w^i, w^{i+1})`$
 
 In the second case, the equations would look like:
 
