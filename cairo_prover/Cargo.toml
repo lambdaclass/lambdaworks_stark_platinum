@@ -6,9 +6,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
-# [[bin]]
-# name = "cairo-platinum"
-# path = "src/main.rs"
+[[bin]]
+name = "cairo-platinum"
+path = "src/main.rs"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

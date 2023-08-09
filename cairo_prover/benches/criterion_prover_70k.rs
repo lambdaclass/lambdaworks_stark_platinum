@@ -1,3 +1,4 @@
+use cairo_platinum_prover::cairo_layout::CairoLayout;
 use cairo_platinum_prover::{
     air::generate_cairo_proof,
     runner::run::{generate_prover_args, CairoVersion},
