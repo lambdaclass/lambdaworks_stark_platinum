@@ -125,9 +125,9 @@ $$ Ck(w^i, w^i+1) $$
 
 In the second case, the equations would look like:
 
-$$ C0(w^{i*4}, w^{i*4+1}) $$
+$$`C0(w^{i*4}, w^{i*4+1})`$$
 
-$$ C1(w^{i*4+1}, w^{i*4+2}) $$
+$$`C1(w^{i*4+1}, w^{i*4+2})`$$
 
-$$ C2(w^{i*4+2}, w^{i*4+3}) $$
+$$`C2(w^{i*4+2}, w^{i*4+3})`$$
 
