@@ -42,10 +42,16 @@ Now, to do this, we will need to evaluate the multiple rows taking in account th
 The trace will now look like this:
 
 ```diff
-+ A0, B0, C0
-+ A1, B1, C1
-A2, B2, C2
-A3, B3, C3
++ A0 | B0 | C0
++ A1 | B1 | C1
+  A2 | B2 | C2
+  A3 | B3 | C3
+```
+```diff
+  A0 | B0 | C0
++ A1 | B1 | C1
++ A2 | B2 | C2
+  A3 | B3 | C3
 ```
 
 | FlagA| FlagB| FlagB|
