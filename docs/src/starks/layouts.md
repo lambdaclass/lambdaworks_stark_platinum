@@ -38,8 +38,7 @@ Each row corresponding to Flag A will have the constraints associated with it's 
 
 Now, to do this, we will need to evaluate the multiple rows taking in account they are part of the same step. To make things easier, we will add a dummy flag D, whose purpose is to make the evaluation move in a number which is a potency of 2. 
 
-
-The trace will now look like this:
+If we were evaluating the Frame where the constraints should give 0, the frame movement would look like this:
 
 ```diff
 + A0 | B0 | C0
@@ -53,10 +52,65 @@ The trace will now look like this:
 + A2 | B2 | C2
   A3 | B3 | C3
 ```
+```diff
+  A0 | B0 | C0
+  A1 | B1 | C1
++ A2 | B2 | C2
++ A3 | B3 | C3
+```
 
-| FlagA| FlagB| FlagB|
-|  --  |  --  | --   |
-|   |  B0  |  C0  |
-|  A1  |  B1  |  C1  |
-|  A2  |  B2  |  C2  |
-|  A3  |  B3  |  C3  |
+```diff 
++ A0 |
++ B0 |
++ C0 |
++ D0 |
++ A1 |
++ B1 |
++ C1 |
++ D1 |
+  A2 |
+  B2 |
+  C2 |
+  D2 |
+  A3 |
+  B3 |
+  C3 |
+  D3 |
+```
+```diff
+  A0 |
+  B0 |
+  C0 |
+  D0 |
++ A1 |
++ B1 |
++ C1 |
++ D1 |
++ A2 |
++ B2 |
++ C2 |
++ D2 |
+  A3 |
+  B3 |
+  C3 |
+  D3 |
+```
+
+```diff
+  A0 |
+  B0 |
+  C0 |
+  D0 |
+  A1 |
+  B1 |
+  C1 |
+  D1 |
++ A2 |
++ B2 |
++ C2 |
++ D2 |
++ A3 |
++ B3 |
++ C3 |
++ D3 |
+```
