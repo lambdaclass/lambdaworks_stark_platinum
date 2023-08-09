@@ -504,11 +504,11 @@ pub struct CairoRAPChallenges {
 /// that were not overwritten. This is not a problem as long as all the public memory pairs
 /// have been written.
 fn add_pub_memory_in_public_input_section(
-    addresses: &Vec<Felt252>,
+    addresses: &[Felt252],
     values: &[Felt252],
     public_input: &PublicInputs,
 ) -> (Vec<Felt252>, Vec<Felt252>) {
-    let mut a_aux = addresses.clone();
+    let mut a_aux = addresses.to_owned();
     let mut v_aux = values.to_owned();
 
     let output_range = public_input.memory_segments.get(&MemorySegment::Output);
@@ -1067,17 +1067,17 @@ fn memory_is_increasing(
             - curr[MEMORY_ADDR_SORTED_2 - builtin_offset]
             - one);
 
-    constraints[MEMORY_INCREASING_3] = (&curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
-        - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset])
-        * (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
-            - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
-            - &one);
+    constraints[MEMORY_INCREASING_3] = (curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+        - curr[MEMORY_ADDR_SORTED_4 - builtin_offset])
+        * (curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - one);
 
-    constraints[MEMORY_INCREASING_4] = (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
-        - &next[MEMORY_ADDR_SORTED_0 - builtin_offset])
-        * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
-            - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
-            - &one);
+    constraints[MEMORY_INCREASING_4] = (curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+        - next[MEMORY_ADDR_SORTED_0 - builtin_offset])
+        * (next[MEMORY_ADDR_SORTED_0 - builtin_offset]
+            - curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - one);
 
     constraints[MEMORY_CONSISTENCY_0] = (curr[MEMORY_VALUES_SORTED_0 - builtin_offset]
         - curr[MEMORY_VALUES_SORTED_1 - builtin_offset])
@@ -1097,17 +1097,17 @@ fn memory_is_increasing(
             - curr[MEMORY_ADDR_SORTED_2 - builtin_offset]
             - one);
 
-    constraints[MEMORY_CONSISTENCY_3] = (&curr[MEMORY_VALUES_SORTED_3 - builtin_offset]
-        - &curr[MEMORY_VALUES_SORTED_4 - builtin_offset])
-        * (&curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
-            - &curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
-            - &one);
+    constraints[MEMORY_CONSISTENCY_3] = (curr[MEMORY_VALUES_SORTED_3 - builtin_offset]
+        - curr[MEMORY_VALUES_SORTED_4 - builtin_offset])
+        * (curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - one);
 
-    constraints[MEMORY_CONSISTENCY_4] = (&curr[MEMORY_VALUES_SORTED_4 - builtin_offset]
-        - &next[MEMORY_VALUES_SORTED_0 - builtin_offset])
-        * (&next[MEMORY_ADDR_SORTED_0 - builtin_offset]
-            - &curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
-            - &one);
+    constraints[MEMORY_CONSISTENCY_4] = (curr[MEMORY_VALUES_SORTED_4 - builtin_offset]
+        - next[MEMORY_VALUES_SORTED_0 - builtin_offset])
+        * (next[MEMORY_ADDR_SORTED_0 - builtin_offset]
+            - curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - one);
 }
 
 fn permutation_argument(
@@ -1175,42 +1175,42 @@ fn permutation_argument_range_check(
     let one = FieldElement::one();
     let z = &rap_challenges.z_range_check;
 
-    constraints[RANGE_CHECK_INCREASING_0] = (&curr[RANGE_CHECK_COL_1 - builtin_offset]
-        - &curr[RANGE_CHECK_COL_2 - builtin_offset])
-        * (&curr[RANGE_CHECK_COL_2 - builtin_offset]
-            - &curr[RANGE_CHECK_COL_1 - builtin_offset]
-            - &one);
-    constraints[RANGE_CHECK_INCREASING_1] = (&curr[RANGE_CHECK_COL_2 - builtin_offset]
-        - &curr[RANGE_CHECK_COL_3 - builtin_offset])
-        * (&curr[RANGE_CHECK_COL_3 - builtin_offset]
-            - &curr[RANGE_CHECK_COL_2 - builtin_offset]
-            - &one);
-    constraints[RANGE_CHECK_INCREASING_2] = (&curr[RANGE_CHECK_COL_3 - builtin_offset]
-        - &curr[RANGE_CHECK_COL_4 - builtin_offset])
-        * (&curr[RANGE_CHECK_COL_4 - builtin_offset]
-            - &curr[RANGE_CHECK_COL_3 - builtin_offset]
-            - &one);
-    constraints[RANGE_CHECK_INCREASING_3] = (&curr[RANGE_CHECK_COL_4 - builtin_offset]
-        - &next[RANGE_CHECK_COL_1 - builtin_offset])
-        * (&next[RANGE_CHECK_COL_1 - builtin_offset]
-            - &curr[RANGE_CHECK_COL_4 - builtin_offset]
-            - &one);
+    constraints[RANGE_CHECK_INCREASING_0] = (curr[RANGE_CHECK_COL_1 - builtin_offset]
+        - curr[RANGE_CHECK_COL_2 - builtin_offset])
+        * (curr[RANGE_CHECK_COL_2 - builtin_offset]
+            - curr[RANGE_CHECK_COL_1 - builtin_offset]
+            - one);
+    constraints[RANGE_CHECK_INCREASING_1] = (curr[RANGE_CHECK_COL_2 - builtin_offset]
+        - curr[RANGE_CHECK_COL_3 - builtin_offset])
+        * (curr[RANGE_CHECK_COL_3 - builtin_offset]
+            - curr[RANGE_CHECK_COL_2 - builtin_offset]
+            - one);
+    constraints[RANGE_CHECK_INCREASING_2] = (curr[RANGE_CHECK_COL_3 - builtin_offset]
+        - curr[RANGE_CHECK_COL_4 - builtin_offset])
+        * (curr[RANGE_CHECK_COL_4 - builtin_offset]
+            - curr[RANGE_CHECK_COL_3 - builtin_offset]
+            - one);
+    constraints[RANGE_CHECK_INCREASING_3] = (curr[RANGE_CHECK_COL_4 - builtin_offset]
+        - next[RANGE_CHECK_COL_1 - builtin_offset])
+        * (next[RANGE_CHECK_COL_1 - builtin_offset]
+            - curr[RANGE_CHECK_COL_4 - builtin_offset]
+            - one);
 
-    let p0 = &curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1 - builtin_offset];
-    let p0_next = &next[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1 - builtin_offset];
-    let p1 = &curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2 - builtin_offset];
-    let p2 = &curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3 - builtin_offset];
-    let p3 = &curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_4 - builtin_offset];
+    let p0 = curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1 - builtin_offset];
+    let p0_next = next[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1 - builtin_offset];
+    let p1 = curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2 - builtin_offset];
+    let p2 = curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3 - builtin_offset];
+    let p3 = curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_4 - builtin_offset];
 
-    let ap0_next = &next[RANGE_CHECK_COL_1 - builtin_offset];
-    let ap1 = &curr[RANGE_CHECK_COL_2 - builtin_offset];
-    let ap2 = &curr[RANGE_CHECK_COL_3 - builtin_offset];
-    let ap3 = &curr[RANGE_CHECK_COL_4 - builtin_offset];
+    let ap0_next = next[RANGE_CHECK_COL_1 - builtin_offset];
+    let ap1 = curr[RANGE_CHECK_COL_2 - builtin_offset];
+    let ap2 = curr[RANGE_CHECK_COL_3 - builtin_offset];
+    let ap3 = curr[RANGE_CHECK_COL_4 - builtin_offset];
 
-    let a0_next = &next[OFF_DST];
-    let a1 = &curr[OFF_OP0];
-    let a2 = &curr[OFF_OP1];
-    let a3 = &curr[RC_HOLES];
+    let a0_next = next[OFF_DST];
+    let a1 = curr[OFF_OP0];
+    let a2 = curr[OFF_OP1];
+    let a3 = curr[RC_HOLES];
 
     constraints[RANGE_CHECK_0] = (z - ap1) * p1 - (z - a1) * p0;
     constraints[RANGE_CHECK_1] = (z - ap2) * p2 - (z - a2) * p1;
@@ -1270,7 +1270,6 @@ pub fn verify_cairo_proof(
 mod test {
     use super::*;
     use lambdaworks_math::field::element::FieldElement;
-    use proptest::{prelude::*, prop_compose, proptest};
 
     #[test]
     fn range_check_eval_works() {
