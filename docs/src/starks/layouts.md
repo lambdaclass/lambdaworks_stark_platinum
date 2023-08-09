@@ -59,6 +59,8 @@ If we were evaluating the Frame where the constraints should give 0, the frame m
 + A3 | B3 | C3
 ```
 
+In the second case, the evaluation would look like this:
+
 ```diff 
 + A0 |
 + B0 |
