@@ -142,4 +142,4 @@ Let's denote the shared constraint $B$, and the independent constraints $C_{i}$
 
 What we can do is define a Column for the flags, where the binary constraint $B$ is enforced. Additionally, we will define a subcolumn for each flag, which will enforce each $C_{i}$.
 
-In summary, if we have a set of shared constraints to apply, we will be using about. If we want to mix or interleave Columns, we will define them as Virtual Columns. And if we want to apply more constraints to a subset of a Column of Virtual Columns, or share constraints between columns, we will define Virtual Subcolumns.
+In summary, if we have a set of shared constraints to apply, we will be using a Column. If we want to mix or interleave Columns, we will define them as Virtual Columns. And if we want to apply more constraints to a subset of a Column of Virtual Columns, or share constraints between columns, we will define Virtual Subcolumns.
