@@ -5,7 +5,7 @@ In previous chapters, we have seen how the registers states and the memory are a
 
 While we have shown a way of doing that, there isn't only one possible provable trace. In fact, there are multiple configurations possible. 
 
-For example, in the Cairo VM, we have 15 flags. These flags include  "DstReg", "Op0Reg", "OpCode" and others. For simplification, let's imagine with have 3 flags with letters from "A" to "C", where "A" is the first flag. 
+For example, in the Cairo VM, we have 15 flags. These flags include  "DstReg", "Op0Reg", "OpCode" and others. For simplification, let's imagine we have 3 flags with letters from "A" to "C", where "A" is the first flag. 
 
 Now, let's assume we have 4 steps in our trace. If we were to only use plain columns, the layout would look like this:
 
@@ -35,11 +35,11 @@ But, we could also organize them like this
 
 The only problem is that now the constraints for each transition of the rows are not the same. We will have to define then a concept called "Virtual Column".
 
-A Virtual Column is like a traditional column, which is its own set of constraints, but it exists interleaved with another one. In the previous example, each row is associated with a column, but in practice, we could have different ratios. We could have 3 rows corresponding to one Virtual Column, and the next one corresponding to another one. For the time being, let's focus on this simpler example.
+A Virtual Column is like a traditional column, which has its own set of constraints, but it exists interleaved with another one. In the previous example, each row is associated with a column, but in practice, we could have different ratios. We could have 3 rows corresponding to one Virtual Column, and the next one corresponding to another one. For the time being, let's focus on this simpler example.
 
 Each row corresponding to Flag A will have the constraints associated with its own Virtual Column, and the same will apply to Flag B and Flag C.
 
-Now, to do this, we will need to evaluate the multiple rows taking into account that they are part of the same step. For a real case, we will add a dummy flag D, whose purpose is to make the evaluation move in a number that is a potency of 2. 
+Now, to do this, we will need to evaluate the multiple rows taking into account that they are part of the same step. For a real case, we will add a dummy flag D, whose purpose is to make the evaluation move in a number that is a power of 2. 
 
 Let's see how it works. If we were evaluating the Frame where the constraints should give 0, the frame movement would look like this:
 
