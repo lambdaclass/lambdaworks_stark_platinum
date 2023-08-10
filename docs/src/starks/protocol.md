@@ -165,8 +165,9 @@ $$H = H_1(X^2) + XH_2(X^2)$$
     - Compute $\text{Open}(p_k(D_k), -\upsilon_s^{2^k})$ for all $k=0,\dots,n-1$.
 
 ##### Round 4.3: Open deep composition polynomial components
-- Compute $\text{Open}(H_1(D_{\text{LDE}}), \upsilon_0)$, $\text{Open}(H_2(D_{\text{LDE}}), \upsilon_0)$.
-- Compute $\text{Open}(t_j(D_{\text{LDE}}), \upsilon_0)$ for all $j=1,\dots, m$.
+- For $s=0,\dots,Q-1$ do the following:
+    - Compute $\text{Open}(H_1(D_{\text{LDE}}), \upsilon_s)$, $\text{Open}(H_2(D_{\text{LDE}}), \upsilon_s)$.
+    - Compute $\text{Open}(t_j(D_{\text{LDE}}), \upsilon_s)$ for all $j=1,\dots, m$.
 
 #### Build proof
 - Send the proof to the verifier:
@@ -179,9 +180,9 @@ $$
 &p_n, \\
 &\{\text{Open}(p_0(D_0), \upsilon_s): 0\leq s < Q\}), \\
 &\{\text{Open}(p_k(D_k), -\upsilon_s^{2^k}): 0\leq k< n, 0\leq s < Q\}, \\
-&\text{Open}(H_1(D_{\text{LDE}}), \upsilon_0), \\
-&\text{Open}(H_2(D_{\text{LDE}}), \upsilon_0), \\
-&\{\text{Open}(t_j(D_{\text{LDE}}), \upsilon_0): 0 \leq j< m\}, \\
+&\{\text{Open}(H_1(D_{\text{LDE}}), \upsilon_s): 0 \leq s < Q\}, \\
+&\{\text{Open}(H_2(D_{\text{LDE}}), \upsilon_s): 0 \leq s < Q\}, \\
+&\{\text{Open}(t_j(D_{\text{LDE}}), \upsilon_s): 0 \leq j< m, 0 \leq s < Q\}, \\
 ) &
 \end{align}
 $$
@@ -202,9 +203,9 @@ $$
 &\pi, \\
 &\{(\pi_0^{\upsilon_s}, \mathfrak{P}_0): 0\leq s < Q\}, \\
 &\{(\pi_k^{-\upsilon_s^{2^k}}, \mathfrak{P}_k): 0\leq k< n, 0\leq s < Q\}, \\
-&(\eta_1^{\upsilon_0}, \mathfrak{H}_1)\\
-&(\eta_2^{\upsilon_0}, \mathfrak{H}_2)\\
-&\{(\tau_j^{\upsilon_0}, \mathfrak{T}_j): 0 \leq j< m\}, \\
+&\{(\eta_1^{\upsilon_s}, \mathfrak{H}_1): 0 \leq s < Q\}\\
+&\{(\eta_2^{\upsilon_s}, \mathfrak{H}_2): 0 \leq s < Q\},\\
+&\{(\tau_j^{\upsilon_s}, \mathfrak{T}_j): 0 \leq j< m, 0 \leq s < Q\}, \\
 ) &
 \end{align}
 $$
@@ -258,13 +259,13 @@ $$
 
 #### Step 4: Verify deep composition polynomial is FRI first layer
 
-- Check that the following are all _Accept_:
-    - $\text{Verify}((\upsilon_0, \eta_1^{\upsilon_0}), \mathbf{H}_1, \mathfrak{h}_1)$.
-    - $\text{Verify}((\upsilon_0, \eta_2^{\upsilon_0}), \mathbf{H}_2, \mathfrak{h}_2)$.
-    - $\text{Verify}((\upsilon_0, \tau_j^{\upsilon_0}), \mathbf{T}_j, \mathfrak{T}_j)$ for all $0\leq j < m$.
-- Check that $\pi_0^{\upsilon_0}$ is equal to the following:
-
-$$
-\gamma\frac{\eta_1^{\upsilon_0} - \eta_1^{z^2}}{\upsilon_0 - z^2} + \gamma'\frac{\eta_2^{\upsilon_0} - \eta_2^{z^2}}{\upsilon_0 - z^2} + \sum_j \gamma_j\frac{\tau_j^{\upsilon_0} - \tau_j^{z}}{\upsilon_0 - z} + \gamma_j'\frac{\tau_j^{\upsilon_0} - \tau_j^{gz}}{\upsilon_0 - gz}
-$$
+- For $s=0,\dots,Q-1$ do the following:
+    - Check that the following are all _Accept_:
+        - $\text{Verify}((\upsilon_s, \eta_1^{\upsilon_s}), \mathbf{H}_1, \mathfrak{h}_1)$.
+        - $\text{Verify}((\upsilon_s, \eta_2^{\upsilon_s}), \mathbf{H}_2, \mathfrak{h}_2)$.
+        - $\text{Verify}((\upsilon_s, \tau_j^{\upsilon_s}), \mathbf{T}_j, \mathfrak{T}_j)$ for all $0\leq j < m$.
+    - Check that $\pi_0^{\upsilon_s}$ is equal to the following:
+        $$
+        \gamma\frac{\eta_1^{\upsilon_s} - \eta_1^{z^2}}{\upsilon_s - z^2} + \gamma'\frac{\eta_2^{\upsilon_s} - \eta_2^{z^2}}{\upsilon_s - z^2} + \sum_j \gamma_j\frac{\tau_j^{\upsilon_s} - \tau_j^{z}}{\upsilon_s - z} + \gamma_j'\frac{\tau_j^{\upsilon_s} - \tau_j^{gz}}{\upsilon_s - gz}
+        $$
 
