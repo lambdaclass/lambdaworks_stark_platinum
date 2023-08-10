@@ -138,7 +138,7 @@ $`C_{2}(w^{i*4+2}, w^{i*4+6})`$
 
 Assume now we have 3 columns that share some constraints. For example, let's have three flags that can be either 0 or 1. Each flag will also have its own set of dedicated constraints. 
 
-Let's denote the shared constraint $B$, and the independent constraints $C_{i}$
+Let's denote the shared constraint $B$, and the independent constraints $C_{i}$.
 
 What we can do is define a Column for the flags, where the binary constraint $B$ is enforced. Additionally, we will define a subcolumn for each flag, which will enforce each $C_{i}$.
 
