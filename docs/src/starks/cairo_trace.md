@@ -1,4 +1,5 @@
 # Trace
+
 The execution of a Cairo program produces a memory vector $V$ and a matrix $M$ of size $L \times 3$ with the evolution of the three registers `pc`, `ap`, `fp`. All of them with entries in $\mathbb{F}$.
 
 ## Construction of execution trace $T$:
