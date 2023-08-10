@@ -85,7 +85,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="starks/starks.html"><strong aria-hidden="true">1.</strong> STARKs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="starks/recap.html"><strong aria-hidden="true">1.1.</strong> Recap</a></li><li class="chapter-item expanded "><a href="starks/protocol_overview.html"><strong aria-hidden="true">1.2.</strong> Protocol overview</a></li><li class="chapter-item expanded "><a href="starks/protocol.html"><strong aria-hidden="true">1.3.</strong> Protocol</a></li><li class="chapter-item expanded "><a href="starks/implementation.html"><strong aria-hidden="true">1.4.</strong> Implementation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="starks/api.html"><strong aria-hidden="true">1.4.1.</strong> High Level API</a></li><li class="chapter-item expanded "><a href="starks/under_the_hood.html"><strong aria-hidden="true">1.4.2.</strong> Under the hood</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="starks/cairo.html"><strong aria-hidden="true">2.</strong> Cairo</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="starks/cairo_trace.html"><strong aria-hidden="true">2.1.</strong> Trace</a></li><li class="chapter-item expanded "><a href="starks/cairo_rap.html"><strong aria-hidden="true">2.2.</strong> RAP</a></li><li class="chapter-item expanded "><a href="starks/cairo_cli.html"><strong aria-hidden="true">2.3.</strong> CLI</a></li></ol></li></ol>            </div>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="starks/starks.html"><strong aria-hidden="true">1.</strong> STARKs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="starks/recap.html"><strong aria-hidden="true">1.1.</strong> Recap</a></li><li class="chapter-item expanded "><a href="starks/protocol_overview.html"><strong aria-hidden="true">1.2.</strong> Protocol overview</a></li><li class="chapter-item expanded "><a href="starks/protocol.html"><strong aria-hidden="true">1.3.</strong> Protocol</a></li><li class="chapter-item expanded "><a href="starks/implementation.html"><strong aria-hidden="true">1.4.</strong> Implementation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="starks/api.html"><strong aria-hidden="true">1.4.1.</strong> High Level API</a></li><li class="chapter-item expanded "><a href="starks/under_the_hood.html"><strong aria-hidden="true">1.4.2.</strong> Under the hood</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="starks/cairo.html"><strong aria-hidden="true">2.</strong> Cairo</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="starks/cairo_trace.html"><strong aria-hidden="true">2.1.</strong> Trace</a></li><li class="chapter-item expanded "><a href="starks/cairo_rap.html"><strong aria-hidden="true">2.2.</strong> RAP</a></li><li class="chapter-item expanded "><a href="starks/virtual_cols.html"><strong aria-hidden="true">2.3.</strong> Virtual Columns</a></li><li class="chapter-item expanded "><a href="starks/cairo_cli.html"><strong aria-hidden="true">2.4.</strong> CLI</a></li></ol></li></ol>            </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
 
@@ -1025,6 +1025,118 @@ let composition_poly_evaluations = vec![
  A                B C  D    E    F   G   H    I    J    K   L
 |xxxxxxxxxxxxxxxx|x|xx|xxxx|xxxx|xxx|xxx|xxxx|xxxx|xxxx|xxx|xxx|
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+<h1 id="virtual-columns-and-subcolumns"><a class="header" href="#virtual-columns-and-subcolumns">Virtual columns and Subcolumns</a></h1>
+<h2 id="virtual-columns"><a class="header" href="#virtual-columns">Virtual Columns</a></h2>
+<p>In previous chapters, we have seen how the registers states and the memory are augmented to generate a provable trace. </p>
+<p>While we have shown a way of doing that, there isn't only one possible provable trace. In fact, there are multiple configurations possible. </p>
+<p>For example, in the Cairo VM, we have 15 flags. These flags include  &quot;DstReg&quot;, &quot;Op0Reg&quot;, &quot;OpCode&quot; and others. For simplification, let's imagine we have 3 flags with letters from &quot;A&quot; to &quot;C&quot;, where &quot;A&quot; is the first flag. </p>
+<p>Now, let's assume we have 4 steps in our trace. If we were to only use plain columns, the layout would look like this:</p>
+<table><thead><tr><th>FlagA</th><th>FlagB</th><th>FlagB</th></tr></thead><tbody>
+<tr><td>A0</td><td>B0</td><td>C0</td></tr>
+<tr><td>A1</td><td>B1</td><td>C1</td></tr>
+<tr><td>A2</td><td>B2</td><td>C2</td></tr>
+<tr><td>A3</td><td>B3</td><td>C3</td></tr>
+</tbody></table>
+<p>But, we could also organize them like this</p>
+<table><thead><tr><th>Flags</th></tr></thead><tbody>
+<tr><td>A0</td></tr>
+<tr><td>B0</td></tr>
+<tr><td>C0</td></tr>
+<tr><td>A1</td></tr>
+<tr><td>B1</td></tr>
+<tr><td>C1</td></tr>
+<tr><td>A2</td></tr>
+<tr><td>B2</td></tr>
+<tr><td>C2</td></tr>
+<tr><td>A3</td></tr>
+<tr><td>B3</td></tr>
+<tr><td>C3</td></tr>
+</tbody></table>
+<p>The only problem is that now the constraints for each transition of the rows are not the same. We will have to define then a concept called &quot;Virtual Column&quot;.</p>
+<p>A Virtual Column is like a traditional column, which has its own set of constraints, but it exists interleaved with another one. In the previous example, each row is associated with a column, but in practice, we could have different ratios. We could have 3 rows corresponding to one Virtual Column, and the next one corresponding to another one. For the time being, let's focus on this simpler example.</p>
+<p>Each row corresponding to Flag A will have the constraints associated with its own Virtual Column, and the same will apply to Flag B and Flag C.</p>
+<p>Now, to do this, we will need to evaluate the multiple rows taking into account that they are part of the same step. For a real case, we will add a dummy flag D, whose purpose is to make the evaluation move in a number that is a power of 2. </p>
+<p>Let's see how it works. If we were evaluating the Frame where the constraints should give 0, the frame movement would look like this:</p>
+<pre><code class="language-diff">+ A0 | B0 | C0
++ A1 | B1 | C1
+  A2 | B2 | C2
+  A3 | B3 | C3
+</code></pre>
+<pre><code class="language-diff">  A0 | B0 | C0
++ A1 | B1 | C1
++ A2 | B2 | C2
+  A3 | B3 | C3
+</code></pre>
+<pre><code class="language-diff">  A0 | B0 | C0
+  A1 | B1 | C1
++ A2 | B2 | C2
++ A3 | B3 | C3
+</code></pre>
+<p>In the second case, the evaluation would look like this:</p>
+<pre><code class="language-diff">+ A0 |
++ B0 |
++ C0 |
++ D0 |
++ A1 |
++ B1 |
++ C1 |
++ D1 |
+  A2 |
+  B2 |
+  C2 |
+  D2 |
+  A3 |
+  B3 |
+  C3 |
+  D3 |
+</code></pre>
+<pre><code class="language-diff">  A0 |
+  B0 |
+  C0 |
+  D0 |
++ A1 |
++ B1 |
++ C1 |
++ D1 |
++ A2 |
++ B2 |
++ C2 |
++ D2 |
+  A3 |
+  B3 |
+  C3 |
+  D3 |
+</code></pre>
+<pre><code class="language-diff">  A0 |
+  B0 |
+  C0 |
+  D0 |
+  A1 |
+  B1 |
+  C1 |
+  D1 |
++ A2 |
++ B2 |
++ C2 |
++ D2 |
++ A3 |
++ B3 |
++ C3 |
++ D3 |
+</code></pre>
+<p>When evaluating the composition polynomial, we will do it over the points on the LDE, where the constraints won't evaluate to 0, but we will use the same spacing. Assume we have three constraints for each flag, <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>, <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>, and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>, and that they don't involve other trace cells. Let's call the index of the frame evaluation i, starting from 0.</p>
+<p>In the first case, the constraint <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>, <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> would be applied over the same rows, giving an equation that looks like this:</p>
+<p><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0747em;vertical-align:-0.25em;"></span><span class="mord">‘</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8247em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8247em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord">‘</span></span></span></span></p>
+<p>In the second case, the equations would look like:</p>
+<p><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0747em;vertical-align:-0.25em;"></span><span class="mord">‘</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8247em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mbin mtight">∗</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8247em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mbin mtight">∗</span><span class="mord mtight">4</span><span class="mbin mtight">+</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord">‘</span></span></span></span></p>
+<p><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0747em;vertical-align:-0.25em;"></span><span class="mord">‘</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8247em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mbin mtight">∗</span><span class="mord mtight">4</span><span class="mbin mtight">+</span><span class="mord mtight">1</span></span></span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8247em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mbin mtight">∗</span><span class="mord mtight">4</span><span class="mbin mtight">+</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord">‘</span></span></span></span></p>
+<p><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0747em;vertical-align:-0.25em;"></span><span class="mord">‘</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8247em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mbin mtight">∗</span><span class="mord mtight">4</span><span class="mbin mtight">+</span><span class="mord mtight">2</span></span></span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8247em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span><span class="mbin mtight">∗</span><span class="mord mtight">4</span><span class="mbin mtight">+</span><span class="mord mtight">6</span></span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord">‘</span></span></span></span></p>
+<h2 id="virtual-subcolumns"><a class="header" href="#virtual-subcolumns">Virtual Subcolumns</a></h2>
+<p>Assume now we have 3 columns that share some constraints. For example, let's have three flags that can be either 0 or 1. Each flag will also have its own set of dedicated constraints. </p>
+<p>Let's denote the shared constraint <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span></span>, and the independent constraints <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>.</p>
+<p>What we can do is define a Column for the flags, where the binary constraint <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.05017em;">B</span></span></span></span> is enforced. Additionally, we will define a subcolumn for each flag, which will enforce each <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.07153em;">C</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0715em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">i</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>.</p>
+<p>In summary, if we have a set of shared constraints to apply, we will be using a Column. If we want to mix or interleave Columns, we will define them as Virtual Columns. And if we want to apply more constraints to a subset of a Column of Virtual Columns, or share constraints between columns, we will define Virtual Subcolumns.</p>
 <div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1 id="cli"><a class="header" href="#cli">CLI</a></h1>
 
