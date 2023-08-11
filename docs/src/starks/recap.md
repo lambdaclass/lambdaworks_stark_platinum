@@ -150,7 +150,7 @@ $$
 
 where \\(D\\) is the smallest power of two greater than the degrees of both \\(B\\) and \\(C\\), so for example if \\(deg(B) = 3\\) and \\(deg(C) = 6\\), then \\(D = 8\\).
 
-Why not just take \\(H(x) = B(x) + C(x)\\)? The reason for the alphas and betas is to make the resulting \\(H\\) be always different and unpredictable for the prover, so they can't precompute stuff beforehand. The \\(x^{D - deg(...)}\\) term is simply an optimization to make sure that \\(H\\) always ends up having a power of two as its degree; it adds nothing to the security or soundness of the system, it just allows code implementations to run faster by using the Fast Fourier Transform.
+Why not just take \\(H(x) = B(x) + C(x)\\)? The reason for the alphas and betas is to make the resulting \\(H\\) be always different and unpredictable for the prover, so they can't precompute stuff beforehand. The \\(x^{D - deg(...)}\\) term is there to adjust the degree of the constraints. This ensures the soundness of the protocol according to the [ethSTARK documentation](https://eprint.iacr.org/2021/582.pdf).
 
 With what we discussed above, showing that the constraints are satisfied is equivalent to saying that `H` is a polynomial and not a rational function (we are simplifying things a bit here, but it works for our purposes).
 

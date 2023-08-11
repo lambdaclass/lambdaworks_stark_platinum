@@ -1,11 +1,9 @@
 # Protocol Overview
 
-The goal of the STARK protocol is to convince a verifier that a prover has executed a program. Programs in this context can always be expressed as a sequence of states. And a transition from one state to the next is considered valid if a system of constraints is satisfied. This system in turn determines a state in term of the preceeding states. The whole sequence evolves from an initial state. An example is the Fibonacci sequence. Here, the state represents the $i$th Fibonacci number, and the transition rule between two consecutive states is $S_i=S_{i-1}+S_{i-2}$. More complex set of states and transitions lead to more flexible systems. The Cairo virtual machine is such an example.
-
-We will refer to a sequence of states $S_i$ as a *trace* and usually denote it $T$. A trace can have several columns to store different aspects or features of a particular state. We will refer to the $j$-th column as $T_j$. You can think of a trace as a matrix $T$ where the entry $T_{ij}$ is the $j$-th element of the $i$-th state.
+In this section we start diving a little bit deeper before showing the formal protocol. If you haven't done so, we recommend first reading the "Recap" section. As mentioned in that section, the trace is a table containing the state of the system at every step. In this section we will denote the trace as $T$. A trace can have several columns to store different aspects or features of a particular state at a particular moment. We will refer to the $j$-th column as $T_j$. You can think of a trace as a matrix $T$ where the entry $T_{ij}$ is the $j$-th element of the $i$-th state.
 
 # Arithmetization
-The main tool in most proving systems is that of polynomials over a finite field  $\mathbb{F}$. Each column $T_j$ of the trace $T$ will be interpeted as evaluations of such a polynomial $t_j$. A consequence of this is that any type of information about the states must be encoded somehow as an element in $\mathbb{F}$.
+The main tool in most proving systems is that of polynomials over a finite field  $\mathbb{F}$. Each column $T_j$ of the trace $T$ will be interpreted as evaluations of such a polynomial $t_j$. A consequence of this is that any type of information about the states must be encoded somehow as an element in $\mathbb{F}$.
 
 To ease notation we will assume here and in the protocol that the constraints encoding transition rules depend only on a state and the previous one. Everything can be easily generalized to transitions that depend on many preceeding states. Then, constraints can be expressed as multivariate polynomials in $2m$ variables
 $$P_k^T(X_1, \dots, X_m, Y_1, \dots, Y_m)$$
