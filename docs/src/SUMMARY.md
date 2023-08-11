@@ -1,11 +1,15 @@
 # Lambdaworks Cairo Prover Documentation
 
 - [STARKs](./starks/starks.md)
-	- [Recap](./starks/recap.md)
-        - [Implementation](./starks/implementation.md)
-            - [High Level API](./starks/api.md)
-            - [Under the hood](./starks/under_the_hood.md)
-        - [Protocol](./starks/protocol.md)
-        - [Protocol Overview](./starks/protocol_overview.md)
-        - [FAQ](./starks/faq.md)
+    - [Recap](./starks/recap.md)
+    - [Protocol overview](./starks/protocol_overview.md)
+    - [Protocol](./starks/protocol.md)
+    - [Implementation](./starks/implementation.md)
+        - [High Level API](./starks/api.md)
+        - [Under the hood](./starks/under_the_hood.md)
+- [Cairo](./starks/cairo.md)
+    - [Trace](./starks/cairo_trace.md)
+    - [RAP](./starks/cairo_rap.md)
+    - [Virtual Columns](./starks/virtual_cols.md)
+    - [CLI](./starks/cairo_cli.md)
 

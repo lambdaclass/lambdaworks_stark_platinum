@@ -2,7 +2,7 @@
 
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-CAIRO0_PROGRAMS_DIR=cairo_programs/cairo0
+CAIRO0_PROGRAMS_DIR=cairo_prover/cairo_programs/cairo0
 CAIRO0_PROGRAMS:=$(wildcard $(CAIRO0_PROGRAMS_DIR)/*.cairo)
 COMPILED_CAIRO0_PROGRAMS:=$(patsubst $(CAIRO0_PROGRAMS_DIR)/%.cairo, $(CAIRO0_PROGRAMS_DIR)/%.json, $(CAIRO0_PROGRAMS))
 
@@ -68,35 +68,35 @@ docker_build_cairo_compiler:
 docker_compile_cairo:
 	docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(OUTPUT)
 
-target/release/lambdaworks-stark: 
-	cargo build --release
+target/release/cairo-platinum: 
+	cargo build --bin cairo-platinum --release --features instruments
 	
-docker_compile_and_run_all: target/release/lambdaworks-stark
+docker_compile_and_run_all: target/release/cairo-platinum
 	@echo "Compiling program with docker"
 	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
+	@cargo run --bin cairo-platinum --features instruments --quiet --release prove_and_verify $(PROGRAM).json
 	@rm $(PROGRAM).json
 
-docker_compile_and_prove: target/release/lambdaworks-stark
+docker_compile_and_prove: target/release/cairo-platinum
 	@echo "Compiling program with docker"
 	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
+	@cargo run --bin cairo-platinum --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
 	@rm $(PROGRAM).json
 
-compile_and_run_all: target/release/lambdaworks-stark
+compile_and_run_all: target/release/cairo-platinum
 	@echo "Compiling program with cairo-compile"
 	@cairo-compile $(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
+	@cargo run --bin cairo-platinum --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
 	@rm $(PROGRAM).json
 
-compile_and_prove: target/release/lambdaworks-stark
+compile_and_prove: target/release/cairo-platinum
 	@echo "Compiling program with cairo-compile"
 	@cairo-compile $(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
+	@cargo run --bin cairo-platinum --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
 	@rm $(PROGRAM).json
 
 clean:
@@ -112,7 +112,7 @@ fuzzer_tools:
 		cargo install cargo-fuzz
 
 build_wasm:
-	wasm-pack build --target=web -- --features wasm
+	cd cairo_prover && wasm-pack build --target=web -- --features wasm
 
 test_wasm:
-	wasm-pack test --node -- --features wasm 
+	cd cairo_prover && wasm-pack test --node -- --features wasm 
