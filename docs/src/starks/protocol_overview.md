@@ -16,14 +16,43 @@ These are called *transition constraints* and they check local properties of the
 
 So far, these constraints can only express local properties of the trace. There are situations where global properties of the trace need to be checked for consistency. For example a column may need to take all values in a range but not in any predefined way. There are several methods to express these global properties as local by adding redundant columns. Usually they need to involve randomness from the verifier to make sense and they turn into an interactive protocol on their own called *Randomized AIR with Preprocessing*.
 
-# Commitments
-In STARKs the prover *commits* to several vectors. Specifically, given a vector $Y = (y_0, \dots, y_L)$, commiting to $Y$ means the following. The prover builds a Merkle tree out of it and sends the root of the tree to the verifier. The verifier can then ask the prover to reveal, or *open*, the value of the vector $Y$ at some index $i$. The prover won't have any choice other than to send the correct value. This is because the verifier will expect not only the corresponding value $y_i$, but also the authentication path to the root of the tree to check its authenticity. The authentication path encodes also the position $i$ and the length $L$ of the vector, which we always assume it's a power of $2$.
+# Polynomial commitment scheme
+A commitment scheme consists of two parts: a commit phase and an open phase. STARK uses a univariate polynomial commitment scheme which internally uses a combination of a vector commitment scheme and a protocol called FRI. Let's begin with this two components and the see how they build up the polynomial commitment scheme.
 
-## Polynomial commitments
-In STARKs, all commited vectors are of the form $Y = (f(d_1), \dots, f(d_L))$ for some polynomial $f$ and some domain fixed domain $D = (d_1, \dots, d_L)$ known to the prover and the verifier. But here's the catch. If $L$ is less than the number of points in the finite field $\mathbb{F}$, any vector $Y = (y_1, \dots, y_L)$ is the vector of evaluations at $D$ of some polynomial $f$ of degree at most $L$. In other words, for any $Y = (y_1, \dots, y_L)$ there is a polynomial $f$ such that $f(d_i) = y_i$. This follows from Lagrange interpolation. So vector commitments and univariate polynomial commitments are pretty much the same thing.
+## Vector commitments
+Given a vector $Y = (y_0, \dots, y_M)$, commiting to $Y$ means the following. The prover builds a Merkle tree out of it and sends the root of the tree to the verifier. The verifier can then ask the prover to reveal, or *open*, the value of the vector $Y$ at some index $i$. The prover won't have any choice other than to send the correct value. This is because the verifier will expect not only the corresponding value $y_i$, but also the authentication path to the root of the tree to check its authenticity. The authentication path encodes also the position $i$ and the length $M$ of the vector.
+
+In STARKs, all commited vectors are of the form $Y = (p(d_1), \dots, p(d_M))$ for some polynomial $p$ and some domain fixed domain $D = (d_1, \dots, d_M)$ known to the prover and the verifier.
 
 ## FRI
-The FRI protocol is a tool to prove that a commitment corresponds to a polynomial of a certain degree. This is run at the end of the STARKs protocol. So during the first interactions the verifier receives a bunch of vector commitments and only at the very end he will be convinced that these vectors are actually evaluations at $D$ of polynomials of low degree.
+The FRI protocol is a tool to prove that the commitment of a vector $(p(d_1), \dots, p(d_M))$ corresponds to the evaluations of a polynomial of a certain degree.
+
+## Polynomial commitments
+Like most of the proving systems, STARK uses a univariate polynomial commitment scheme. This is what is expected from the **commit** and **open** phases.
+- *Commit*: given a polynomial $p$, the prover produces a sort of hash of it. We denote it here by $[p]$ and is called the *commitment* of $p$. This hash is unique to $p$. The prover usually sends $[p]$ to the verifier.
+- *Open*: this is an interactive protocol between the prover and the verifier. The prover holds the polynomial $p$. The verifier only holds the commitment $[p]$. The verifier sends a value $z$ to the prover at which he wants to know the value $y=p(z)$. The prover sends a value $y$ to the verifier and then they engage in the *Open* protocol. As a result of this, the verifier gets convinced that the polynomial that corresponds to the hash $[p]$ evaluates to $y$ at $z$.
+
+Let's see how both of these phases work in detail. Two configuration parameters are needed: 
+- a power of two $N=2^n$
+- some vector $D=(d_1,\dots,d_M)$ with $d_i$ elements of $F$ for all $i$ and $d_i\neq d_j$ for all $i\neq j$.
+In what follows all polynomials will be of degree at most $N-1$. The commitment scheme will only work for polynomials satisfying that degree bound.
+
+### Commit
+Given a polynomial $p$, the commitment $[p]$ is just the commitment of the vector $(p(d_1), \dots, p(d_M))$. That is, $[p]$ is the root of the Merkle tree of the vector of evaluations of $p$ at $D$.
+
+### Open
+This is an interactive protocol. So assume there is a prover and a verifier. The prover holds the polynomial $p$ and the verifier only the commitment $[p]$ of it. There is also an element $z$. The prover evaluates $p(z)$ and sends the result to the verifiers. The goal as we mentioned is to generate a proof of the validity the evaluation. Let us denote $y := p(z)$. This is a value now both the prover and verifier have.
+
+Since $p(z) = y$, the polynomial $p$ can be written as $p = y + (x - z) q$ for some polynomial $q$. The prover computes the commitment $[q]$ and sends it to the verifier. Now they engage in a FRI protocol for polynomials of degree at most $N-1$, which convinces the verifier that $[q]$ is the commitment of a polynomial of degree at most $N-1$. 
+
+From the point of view of the verifier. The commitments $[p]$ and $[q]$ are still potentially unrelated. Next there is a check to ensure that $[q]$ was actually computed properly from $p$. To do this the verifier challenges the prover to open $[p]$ and $[q]$ as a vectors. Meaning they use the open phase of the vector commitment scheme to reveal the values $p(d_i)$ and $q(d_i)$ for some random point $d_i \in D$ chosen by the verifier. Next he checks that $p(d_i) = y + (d_i - z) q(d_i) $. They repeat this last part a bunch of times and, as we'll analyze in the next section, this will convince the verifier that $p = y + (x -z) q$ as polynomials with overwhelming probability. Equality from which the verifier deduces that $p(z) = y$.
+
+## Soundness
+TODO
+
+## Batch open
+TODO
+
 
 # High level description of the protocol
 The protocol is split into rounds. Each round more or less represents an interaction with the verifier. This means that each round will generally start by getting a challenge from the verifier. 
@@ -47,8 +76,9 @@ These result in univariate polynomials. And the same can be done for the boundar
 As we already mentioned, this is assuming that transitions only depend on the current and previous state. But it can be generalized to include *frames* with three or more rows or more context for each constraint. For example, in the Fibonacci case the most natural way is to encode it as one transition constraint that depend on a row and the two preceeding it as we already did in the Recap section. The STARK protocol checks whether the function $\frac{Q_k^T}{X^{2^n} - 1}$ is a polynomial instead of checking that the polynomial is zero over the domain $D =\{g_i\}_{i=0}^{2^n-1}$. The two statements are equivalent.
 
 The verifier could check that all $\frac{Q_k^T}{X^{2^n} - 1}$ are polynomials one by one, and the same for the polynomials coming from the boundary constraints. But this is inefficient and the same can be obtained with a single polynomial. To do this, the prover samples challenges and obtains a random linear combination of these polynomials. The result of this is denoted by $H$ and is called the composition polynomial. It integrates all the constraints by adding them up. So after computing $H$, the prover commits to it and sends the commitment to the verifier. The rest of the protocol are efforts to prove that $H$ was properly constructed and that it is in fact a polynomial, which can only be true if the prover actually has a valid extension of the original trace.
+
 ## Round 3
-The verifier needs to check that $H$ was constructed according the the rules of the protocol. That is, $H$ has to be a linaer combination of all the functions $\frac{Q_k^T}{X^{2^n}-1}$ and the similar terms for the boundary constraints. To do so, in **round 3** the verifier chooses a random point $z\in\mathbb{F}$ and the prover computes $H(z)$, $t_j(z)$ and $t_j(g z)$ for all $j$. With all these the verifier can check that $H$ and the expected linaer combination coincide at least when evaluated at $z$. Since $z$ was chosen at random, this proves with overwhelming probability that $H$ was properly constructed.
+The verifier needs to check that $H$ was constructed according the the rules of the protocol. That is, $H$ has to be a linear combination of all the functions $\frac{Q_k^T}{X^{2^n}-1}$ and the similar terms for the boundary constraints. To do so, in **round 3** the verifier chooses a random point $z\in\mathbb{F}$ and the prover computes $H(z)$, $t_j(z)$ and $t_j(g z)$ for all $j$. With all these the verifier can check that $H$ and the expected linear combination coincide at least when evaluated at $z$. Since $z$ was chosen at random, this proves with overwhelming probability that $H$ was properly constructed.
 
 The problem with this is that the verifier still needs to check that the evaluations $H(z)$, $t_j(z)$ and $t_j(g z)$ were properly computed and correspond to the already commited functions. And after that, the problem of checking that $H$ is a polynomial still remains. All of this is achieved at the same time in the next round
 
