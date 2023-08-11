@@ -25,6 +25,8 @@ In STARKs, all commited vectors are of the form $Y = (p(d_1), \dots, p(d_M))$ fo
 ## FRI
 The FRI protocol is a tool to prove that the commitment of a vector $(p(d_1), \dots, p(d_M))$ corresponds to the evaluations of a polynomial of a certain degree.
 
+TODO: Complete.
+
 ## Polynomial commitments
 Like most of the proving systems, STARK uses a univariate polynomial commitment scheme. This is what is expected from the **commit** and **open** phases.
 - *Commit*: given a polynomial $p$, the prover produces a sort of hash of it. We denote it here by $[p]$ and is called the *commitment* of $p$. This hash is unique to $p$. The prover usually sends $[p]$ to the verifier.
@@ -43,12 +45,12 @@ This is an interactive protocol. So assume there is a prover and a verifier. The
 
 Since $p(z) = y$, the polynomial $p$ can be written as $p = y + (x - z) q$ for some polynomial $q$. The prover computes the commitment $[q]$ and sends it to the verifier. Now they engage in a FRI protocol for polynomials of degree at most $N-1$, which convinces the verifier that $[q]$ is the commitment of a polynomial of degree at most $N-1$. 
 
-From the point of view of the verifier. The commitments $[p]$ and $[q]$ are still potentially unrelated. Next there is a check to ensure that $[q]$ was actually computed properly from $p$. To do this the verifier challenges the prover to open $[p]$ and $[q]$ as a vectors. Meaning they use the open phase of the vector commitment scheme to reveal the values $p(d_i)$ and $q(d_i)$ for some random point $d_i \in D$ chosen by the verifier. Next he checks that $p(d_i) = y + (d_i - z) q(d_i) $. They repeat this last part a bunch of times and, as we'll analyze in the next section, this will convince the verifier that $p = y + (x -z) q$ as polynomials with overwhelming probability. Equality from which the verifier deduces that $p(z) = y$.
+From the point of view of the verifier. The commitments $[p]$ and $[q]$ are still potentially unrelated. Next there is a check to ensure that $[q]$ was actually computed properly from $p$. To do this the verifier challenges the prover to open $[p]$ and $[q]$ as a vectors. Meaning they use the open phase of the vector commitment scheme to reveal the values $p(d_i)$ and $q(d_i)$ for some random point $d_i \in D$ chosen by the verifier. Next he checks that $p(d_i) = y + (d_i - z) q(d_i) $. They repeat this last part a bunch of times and, as we'll analyze in the next section, this will convince the verifier that $p = y + (x -z) q$ as polynomials with overwhelming probability. From this equality the verifier deduces that $p(z) = y$.
 
 ## Soundness
 TODO
 
-## Batch open
+## Batch
 TODO
 
 
