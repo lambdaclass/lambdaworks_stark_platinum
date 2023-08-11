@@ -69,8 +69,17 @@ Alternatively, he can choose some subset of $D' \subset D$ of size $N$ and inter
 If the ratio between $M$ and $N$ is $2$, then $k$ challenges give $1/2^{k}$ of probability of a malicious prover to succeed. If the ratio is $4$, that is, if $M = 4N$, then that probability is $1/4^k$ for the same number of point checks. This provides another way of improving the soundness error. The larger the ratio, the harder is to cheat in the open protocol. This ratio is what's called *the blowup factor*. It is a security parameter and finding a balance between the number of challenges $k$ and the size of $D$ is part of the configuartion of the protocol. Increasing the size of $D$ makes commiting an expensive operation since it involves building a Merkle tree with for a vector of the size of $D$. But increasing the number of challenges makes the size of the final proof larger.
 
 ## Batch
-TODO
+Most protocols commit and open polynomials several times. Doing these operations for each polynomial independently is costly. In this section we'll see how batching polynomials can reduce the amount of computation. Instead of working with a single polynomial $p$, we will commit or open a batch of polynomials $P=\{p_1, \dots, p_n\}$. We note the batch commitment as $[P]$.
 
+As mentioned earlier, to commit a single polynomial $p$ we choose a domain $D$ and construct a Merkle tree over the vector $(p(d_1), \dots, p(d_m))$. When committing a batch of polynomials, the leaves of the Merkle tree instead contain the concatenation of the polynomial evaluations, that is $(p_1(d_1)||\dots||p_n(d_m), \dots, p_1(d_m)||p_n(d_m))$. The commitment $[P]$ is the root of this Merkle tree. This reduces the proof size: we only need one Merkle tree for $n$ polynomials. It also reduces the computational time. By traversing the Merkle tree one time, it can verify several commits.
+
+The open operation proceeds similarly to the case of a single polynomial. The prover will try to convince the verifier that the committed polynomials $P$ at $z$ evaluate to some values. In the "batch" case the prover will construct the following polynomial:
+
+$$
+H(x)=\sum_{i=1}^{N}\frac{p_i(x)-p_i(z)}{x-z}
+$$
+
+The values provided by the prover should be $y_i=p_i(z)$. For a malicious prover of course, that may not be the case. However, the prover and the verifier will engage in the FRI protocol using the commitments $[H]$ and $[P]$. As in the case of a single polynomial, the verifier will reconstruct the polynomial $H$ evaluated at some random challenge $\upsilon$ and will check that, in fact, $H$ and the committed polynomials $p_i$ are, in fact, related. This makes a huge difference, as we only need to run the FRI protocol once instead of running it one time for each polynomial.
 
 # High level description of the protocol
 The protocol is split into rounds. Each round more or less represents an interaction with the verifier. This means that each round will generally start by getting a challenge from the verifier. 
