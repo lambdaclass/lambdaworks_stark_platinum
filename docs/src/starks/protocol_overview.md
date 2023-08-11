@@ -76,10 +76,12 @@ As mentioned earlier, to commit a single polynomial $p$ we choose a domain $D$ a
 The open operation proceeds similarly to the case of a single polynomial. The prover will try to convince the verifier that the committed polynomials $P$ at $z$ evaluate to some values. In the "batch" case the prover will construct the following polynomial:
 
 $$
-H(x)=\sum_{i=1}^{N}\frac{p_i(x)-p_i(z)}{x-z}
+H(x)=\sum_{i=1}^{N}\gamma_i\frac{p_i(x)-p_i(z)}{x-z}
 $$
 
-The values provided by the prover should be $y_i=p_i(z)$. For a malicious prover of course, that may not be the case. However, the prover and the verifier will engage in the FRI protocol using the commitments $[H]$ and $[P]$. As in the case of a single polynomial, the verifier will reconstruct the polynomial $H$ evaluated at some random challenge $\upsilon$ and will check that, in fact, $H$ and the committed polynomials $p_i$ are, in fact, related. This makes a huge difference, as we only need to run the FRI protocol once instead of running it one time for each polynomial.
+Where $\gamma_i$ are challenges provided by the verifier. Let's see how this polynomial helps to convince the verifier. The prover should provided $n$ values that should be $y_i=p_i(z)$. For a malicious prover of course, that may not be the case. However, the prover and the verifier will engage in the FRI protocol over polynomial $[H]$. This will convince the verifier that $H$ is, in fact, a polynomial degree at most $N$, as seen in the soundness section. Later, with the help of the commitment $[P]$, the verifier will reconstruct the polynomial $H$ evaluated at some random challenge $\upsilon$ and will check that, in fact, $H$ and the committed polynomials $p_i$ are, in fact, related. As the prover is not lying about $H$ being a polynomial, the verifier concludes that $y_i=p_i(z)$, because $(x-z)$ divides $(p_i(x)-y_i)$ for each polynomial $p_i$. 
+
+Note that this optimization makes a huge difference, as we only need to run the FRI protocol once instead of running it one time for each polynomial.
 
 # High level description of the protocol
 The protocol is split into rounds. Each round more or less represents an interaction with the verifier. This means that each round will generally start by getting a challenge from the verifier. 
