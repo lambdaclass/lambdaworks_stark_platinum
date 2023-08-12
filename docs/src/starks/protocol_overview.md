@@ -70,6 +70,8 @@ Alternatively, he can choose some subset of $D' \subset D$ of size $N$ and inter
 #### General case: the blowup factor
 If the ratio between $M$ and $N$ is $2$, then $k$ challenges give $1/2^{k}$ of probability for a malicious prover to succeed. If the ratio is $4$, that is, if $M = 4N$, then that probability is $1/4^k$ for the same number of point checks. This provides another way of improving the soundness error. The larger the ratio, the harder is to cheat in the open protocol. This ratio is what's called *the blowup factor*. It is a security parameter and finding a balance between the number of challenges $k$ and the size of $D$ is part of the configuartion of the protocol. Increasing the size of $D$ makes commiting an expensive operation since it involves building a Merkle tree with for a vector of the size of $D$. But increasing the number of challenges makes the size of the final proof larger.
 
+We denote the blowup factor by $b$ and it's always assumed to be a power of $2$.
+
 #### What if $p$ was of degree larger than $N$ to begin with?
 The soundness analysis we did heavily depends on the fact that $p$ is a polynomial of degree at most $N$. But a malicious prover could start by sending a commitment $[p]$ of a polynomial of higher degree. There are two good news.
 
