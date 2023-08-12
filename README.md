@@ -221,12 +221,15 @@ make fuzzer_tools
 
 The following links, repos and projects have been important in the development of this library and we want to thank and acknowledge them. 
 
+- [Starkware](https://starkware.co/)
 - [Winterfell](https://github.com/facebook/winterfell)
 - [Anatomy of a Stark](https://aszepieniec.github.io/stark-anatomy/overview)
 - [Giza](https://github.com/maxgillett/giza)
 - [Ministark](https://github.com/andrewmilson/ministark)
 - [Sandstorm](https://github.com/andrewmilson/sandstorm)
 - [STARK-101](https://starkware.co/stark-101/)
+- [Risc0](https://github.com/risc0/risc0)
+- [Neptune](https://github.com/Neptune-Crypto)
 - [Summary on FRI low degree test](https://eprint.iacr.org/2022/1216)
 - [STARKs paper](https://eprint.iacr.org/2018/046)
 - [DEEP FRI](https://eprint.iacr.org/2019/336)
