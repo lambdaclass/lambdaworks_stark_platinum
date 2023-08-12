@@ -23,50 +23,59 @@ Given a vector $Y = (y_0, \dots, y_M)$, commiting to $Y$ means the following. Th
 In STARKs, all commited vectors are of the form $Y = (p(d_1), \dots, p(d_M))$ for some polynomial $p$ and some domain fixed domain $D = (d_1, \dots, d_M)$ known to the prover and the verifier.
 
 ## FRI
-The FRI protocol is a tool to prove that the commitment of a vector $(p(d_1), \dots, p(d_M))$ corresponds to the evaluations of a polynomial of a certain degree.
+The FRI protocol is a tool to prove that the commitment of a vector $(p(d_1), \dots, p(d_M))$ corresponds to the evaluations of a polynomial of a certain degree. The degree is a configuration of the protocol.
 
 TODO: Complete.
 
 ## Polynomial commitments
-Like most of the proving systems, STARK uses a univariate polynomial commitment scheme. This is what is expected from the **commit** and **open** phases.
+Like most proving systems, STARK uses a univariate polynomial commitment scheme. The following is what is expected from the **commit** and **open** phases:
 - *Commit*: given a polynomial $p$, the prover produces a sort of hash of it. We denote it here by $[p]$ and is called the *commitment* of $p$. This hash is unique to $p$. The prover usually sends $[p]$ to the verifier.
 - *Open*: this is an interactive protocol between the prover and the verifier. The prover holds the polynomial $p$. The verifier only holds the commitment $[p]$. The verifier sends a value $z$ to the prover at which he wants to know the value $y=p(z)$. The prover sends a value $y$ to the verifier and then they engage in the *Open* protocol. As a result of this, the verifier gets convinced that the polynomial that corresponds to the hash $[p]$ evaluates to $y$ at $z$.
 
-Let's see how both of these phases work in detail. Two configuration parameters are needed: 
-- a power of two $N=2^n$
-- some vector $D=(d_1,\dots,d_M)$ with $d_i$ elements of $F$ for all $i$ and $d_i\neq d_j$ for all $i\neq j$.
-In what follows all polynomials will be of degree at most $N-1$. The commitment scheme will only work for polynomials satisfying that degree bound.
+Let's see how both of these phases work in detail. Three configuration parameters are needed: 
+- Powers of two $N = 2^n$ and $M = 2^m$ with $n < m$.
+- A vector $D=(d_1,\dots,d_M)$, with $d_i$ in $\mathbb{F}$ for all $i$ and $d_i\neq d_j$ for all $i\neq j$.
+- An integer $k > 0$.
+
+In what follows all polynomials will be of degree at most $N$. The commitment scheme will only work for polynomials satisfying that degree bound. [Later on](#what-if-p-was-of-degree-larger-than-n-to-begin-with) we discuss what happens with this protocol for polynomials of larger degree.
 
 ### Commit
 Given a polynomial $p$, the commitment $[p]$ is just the commitment of the vector $(p(d_1), \dots, p(d_M))$. That is, $[p]$ is the root of the Merkle tree of the vector of evaluations of $p$ at $D$.
 
 ### Open
-This is an interactive protocol. So assume there is a prover and a verifier. The prover holds the polynomial $p$ and the verifier only the commitment $[p]$ of it. There is also an element $z$. The prover evaluates $p(z)$ and sends the result to the verifiers. The goal as we mentioned is to generate a proof of the validity the evaluation. Let us denote $y := p(z)$. This is a value now both the prover and verifier have.
+This is an interactive protocol. So assume there is a prover and a verifier. The prover holds the polynomial $p$ and the verifier only the commitment $[p]$ of it. There is also an element $z$. The prover evaluates $p(z)$ and sends the result to the verifier. The goal, as we mentioned, is to generate a proof of the validity the evaluation. Let us denote $y := p(z)$. This is a value now both the prover and verifier have.
 
 Since $p(z) = y$, the polynomial $p$ can be written as $p = y + (x - z) q$ for some polynomial $q$. The prover computes the commitment $[q]$ and sends it to the verifier. Now they engage in a FRI protocol for polynomials of degree at most $N-1$, which convinces the verifier that $[q]$ is the commitment of a polynomial of degree at most $N-1$. 
 
-From the point of view of the verifier. The commitments $[p]$ and $[q]$ are still potentially unrelated. Next there is a check to ensure that $[q]$ was actually computed properly from $p$. To do this the verifier challenges the prover to open $[p]$ and $[q]$ as a vectors. Meaning they use the open phase of the vector commitment scheme to reveal the values $p(d_i)$ and $q(d_i)$ for some random point $d_i \in D$ chosen by the verifier. Next he checks that $p(d_i) = y + (d_i - z) q(d_i) $. They repeat this last part a bunch of times and, as we'll analyze in the next section, this whole thing will convince the verifier that $p = y + (x -z) q$ as polynomials with overwhelming probability. From this equality the verifier deduces that $p(z) = y$.
+Important is that $q$ really is $(p-y) / (x-z)$ and not anything else. But from the point of view of the verifier the commitments $[p]$ and $[q]$ are still potentially unrelated. Next there is a check to ensure that $q$ was actually computed properly from $p$ following that formula and that $[q]$ is its commitment. To do this the verifier challenges the prover to open $[p]$ and $[q]$ as a vectors. Meaning they use the open phase of the vector commitment scheme to reveal the values $p(d_i)$ and $q(d_i)$ for some random point $d_i \in D$ chosen by the verifier. Next he checks that $p(d_i) = y + (d_i - z) q(d_i) $. They repeat this last part $k$ times and, as we'll analyze in the next section, this whole thing will convince the verifier that $p = y + (x -z) q$ as polynomials with overwhelming probability (about $(N/M)^k$). Finally, from this equality the verifier deduces that $p(z) = y$.
 
 ### Soundness
-Let's analyze why the open protocol just described actually convinces the verifier that $p = (x - z) q$.
+Let's analyze why the open protocol just described convinces the verifier that $p = y + (X - z) q$.
 
-Keep in mind is that the prover always has to provide a commitment $[q]$ of degree at most $N-1$ that satisfies $p(d_i) = (d_i - z) q(d_i)$ for the chosen values of the verifier. That's the goal. An important but subtle part of the soundness is that $D$ is a vector of length $M>N$. To see why let's see what happens if $N = M$.
+Keep in mind that the prover always has to provide a commitment $[q]$ of a polynomial of degree at most $N-1$ that satisfies $p(d_i) = y + (d_i - z) q(d_i)$ for the chosen values of the verifier. That's the goal. An important but subtle part of the soundness is that $D$ is a vector of length $M>N$. To understand why let's see what happens if $N = M$.
 
 #### Case $M=N$
-Suppose the prover is trying to cheat the verifier by sending a value $y$ different from $p(z)$. This means that $p - y$ is not divisible by $x-z$ as polynomials. But as long as $z$ is not in $D$ the prover can interpolate the values $$\frac{p(d_1) - y}{d_1 - z}, \dots, \frac{p(d_N) - y}{d_N - z},$$
+Suppose the prover is trying to cheat the verifier by sending a value $y$ different from $p(z)$. This means that $p - y$ is not divisible by $X-z$ as polynomials. But as long as $z$ is not in $D$ the prover can interpolate the values $$\frac{p(d_1) - y}{d_1 - z}, \dots, \frac{p(d_N) - y}{d_N - z},$$
 at $D$ and obtain some polynomial $q$ of degree at most $N-1$. This polynomial satisfies $p(d_i) = y + (d_i - z) q(d_i)$ for all $d_i \in D$, but the equality of polynomials $p = y + (x - z) q$ does not hold. Mainly because that would imply that $p(z) = y$ and we are assuming the opposite case. Nevertheless, if they continue with the Open phase, FRI will pass since $q$ is truly a polynomial of degree at most $N-1$. All subsequent point checks will also pass since $q$ was crafted specially for that. 
 
-So how can it be that $p$ is different from $y + (x - z) q$ but has the property that $p(d_i) = y + (d_i - z) q(d_i)$ for all $d_i \in D$? The only way for that to happen is that $q$ is of degree exactly $N-1$, so that $y + (x - z) q$ is of degree exactly $N+1$. Then, since $p$ is of degree at most $N-1$, the difference $f := y + (x-z) q - p$ is again of degree exactly $N$. The polynomial $f$ will be the polynomial zero if and only if we can prove that $f(d) = 0$ for $N+1$ points. But the construction of $q$ only shows that $f(d_i) = 0$ for all $d_i \in D$, which is a set of $N$ points. One extra point and the equality would hold. Of course that point doesn't exist, again because that would imply that $p(z) = y$, which we assume not to hold. The moral here is that checking $N+1$ points would be enough for the verifier to get convinced. And that's the spirit of the general case.
+So how come $p$ is different from $y + (x - z) q$ but has the property that $p(d_i) = y + (d_i - z) q(d_i)$ for all $d_i \in D$? FRI guarantees $q$ is of degree at most $N-1$, which implies that $y + (x - z) q$ is of degree at most $N$. Then, [since $p$ is of degree at most $N$](#what-if-p-was-of-degree-larger-than-n-to-begin-with), the difference $$f := y + (X-z) q - p$$ is again of degree at most $N$. A polynomial $f$ of degree at most $N$ is zero if and only if we can prove that $f(d) = 0$ for $N+1$ distinct points. But the construction of $q$ only shows that $f(d_i) = 0$ for all $d_i \in D$, which is a set of $N$ points. It's not enough. One extra point and the equality $f=0$ would hold. Of course that point doesn't exist, again because that would imply that $p(z) = y$, which we assume not true.
 
 #### Case $M=2N$
-Let's see one more example where we double de size of $D$ but keep the same bound for the degree of the polynomials. So polynomials are of degree at most $N-1$ and $D$ is of length $M = 2N$.
+Let's see one more example where we double de size of $D$ but keep the same bound for the degree of the polynomials. So polynomials are of degree at most $N$ and the length of $D$ is $M = 2N$.
 
-Again let's assume the prover wants to cheat the verifier in the same way and claims that $y$ is $p(z)$ but actually $y \neq p(z)$. Inevitably, for the Open protocol to succeed, the prover has to send a commitment $[q]$ of some polynomial of degree at most $N-1$. The strategy of the prover is pretty much constrained to be the same. But now he can't interpolate $q$ as before in every element of $D$, because otherwise that would produce a polynomial of degree at most $2N-1$. This most likely won't pass the FRI check.
+Again let's assume the prover wants to cheat the verifier in the same way and claims that $y$ is $p(z)$ but in reality $y \neq p(z)$. Inevitably, for the Open protocol to succeed, the prover has to send a commitment $[q]$ of some polynomial of degree at most $N-1$. The strategy of the prover is pretty much constrained to be the same. But now he can't interpolate $q$ as before in every element of $D$, because otherwise that would produce a polynomial of degree at most $2N-1$. This most likely won't pass the FRI check.
 
 Alternatively, he can choose some subset of $D' \subset D$ of size $N$ and interpolate only there to get a polynomial $q$ of degree at most $N-1$. That's going to succeed in the FRI phase, but what happens with the point checks? If the verifier chooses a challenge $d_i$ that belongs to $D'$, the check will pass. If $d_i \notin D'$, then the check will inevitably fail. This is because, as we saw in the previous case, one extra successful point to the already $N$ points where $q$ was interpolated was enough to prove that $p(z) = y$, which we assume now does not hold. This means, if $d_i \notin D'$, then $p(d_i)$ does not coincide with $y + (d_i - z) q(d_i)$ and the point check fails. So if the verifier chooses the challenges following a uniform distribution, then the chances of the prover of being caught are $1/2$ for only one challenge. If the verifier performs $k$ challenges, then the chance of not being caught is $1/2^{k}$.
 
 #### General case: the blowup factor
-If the ratio between $M$ and $N$ is $2$, then $k$ challenges give $1/2^{k}$ of probability of a malicious prover to succeed. If the ratio is $4$, that is, if $M = 4N$, then that probability is $1/4^k$ for the same number of point checks. This provides another way of improving the soundness error. The larger the ratio, the harder is to cheat in the open protocol. This ratio is what's called *the blowup factor*. It is a security parameter and finding a balance between the number of challenges $k$ and the size of $D$ is part of the configuartion of the protocol. Increasing the size of $D$ makes commiting an expensive operation since it involves building a Merkle tree with for a vector of the size of $D$. But increasing the number of challenges makes the size of the final proof larger.
+If the ratio between $M$ and $N$ is $2$, then $k$ challenges give $1/2^{k}$ of probability for a malicious prover to succeed. If the ratio is $4$, that is, if $M = 4N$, then that probability is $1/4^k$ for the same number of point checks. This provides another way of improving the soundness error. The larger the ratio, the harder is to cheat in the open protocol. This ratio is what's called *the blowup factor*. It is a security parameter and finding a balance between the number of challenges $k$ and the size of $D$ is part of the configuartion of the protocol. Increasing the size of $D$ makes commiting an expensive operation since it involves building a Merkle tree with for a vector of the size of $D$. But increasing the number of challenges makes the size of the final proof larger.
+
+#### What if $p$ was of degree larger than $N$ to begin with?
+The soundness analysis we did heavily depends on the fact that $p$ is a polynomial of degree at most $N$. But a malicious prover could start by sending a commitment $[p]$ of a polynomial of higher degree. There are two good news.
+
+First, the easy but inefficient solution would be to add to the Open protocol a FRI check for polynomials of degree $N$ to prove that $[p]$ satisfies that degree bound.
+
+But better than that, there's no need to do anything. The probability of not catching a malicious prover is still $(N/M)^k$ without assuming $p$ is of degree at most $N$. This requires a finer analysis that we leave for another section.
 
 ## Batch
 Most protocols commit and open polynomials several times. Doing these operations for each polynomial independently is costly. In this section we'll see how batching polynomials can reduce the amount of computation. Instead of working with a single polynomial $p$, we will commit or open a batch of polynomials $P=\{p_1, \dots, p_n\}$. We note the batch commitment as $[P]$.
@@ -76,10 +85,10 @@ As mentioned earlier, to commit a single polynomial $p$ we choose a domain $D$ a
 The open operation proceeds similarly to the case of a single polynomial. The prover will try to convince the verifier that the committed polynomials $P$ at $z$ evaluate to some values. In the "batch" case the prover will construct the following polynomial:
 
 $$
-H(x)=\sum_{i=1}^{N}\gamma_i\frac{p_i(x)-p_i(z)}{x-z}
+H(X)=\sum_{i=1}^{N}\gamma_i\frac{p_i(X)-p_i(z)}{X-z}
 $$
 
-Where $\gamma_i$ are challenges provided by the verifier. Let's see how this polynomial helps to convince the verifier. The prover should provided $n$ values that should be $y_i=p_i(z)$. For a malicious prover of course, that may not be the case. However, the prover and the verifier will engage in the FRI protocol over polynomial $[H]$. This will convince the verifier that $H$ is, in fact, a polynomial degree at most $N$, as seen in the soundness section. Later, with the help of the commitment $[P]$, the verifier will reconstruct the polynomial $H$ evaluated at some random challenge $\upsilon$ and will check that, in fact, $H$ and the committed polynomials $p_i$ are, in fact, related. As the prover is not lying about $H$ being a polynomial, the verifier concludes that $y_i=p_i(z)$, because $(x-z)$ divides $(p_i(x)-y_i)$ for each polynomial $p_i$. 
+Where $\gamma_i$ are challenges provided by the verifier. Let's see how this polynomial helps to convince the verifier. The prover should provided $n$ values that should be $y_i=p_i(z)$. For a malicious prover of course, that may not be the case. However, the prover and the verifier will engage in the FRI protocol over polynomial $[H]$. This will convince the verifier that $H$ is, in fact, a polynomial degree at most $N$, as seen in the soundness section. Later, with the help of the commitment $[P]$, the verifier will reconstruct the polynomial $H$ evaluated at some random challenge $\upsilon$ and will check that, in fact, $H$ and the committed polynomials $p_i$ are, in fact, related. As the prover is not lying about $H$ being a polynomial, the verifier concludes that $y_i=p_i(z)$, because $(X-z)$ divides $(p_i(x)-y_i)$ for each polynomial $p_i$. 
 
 Note that this optimization makes a huge difference, as we only need to run the FRI protocol once instead of running it one time for each polynomial.
 
