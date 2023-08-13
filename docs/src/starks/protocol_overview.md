@@ -81,9 +81,11 @@ First, the easy but inefficient solution would be to add to the Open protocol a 
 But better than that, there's no need to do anything. The probability of not catching a malicious prover is still $(N/M)^k$ without assuming $p$ is of degree at most $N$. This requires a finer analysis that we leave for another section.
 
 ## Batch
-Most protocols commit and open polynomials several times. Doing these operations for each polynomial independently is costly. In this section we'll see how batching polynomials can reduce the amount of computation. Instead of working with a single polynomial $p$, we will commit or open a batch of polynomials $P=\{p_1, \dots, p_n\}$. We note the batch commitment as $[P]$.
+During proof generation, polynomials are committed and opened several times. Computing these for each polynomial independently is costly. In this section we'll see how batching polynomials can reduce the amount of computation. Let $P=\{p_1, \dots, p_n\}$ be a set of polynomials. We will commit and open $P$ as a whole. We note the batch commitment as $[P]$.
 
-As mentioned earlier, to commit a single polynomial $p$ we choose a domain $D$ and construct a Merkle tree over the vector $(p(d_1), \dots, p(d_m))$. When committing a batch of polynomials, the leaves of the Merkle tree instead contain the concatenation of the polynomial evaluations, that is $(p_1(d_1)||\dots||p_n(d_1), \dots, p_1(d_m)||\dots||p_n(d_m))$. The commitment $[P]$ is the root of this Merkle tree. This reduces the proof size: we only need one Merkle tree for $n$ polynomials. It also reduces the computational time. By traversing the Merkle tree one time, it can verify several commits.
+We need the same configuration parameters as before: $N=2^n$, $M=2^m$ with $N<M$, a vector $D=(d_1, \dots, d_M)$ and $k>0$.
+
+As described earlier, to commit to a single polynomial $p$, a Merkle tree is built over the vector $(p(d_1), \dots, p(d_m))$. When committing a batch of polynomials $P=\{p_1, \dots, p_n\}$, the leaves of the Merkle tree are instead the concatenation of the polynomial evaluations. That is, in the batch setting, the Merkle tree is built for the vector $(p_1(d_1)||\dots||p_n(d_1), \dots, p_1(d_m)||\dots||p_n(d_m))$. The commitment $[P]$ is the root of this Merkle tree. This reduces the proof size: we only need one Merkle tree for $n$ polynomials. It also reduces the computational time. By traversing the Merkle tree one time, it can verify several commits.
 
 The open operation proceeds similarly to the case of a single polynomial. The prover will try to convince the verifier that the committed polynomials $P$ at $z$ evaluate to some values. In the "batch" case the prover will construct the following polynomial:
 
