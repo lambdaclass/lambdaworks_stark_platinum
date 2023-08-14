@@ -62,7 +62,7 @@ The prover holds the polynomial $p$ and the verifier only the commitment $[p]$ o
 
 The protocol has three steps:
 
-- **FRI on $p$**: First the prover and the verifier engage in a FRI protocol for polynomials of degree at most $N$ to check that $[p]$ is the commitment of such a polynomial. We will assume from now on that the degree of $p$ is at most $N$. There is an optimization that completely removes this step. More on that later.
+- **FRI on $p$**: First the prover and the verifier engage in a FRI protocol for polynomials of degree at most $N$ to check that $[p]$ is the commitment of such a polynomial. We will assume from now on that the degree of $p$ is at most $N$. There is an optimization that completely removes this step. More on that [later](#optimize-the-open-protocol-reusing-fri-internal-challenges).
 
 - **FRI on $(p-y)/(x-z)$**: Since $p(z) = y$, the polynomial $p$ can be written as $p = y + (x - z) q$ for some polynomial $q$. The prover computes the commitment $[q]$ and sends it to the verifier. Now they engage in a FRI protocol for polynomials of degree at most $N-1$, which convinces the verifier that $[q]$ is the commitment of a polynomial of degree at most $N-1$. 
 
@@ -89,7 +89,7 @@ If the ratio between $M$ and $N$ is $2$, then $k$ challenges give $1/2^{k}$ of p
 
 We denote the blowup factor by $b$ and it's always assumed to be a power of $2$.
 
-## Batch
+### Batch
 During proof generation, polynomials are committed and opened several times. Computing these for each polynomial independently is costly. In this section we'll see how batching polynomials can reduce the amount of computation. Let $P=\{p_1, \dots, p_L\}$ be a set of polynomials. We will commit and open $P$ as a whole. We note this batch commitment as $[P]$.
 
 We need the same configuration parameters as before: $N=2^n$, $M=2^m$ with $N<M$, a vector $D=(d_1, \dots, d_M)$ and $k>0$.
@@ -105,6 +105,18 @@ $$
 Where $\gamma_i$ are challenges provided by the verifier. The prover commits to $Q$ and sends $[Q]$ to the verifier. Then the prover and verifier continue very similarly to the normal open protocol, but for $Q$ only. This means that they engage in a FRI protocol for polynomials of degree at most $N-1$ for $Q$. Then they engage in the point checks for $Q$. Here, for each challenge $d_i$, the prover uses one authentication path for $[Q]$ to reveal $Q(d_i)$ and use one authentication path for $[P]$ to batch reveal values $p_1(d_i),\dots, p_L(d_i)$. Successful point checks here mean that $Q(d_i) = \sum_i \gamma_i(p_i(d_i) - y_i) / (d_i - z)$.
 
 All of this is equivalent to running the open protocol $L$ times, one for each term $p_i$ and $y_i$. Note that this optimization makes a huge difference, as we only need to run the FRI protocol once instead of running it one time for each polynomial.
+
+### Optimize the open protocol reusing FRI internal challenges
+
+There is an optimization for the open protocol to avoid running FRI to check that $p$ is of degree at most $N$. The idea is as follows. Part of FRI protocol for $[q]$, to check that it is of degree at most $N-1$, involves revealing values of $q$ at other random points $d_i$ chosen also by the verifier. These are part of the internal workings of FRI. These challenges are unrelated to what we mentioned before. So if one removes the FRI check for $p$, the point checks of the open protocol need to be performed on these challenges $d_i$ of the FRI protocol for $[q]$. This optimization is included in the formal description of the protocol.
+
+## References
+
+- [Transparent Polynomial Commitment Scheme with Polylogarithmic Communication Complexity](https://eprint.iacr.org/2019/1020)
+- [Summary on FRI low degree test](https://eprint.iacr.org/2022/1216)
+- [DEEP FRI](https://eprint.iacr.org/2019/336)
+- [Thank goodness it's FRIday](https://vitalik.ca/general/2017/11/22/starks_part_2.html)
+- [Diving DEEP FRI](https://blog.lambdaclass.com/diving-deep-fri/)
 
 # High level description of the protocol
 The protocol is split into rounds. Each round more or less represents an interaction with the verifier. This means that each round will generally start by getting a challenge from the verifier. 
