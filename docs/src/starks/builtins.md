@@ -2,7 +2,7 @@
 
 We can understand the built-in as a small machine, that we can use to efficiently prove a subprogram. For example, it may be able to prove a hash, like Poseidon or Keccak, verify a signature, or check that some variable is in a range, and the cost would be less than what we would have if using the Cairo VM instructions.
 
-For each subprogram we want to prove, we will have a machine, which will have its own set of constraints in the prover. Let's take for example the Range Check built-in. This builtin enforces that a value $X$ is between 0 and 2^128.
+For each subprogram we want to prove, we will have a machine, which will have its own set of constraints in the prover. Let's take for example the Range Check built-in. This builtin enforces that a value $X$ is between 0 and $2^{128}$.
 
 The logic behind the built-in is pretty straightforward. We split $X$ into 8 parts. So we will say that $X = X_{0} + X_{1} * 2^{16} + X_{2} * 2^{32} + X_{3} * 2^{48} + ... + X_{7} * 2^{112}$
 
