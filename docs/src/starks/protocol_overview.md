@@ -91,21 +91,21 @@ If the ratio between $M$ and $N$ is $2$, then $k$ challenges give $1/2^{k}$ of p
 We denote the blowup factor by $b$ and it's always assumed to be a power of $2$.
 
 ## Batch
-During proof generation, polynomials are committed and opened several times. Computing these for each polynomial independently is costly. In this section we'll see how batching polynomials can reduce the amount of computation. Let $P=\{p_1, \dots, p_n\}$ be a set of polynomials. We will commit and open $P$ as a whole. We note the batch commitment as $[P]$.
+During proof generation, polynomials are committed and opened several times. Computing these for each polynomial independently is costly. In this section we'll see how batching polynomials can reduce the amount of computation. Let $P=\{p_1, \dots, p_L\}$ be a set of polynomials. We will commit and open $P$ as a whole. We note this batch commitment as $[P]$.
 
 We need the same configuration parameters as before: $N=2^n$, $M=2^m$ with $N<M$, a vector $D=(d_1, \dots, d_M)$ and $k>0$.
 
-As described earlier, to commit to a single polynomial $p$, a Merkle tree is built over the vector $(p(d_1), \dots, p(d_m))$. When committing a batch of polynomials $P=\{p_1, \dots, p_n\}$, the leaves of the Merkle tree are instead the concatenation of the polynomial evaluations. That is, in the batch setting, the Merkle tree is built for the vector $(p_1(d_1)||\dots||p_n(d_1), \dots, p_1(d_m)||\dots||p_n(d_m))$. The commitment $[P]$ is the root of this Merkle tree. This reduces the proof size: we only need one Merkle tree for $n$ polynomials. It also reduces the computational time. By traversing the Merkle tree one time, it can verify several commits.
+As described earlier, to commit to a single polynomial $p$, a Merkle tree is built over the vector $(p(d_1), \dots, p(d_m))$. When committing to a batch of polynomials $P=\{p_1, \dots, p_n\}$, the leaves of the Merkle tree are instead the concatenation of the polynomial evaluations. That is, in the batch setting, the Merkle tree is built for the vector $(p_1(d_1)||\dots||p_L(d_1), \dots, p_L(d_m)||\dots||p_n(d_m))$. The commitment $[P]$ is the root of this Merkle tree. This reduces the proof size: we only need one Merkle tree for $L$ polynomials. The verifier can then only ask values in batches. When the verifier chooses an index $i$, the prover sends all of $p_1(d_i),\dots,p_L(d_i)$ along with one authentication path. The verifier on his side computes the concatenation $p_1(d_i)||\dots||p_L(d_i)$ and validates it with the authentication path and $[P]$. This also reduces the computational time. By traversing the Merkle tree one time, it can batch reveal several components at the same time.
 
-The open operation proceeds similarly to the case of a single polynomial. The prover will try to convince the verifier that the committed polynomials $P$ at $z$ evaluate to some values. In the "batch" case the prover will construct the following polynomial:
+The batch open protocol proceeds similarly to the case of a single polynomial. The prover will try to convince the verifier that the committed polynomials $P$ at $z$ evaluate to some values $y_i$. In the batch case the prover will construct the following polynomial:
 
 $$
-H(X)=\sum_{i=1}^{N}\gamma_i\frac{p_i(X)-p_i(z)}{X-z}
+Q:=\sum_{i=1}^{L}\gamma_i\frac{p_i-p_i(z)}{X-z}
 $$
 
-Where $\gamma_i$ are challenges provided by the verifier. Let's see how this polynomial helps to convince the verifier. The prover should provided $n$ values that should be $y_i=p_i(z)$. For a malicious prover of course, that may not be the case. However, the prover and the verifier will engage in the FRI protocol over polynomial $[H]$. This will convince the verifier that $H$ is, in fact, a polynomial degree at most $N$, as seen in the soundness section. Later, with the help of the commitment $[P]$, the verifier will reconstruct the polynomial $H$ evaluated at some random challenge $\upsilon$ and will check that, in fact, $H$ and the committed polynomials $p_i$ are, in fact, related. As the prover is not lying about $H$ being a polynomial, the verifier concludes that $y_i=p_i(z)$, because $(X-z)$ divides $(p_i(x)-y_i)$ for each polynomial $p_i$. 
+Where $\gamma_i$ are challenges provided by the verifier. The prover commits to $Q$ and sends $[Q]$ to the verifier. Then the prover and verifier continue very similarly to the normal open protocol, but for $Q$ only. This means that they engage in a FRI protocol for polynomials of degree at most $N-1$ for $Q$. Then they engage in the point checks for $Q$. Here, for each challenge $d_i$, the prover uses one authentication path for $[Q]$ to reveal $Q(d_i)$ and use one authentication path for $[P]$ to batch reveal values $p_1(d_i),\dots, p_L(d_i)$. Successful point checks here mean that $Q(d_i) = \sum_i \gamma_i(p_i(d_i) - y_i) / (d_i - z)$.
 
-Note that this optimization makes a huge difference, as we only need to run the FRI protocol once instead of running it one time for each polynomial.
+All of this is equivalent to running the open protocol $L$ times, one for each term $p_i$ and $y_i$. Note that this optimization makes a huge difference, as we only need to run the FRI protocol once instead of running it one time for each polynomial.
 
 # High level description of the protocol
 The protocol is split into rounds. Each round more or less represents an interaction with the verifier. This means that each round will generally start by getting a challenge from the verifier. 
