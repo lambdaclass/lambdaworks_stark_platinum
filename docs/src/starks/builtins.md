@@ -18,7 +18,7 @@ Knowing which specific positions of the memory are used by the built-in, the pro
 
 In the constraint system of the VM, we will treat every memory cell associated with the built-in as any other, treating it as a pair of addresses and values with the usual constraints. Additionally, we will add more that are specific to the builtin. 
 
-Let's say we have multiple values x_{i}, such that each x_{i} needs to be range checked by the built-in. Let each value be stored in a memory address m_{i}. Let the initial expected memory position for the range check built-in be r_{0}. Here r_{0} is a value known and a public input.
+Let's say we have multiple values $x_{i}$, such that each $x_{i}$ needs to be range checked by the built-in. Let each value be stored in a memory address $m_{i}$. Let the initial expected memory position for the range check built-in be $r_{0}$. Here $r_{0}$ is a value known and a public input.
 
 We need to enforce then that $m_{0} = r_{0}$, and that the built in $m_{i+1} = m_{i} + 1$. These constraints have to be put on top of the constraints that are used by the memory, and that's the key to all of this. If these constraints weren't in place, there wouldn't be an enforced link between the Builtin and the VM, which would lead to security issues.
 
