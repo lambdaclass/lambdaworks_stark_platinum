@@ -4,7 +4,7 @@ We can understand the built-in as a small machine, that we can use to efficientl
 
 For each subprogram we want to prove, we will have a machine, which will have its own set of constraints in the prover. Let's take for example the Range Check built-in. This builtin enforces that a value $X$ is between 0 and 2^128.
 
-The logic behind the built-in is pretty straightforward. We split $X$ into 8 parts. So we will say that $X = X_{0} + X_{1} * 2^16 + X_{2} * 2^32 + X_{3} * 2^48 + ... + X_{7} * 2^112$
+The logic behind the built-in is pretty straightforward. We split $X$ into 8 parts. So we will say that $X = X_{0} + X_{1} * 2^{16} + X_{2} * 2^{32} + X_{3} * 2^{48} + ... + X_{7} * 2^{112}$
 
 Then we require that each is in the range $ 0 < X_{i} < 2^16 $. The idea here is to reuse the Range Check constraint that checks if the offsets are between $0$ and $2^16$. If we can decompose the number in eight limbs of 16 bits, and we don't need any more limbs, it follows that the number will be less than $2^128$
 
