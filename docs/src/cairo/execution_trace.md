@@ -107,14 +107,22 @@ In order to have constraints of max degree two, some more columns are derived fr
 * `t0` is the product of the values of `dst` and the `PC_JNZ` flag for each step. 
 * `t1` is the product of `t0` and `res` for each step.
 * `mul` is the product of `op0` and `op1` for each step.
+#### Range check and Memory holes
 
----
-**TODO**:
-#### Memory holes
+For the values constrained between ranges $0$ and $2^16$, the offsets, the prover uses a permutation argument to optimize enforcing this. In particular, it checks an ordered list with the offsets is the same as the original one, is continuous, the first value is $rc_{min}$, and the last one less than $rc_{max}$.
 
+Since not all values are used, there may be unused values, and so the ordered offset may not be continuos. These unused values are called holes, and they need to be filled with the missing values, so the checks can be done.
+
+This is explained on section 9.9 of the Cairo Paper
+
+In the case of the memory, something similar happen, where the values should be continous, but if there are built-ins, this may not be the case. For example, the built-in may be using addresses in ranges higher than the ones used by the program. 
+
+To fix this, holes in the memory cells are filled, just as the ones of the RC. Dummy memory accesses
 #### Dummy memory accesses
 
-#### Range-check holes
+As explained in section 9.8 of the Cairo paper, we need to prove that memory used extends the public memory. This public memory contains the bytecode that was executed, outputs, and other data.
+
+The first is critical for the verifier to not only know that somethign was executed correctly, but to know what was executed.
 
 
 ## Trace extension
