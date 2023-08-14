@@ -1,6 +1,6 @@
 # Protocol Overview
 
-In this section we start diving deeper before showing the formal protocol. If you haven't done so, we recommend first reading the "Recap" section.
+In this section, we start diving deeper before showing the formal protocol. If you haven't done so, we recommend first reading the "Recap" section.
 
 At a high level the protocol works as follows. The starting point is a matrix $T$ that encodes the trace of a valid execution of the program. This matrix needs to be in a special format so that its correctness is equivalent to checking a finite number of polynomial equations on its rows. Transforming the execution to this matrix is what's called the arithmetization process.
 
