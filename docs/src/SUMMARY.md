@@ -13,4 +13,3 @@
     - [Virtual Columns](./starks/virtual_cols.md)
     - [Built-ins](./starks/builtins.md)
     - [CLI](./starks/cairo_cli.md)
-
