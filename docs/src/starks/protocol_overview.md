@@ -112,14 +112,14 @@ The protocol is split into rounds. Each round more or less represents an interac
 
 The prover will need to interpolate polynomials and he will always do it over the set $D_S = \{g^i \}_{i=0}^{2^n-1} \subseteq \mathbb{F}$ with $g$ is a $2^n$ root of unity in $\mathbb{F}$. Also, most commitments will be done over the set $D_{LDE} = (h, h \omega, h \omega^2, \dots, h \omega^{2^{n + l}})$ where $\omega$ is a $2^{n + l}$ root of unity.
 
-## Round 1
+## Round 1: Arithmetization and commitment of the execution trace
 In **round 1**, the prover commits to the columns of the trace $T$. He does so by interpolating each column $j$ and obtaining univariate polynomials $t_j$.
 Then the prover commits to $t_j$ over $D_{LDE}$. In this way, we have $T_{i,j}=t_j(g^i)$.
 From now on, the prover won't be able to change the values of the trace $T$. The verifier will leverage this and send challenges to the prover. The prover cannot know in advance what these challenges will be, thus he cannot handcraft a trace to deceive the verifier.
 
 As mentioned before, if some constraints cannot be expressed locally, more columns can be added with the goal of making a constraint-friendly trace. This is done by first committing to the first set of columns, then sampling challenges from the verifier and repeating round 1. The sampling of challenges serves to add new constraints. These constraints will make sure the new columns have some common structure with the original trace. In the protocol this is extended columns are referred to as the *RAP2* (Randomized AIR with Preprocessing). The matrix of the extended columns is denoted $M_{\text{RAP2}}$.
 
-## Round 2
+## Round 2: Construction of composition polynomial $H$
 The goal of **round 2** is to build the composition polynomial $H$. This function will have the property that it is a polynomial if and only if the trace that the prover committed to at **round 1** is valid and satisfies the agreed polynomial constraints. That is, $H$ will be a polynomial if and only if $T$ is a trace that satisfies all the transition and boundary constraints.
 
 Note that we can compose the polynomials $t_j$, the ones that interpolate the columns of the trace $T$, with the multivariate constraint polynomials as follows.
@@ -130,18 +130,11 @@ As we already mentioned, this is assuming that transitions only depend on the cu
 
 The verifier could check that all $\frac{Q_k^T}{X^{2^n} - 1}$ are polynomials one by one, and the same for the polynomials coming from the boundary constraints. But this is inefficient and the same can be obtained with a single polynomial. To do this, the prover samples challenges and obtains a random linear combination of these polynomials. The result of this is denoted by $H$ and is called the composition polynomial. It integrates all the constraints by adding them up. So after computing $H$, the prover commits to it and sends the commitment to the verifier. The rest of the protocol are efforts to prove that $H$ was properly constructed and that it is in fact a polynomial, which can only be true if the prover actually has a valid extension of the original trace.
 
-## Round 3
+## Round 3: Evaluation of polynomials at $z$
 The verifier needs to check that $H$ was constructed according the the rules of the protocol. That is, $H$ has to be a linear combination of all the functions $\frac{Q_k^T}{X^{2^n}-1}$ and the similar terms for the boundary constraints. To do so, in **round 3** the verifier chooses a random point $z\in\mathbb{F}$ and the prover computes $H(z)$, $t_j(z)$ and $t_j(g z)$ for all $j$. With all these the verifier can check that $H$ and the expected linear combination coincide at least when evaluated at $z$. Since $z$ was chosen at random, this proves with overwhelming probability that $H$ was properly constructed.
 
-The problem with this is that the verifier still needs to check that the evaluations $H(z)$, $t_j(z)$ and $t_j(g z)$ were properly computed and correspond to the already commited functions. And after that, the problem of checking that $H$ is a polynomial still remains. All of this is achieved at the same time in the next round
-
-## Round 4
-This round makes an extensive use of the FRI protocol. This protocol is run to prove that a vector of evaluations is actually the vector of evaluations of a polynomial of at most a predefined degree. The two remaining checks will be validated using this. That is, that the evaluations at $z$ were properly computed and that all of the commited functions are polynomials of bounded degree.
-
-Suppose $f$ is any of the functions involved here. Either $H$, or $t_j$, or the shifts of the $t_j$. The prover has already commited to $f$ and gave the verifier also a value $y$ (at which supposedly $f(z) = y$). Further suppose the prover wants to convince the verifier that $f$ is a polynomial and that actually $f(z) = y$. Both of these are checked by running the FRI protocol over the function $$g(x) := \frac{f(x) - y}{x - z}.$$
-This is because if $g$ is a polynomial, then $f(x) = y + g(x) (x - z)$, which is then also a polynomial and evaluating that expression at $z$ we get $f(z) = y$.
-
-The prover and the verifier could engage in a FRI protocol for $f=H$, then again for $f=t_0$ and so on for $f=t_j$ for all $j$. But this is terribly inefficient. The random linear combination trick also can be used here to reduce this to a single FRI protocol for all of them. That random linear combination is the deep composition polynomial.
+## Round 4: Run batch open protocol 
+In this round the prover and verifier engage in the batch open protocol of the polynomial commitment scheme described above to validate all the evaluations at $z$ from the previous round.
 
 # FAQ
 
