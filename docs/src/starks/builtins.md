@@ -24,4 +24,4 @@ We need to enforce then that $m_{0} = r_{0}$, and that the built in $m_{i+1} = m
 
 As one last detail, since the memory cells share the same constraints, and we add more for the ones in the builtin, we can treat the builtin cells as a subcolumn. In that case, we can assign one cell for the memory every N cell, giving a ratio that will be observable in the layout. 
 
-This gives a better relationship between the amount of cells used for the VM, and the builtin, giving an improvement in performance.
+This gives a better relationship between the number of cells used for the VM, and the builtin, giving an improvement in performance.
