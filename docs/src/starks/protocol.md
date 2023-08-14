@@ -2,7 +2,7 @@
 
 In this section we describe precisely the STARKs protocol used in Lambdaworks.
 
-We begin with some additional considereations and notation for most of the relevant objects and values to refer to them later on.
+We begin with some additional considerations and notation for most of the relevant objects and values to refer to them later on.
 
 ### Grinding
 This is a technique to increase the soundness of the protocol by adding proof of work. It works as follows. At some fixed point in the protocol, the verifier sends a challenge $x$ to the prover. The prover needs to find a string $y$ such that $H(x || y)$ begins with a predefined number of zeroes. Here $x || y$ denotes the concatenation of $x$ and $y$, seen as bit strings.
