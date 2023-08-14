@@ -2,14 +2,22 @@
 
 In this section we describe precisely the STARKs protocol used in Lambdaworks.
 
-We begin by fixing notation for most of the relevant objects and values to refer to them later on.
+We begin with some additional considereations and notation for most of the relevant objects and values to refer to them later on.
+
+### Grinding
+This is a technique to increase the soundness of the protocol by adding proof of work. It works as follows. At some fixed point in the protocol, the verifier sends a challenge $x$ to the prover. The prover needs to find a string $y$ such that $H(x || y)$ begins with a predefined number of zeroes. Here $x || y$ denotes the concatenation of $x$ and $y$, seen as bit strings.
+The number of zeroes is called the *grinding factor*. The hash function $H$ can be any hash function, independent of other hash functions used in the rest of the protocol. In Lambdaworks we use Keccak256.
+
+### Transcript
+
+The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume there is a transcript object to which values can be added and from which challenges can be sampled.
 
 ## General notation
 
 - $\mathbb{F}$ denotes a finite field.
 - Given a vector $D=(y_1,\dots,y_L)$ and a function $f:\text{set}(D) \to \mathbb{F}$, denote by $f(D)$ the vector $(f(y_1),\dots,f(y_L))$. Here $\text{set}(D)$ denotes the underlying set of $A$.
 - A polynomial $p \in \mathbb{F}[X]$ induces a function $f:A \to \mathbb{F}$ for every subset $A$ of $\mathbb{F}$, where $f(a) := p(a)$.
-- Let $p, q \in \mathbb{F}[X]$ be two polynomials. A function $f: A \to \mathbb{F}$ can be induce from them for every subset $A$ disjoint from the set of roots of $q$, defined by $f(a) := p(a) q(a)^{-1}$. We abuse notation and denote $f$ by $p/q$.
+- Let $p, q \in \mathbb{F}[X]$ be two polynomials. A function $f: A \to \mathbb{F}$ can be induced from them for every subset $A$ disjoint from the set of roots of $q$, defined by $f(a) := p(a) q(a)^{-1}$. We abuse notation and denote $f$ by $p/q$.
 
 ## Definitions 
 
@@ -25,7 +33,7 @@ These values are determined the program,  the specifications of the AIR being us
 - $m$ is the total number of columns: $m := m' + m''$.
 - $P_k^T$ denote the transition constraint polynomials for $k=1,\dots,n_T$. We are assuming these are of degree at most 2.
 - $Z_j^T$ denote the transition constraint zerofiers for $k=1,\dots,n_T$.
-- $b=2^l$ is the *blowup factor*.
+- $b=2^l$ is the *[blowup factor](/starks/protocol_overview.html#general-case-the-blowup-factor)*.
 - $c$ is the *grinding factor*.
 - $Q$ is number of FRI queries.
 - We assume there is a fixed hash function from $\mathbb{F}$ to binary strings. We also assume all Merkle trees are constructed using this hash function.
@@ -46,13 +54,8 @@ Both prover and verifier compute the following.
 - The Low Degree Extension $D_{\text{LDE}} =(h, h\omega, h\omega^2,\dots, h\omega^{2^{n+l} - 1})$. Recall $2^l$ is the blowup factor.
 - Let $d_k^T := 2^n (\deg(P_k^T) - 1)$ and let $d^B := 2^n$. Let $d := 2^{n + 1}$. Notice that $d^B \leq d$ and $d_k^T \leq d$ for all $k$. This holds because we assume all transition constraint polynomials are at most cubic.
 
-## Randomized AIR with Preprocessing (RAP)
-
-This the process in which the prover uses randomness from the verifier to complete the execution trace $T$ with additional columns. This is specific to each RAP. See [here](https://hackmd.io/@aztec-network/plonk-arithmetiization-air) for more details. 
-
-We consider it as part of the proving protocol. Check out [round 1](#round-12-commit-extended-trace).
-
-## Vector commitment scheme
+### Notation of important operations
+#### Vector commitment scheme
 
 Given a vector $A=(y_0, \dots, y_L)$. The operation $\text{Commit}(A)$ returns the root $r$ of the Merkle tree that has the hash of the elements of $A$ as leaves.
 
@@ -63,24 +66,6 @@ The operation $\text{Verify}(i,y,r,s)$ returns _Accept_ or _Reject_ depending on
 
 In our cases the sets $A$ will be of the form $A=(f(a), f(ab), f(ab^2), \dots, f(ab^L))$ for some elements $a,b\in\mathbb{F}$. It will be convenient to use the following abuse of notation. We will write $\text{Open}(A, ab^i)$ to mean $\text{Open}(A, i)$. Similarly, we will write $\text{Verify}(ab^i, y, r, s)$ instead of $\text{Verify}(i, y, r, s)$. Note that this is only notation and $\text{Verify}(ab^i, y, r, s)$ is only checking that the $y$ is the $i$-th element of the commited vector. 
 
-### Batch commitments
-Building Merkle trees to commit to a vector is an expensive operation. Often the protocol involves commiting to multiple vectors of the same length at the same time. Also all these commitments are opened at the same points. Luckily, there is an optimization to use a single Merkle tree to commit to all of them, and also use a single authentication path to open them all. It works as follows.
-
-Let $A_0, \dots, A_t$ be vectors where $A_i = (y_{0, i}, \dots, y_{N, i})$. From all of them build a single vector $A = (y_0, \dots, y_N)$ where $y_j$ is defined as $H(y_{j, 0}, \dots, y_{j,t})$ for some hash function $H$ that takes field elements to binary strings. The function $H$ is potentially different from the hash function that's used to build the Merkle tree.
-Then we can run $\text{Commit}(A)$ producing a single root $r$. To do so we only need one Merkle tree.
-
-To run the $\text{Open}$ protocol the verifier chooses some index $j$. Then the prover sends the elements $y_{j, 0}, \dots, y_{j,t}$ along with the authentication path $s$ from $H(y_{j, 0}, \dots, y_{j,t})$ to the Merkle root. The verifier has everything to run $\text{Verify}(j, H(y_{j, 0}, \dots, y_{j,t}), r, s)$.
-
-Below in the protocol we'll indicate where this optimization can be applied.
-
-## Grinding
-This is a technique to increase the soundness of the protocol by adding proof of work. It works as follows. At some fixed point in the protocol, the verifier sends a challenge $x$ to the prover. The prover needs to find a string $y$ such that $H(x || y)$ begins with a predefined number of zeroes. Here $x || y$ denotes the concatenation of $x$ and $y$, seen as bit strings.
-The number of zeroes is called the *grinding factor*. The hash function $H$ can be any hash function, independent of other hash functions used in the rest of the protocol. In Lambdaworks we use Keccak256.
-
-## Transcript
-
-The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume there is a transcript object to which values can be added and from which challenges can be sampled.
-
 ## Protocol
 
 ### Prover
@@ -90,8 +75,8 @@ The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume
 - Start a new transcript.
 - (Strong Fiat Shamir) Add to it all the public values.
 
-#### Round 1: Build RAP
-
+#### Round 1: Arithmetization and commitment of the execution trace
+ 
 ##### Round 1.1: Commit main trace
 
 - For each column $M_j$ of the execution trace matrix $T$, interpolate its values at the domain $D_S$ and obtain polynomials $t_j$ such that $t_j(g^i)=T_{i,j}$.
@@ -106,8 +91,8 @@ The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume
 - Compute $[t_j] := \text{Commit}(t_j(D_{\text{LED}}))$ for all $j=m'+1,\dots,m'+m''$ (*Batch commitment optimization applies here*).
 - Add $[t_j]$ to the transcript in increasing order for all $j=m'+1,\dots,m'+m''$.
 
-#### Round 2: Compute composition polynomial
-
+#### Round 2: Construction of composition polynomial $H$
+ 
 - Sample $\alpha_1^B,\dots,\alpha_{m}^B$ and $\beta_1^B,\dots,\beta_{m}^B$ in $\mathbb{F}$ from the transcript.
 - Sample $\alpha_1^T,\dots,\alpha_{n_T}^T$ and $\beta_1^T,\dots,\beta_{n_T}^T$ in $\mathbb{F}$ from the transcript.
 - Compute $B_j := \frac{t_j - P^B_j}{Z_j^B}$.
@@ -119,14 +104,14 @@ The Fiat-Shamir heuristic is used to make the protocol noninteractive. We assume
 - Compute commitments $[H_1]$ and $[H_2]$.
 - Add $[H_1]$ and $[H_2]$ to the transcript.
 
-#### Round 3: Evaluate polynomials in out of domain element
-
+#### Round 3: Evaluation of polynomials at $z$
+ 
 - Sample from the transcript until obtaining $z\in\mathbb{F}\setminus D_{\text{LDE}}$.
 - Compute $H_1(z^2)$, $H_2(z^2)$, and $t_j(z)$ and $t_j(gz)$ for all $j$.
 - Add $H_1(z^2)$, $H_2(z^2)$, and $t_j(z)$ and $t_j(gz)$ for all $j$ to the transcript.
 
-#### Round 4: Compute and run FRI on the Deep composition polynomial
-
+#### Round 4: Run batch open protocol 
+ 
 - Sample $\gamma$, $\gamma'$, and $\gamma_1,\dots,\gamma_m$, $\gamma_1',\dots,\gamma_m'$ in $\mathbb{F}$ from the transcript.
 - Compute $p_0$ as $$\gamma\frac{H_1 - H_1(z^2)}{X - z^2} + \gamma'\frac{H_2 - H_2(z^2)}{X - z^2} + \sum_j \gamma_j\frac{t_j - t_j(z)}{X - z} + \gamma_j'\frac{t_j - t_j(gz)}{X - gz}$$
 
