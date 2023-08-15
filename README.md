@@ -36,7 +36,7 @@ CLI currently runs with 100 bits of conjecturable security
 - [Using cairo-compile for Cairo 0 programs](#using-cairo-compile-for-cairo-0-programs)
 - [References](#-references)
 - [Related projects](#-related-projects)
-- [STARKs](#stark-prover)
+- [STARKs](#starks)
     - [Recap](#recap)
     - [Protocol overview](#protocol-overview)
     - [Protocol](#protocol)
@@ -269,7 +269,7 @@ The following links, repos and projects have been important in the development o
 - [StarkNet Stack](https://github.com/lambdaclass/starknet_stack)
 
 
-# STARK Prover
+# STARKs
 
 The goal of this document is to give a good a understanding of our stark prover code. To this end, in the first section we go through a recap of how the proving system works at a high level mathematically; then we dive into how that's actually implemented in our code.
 
