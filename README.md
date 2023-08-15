@@ -43,7 +43,7 @@ CLI currently runs with 100 bits of conjecturable security
     - [Implementation](#lambdaworks-implementation)
         - [High Level API](#high-level-api-fibonacci-example)
         - [Under the hood](#how-this-works-under-the-hood)
-- [Cairo](#cairo)
+- [Cairo](#cairo-1)
     - [Trace](#trace)
     - [Extended columns (RAP)](#extended-columns)
     - [Virtual columns and subcolumns](#virtual-columns-and-subcolumns)
