@@ -41,7 +41,7 @@ CLI currently runs with 100 bits of conjecturable security
     - [Protocol overview](#protocol-overview)
     - [Protocol](#protocol)
     - [Implementation](#lambdaworks-implementation)
-        - [High Level API](#high-level-api.md)
+        - [High Level API](#high-level-api-fibonacci-example)
         - [Under the hood](#how-this-works-under-the-hood)
 
 ## Main building blocks
