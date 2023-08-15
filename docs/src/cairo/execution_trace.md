@@ -122,7 +122,15 @@ To fix this, holes in the memory cells are filled, just as the ones of the RC. D
 
 As explained in section 9.8 of the Cairo paper, we need to prove that memory used extends the public memory. This public memory contains the bytecode that was executed, outputs, and other data.
 
-The first is critical for the verifier to not only know that somethign was executed correctly, but to know what was executed.
+The first is critical for the verifier to not only know that something was executed correctly, but to know what was executed.
 
+To make this check, we needs to add dummy accesses on the memory cells with address 0 and value 0, which helps us prove it was used by changing the final value of the constraints that ensure that the memory is continuos and read only.
+#### Trace extension / Padding
 
-## Trace extension
+The last step is padding the trace to a power of two for efficiency. We may also need to pad the trace if for some reasons some unbalance given by the layout.
+
+For this, we will copy the last executed instruction until reaching the desired length. 
+
+But there's a trick. If the last executed instruction is any instruction, and it's copied, the transitiosn constraints won't be sattisfied. To be able to do this, we need to use something call "proof mode". In proof mode, the main function of the program is wrapped in another one, which calls it and returns to an infinite loop. This loop, is a jmp relative to 0.
+
+Since this loop can be executed many times without changing the validity of the trace, it can be copied as many times as we want.
