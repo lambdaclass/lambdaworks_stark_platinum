@@ -1,9 +1,8 @@
 # Cairo execution trace
 
 ## Raw materials
-After the execution of a Cairo program in the Cairo VM, three files are generated that are
-the core components for the construction of the execution trace, needed for the proving
-system:
+
+After the execution of a Cairo program in the Cairo VM, three files are generated that are the core components for the construction of the execution trace, needed for the proving system:
 
 * **trace file**: Has the information on the state of the three Cairo VM registers `ap`, 
 `fp`, and `pc` at every cycle of the execution of the program. To reduce ambiguity in terms,
@@ -120,7 +119,6 @@ In the case of memory, something similar happens, where the values should be con
 To fix this, holes in the memory cells are filled, just like the ones of the RC. Dummy memory accesses
 #### Dummy memory accesses
 
-
 As part of proving the execution of a Cairo program, we need to prove that memory used by the program extends the public memory. This is important since public memory contains for example the bytecode that was executed and the outputs.
 
 The bytecode is something critical for the verifier to not only know that something was executed correctly but to know what was executed.
@@ -155,3 +153,12 @@ For this, we will copy the last executed instruction until reaching the desired 
 But there's a trick. If the last executed instruction is any instruction, and it's copied, the transition constraints won't be satisfied. To be able to do this, we need to use something called "proof mode". In proof mode, the main function of the program is wrapped in another one, which calls it and returns to an infinite loop. This loop is a jump relative 0.
 
 Since this loop can be executed many times without changing the validity of the trace, it can be copied as many times as
+needed, solving the issues mentioned before.
+
+#### Summary
+
+To construct the execution trace, we augment the `RegisterStates` with the information obtained from the Memory. This includes decoding instruction of each steps, and writing all the data needed to check the execution is valid.
+
+Additionally, memory holes have to be filled, public memory added, and a final pad using an infinite loop is needed for everything to work properly.
+
+Adding all of that, we create an execution trace that's ready for the prover to generate a proof. 
