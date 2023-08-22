@@ -969,10 +969,11 @@ Check that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
 - Check that the following are all _Accept_:
   - $\text{Verify}((\upsilon_s, \pi_0^{\upsilon_s}), \mathbf{P}_0, \mathfrak{P}_0)$ for all $0\leq s < Q$.
   - $\text{Verify}((-\upsilon_s^{2^k}, \pi_k^{-\upsilon_s^{2^k}}), \mathbf{P}_k, \mathfrak{P}_k)$ for all $0\leq k < n$, $0\leq s < Q$.
-- For all $s=0,\dots,Q-1$: - For all $k=0,\dots,n-1$: - Solve the following system of equations on the variables $G, H$
+- For all $s=0,\dots,Q-1$:
+  - For all $k=0,\dots,n-1$:
+    - Solve the following system of equations on the variables $G, H$
 
   ```math
-
   \begin{align}
   \pi_k^{\upsilon_s^{2^{k}}} &= G + \upsilon_s^{2^k}H \\
   \pi_k^{-\upsilon_s^{2^{k}}} &= G - \upsilon_s^{2^k}H
