@@ -972,12 +972,10 @@ Check that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
 - For all $s=0,\dots,Q-1$:
   - For all $k=0,\dots,n-1$:
     - Solve the following system of equations on the variables $G, H$:
-
-  $\pi_k^{\upsilon_s^{2^{k}}} = G + \upsilon_s^{2^k}H$
-
-  $\pi_k^{-\upsilon_s^{2^{k}}} = G - \upsilon_s^{2^k}H$
-      - Define $`\pi_{k+1}^{\upsilon_s^{2^{k+1}}}:=G + \zeta_{k}H`$
-    - Check that $`\pi_n^{\upsilon_s^{2^n}}`$ is equal to $`\pi`$.
+        $$\pi_k^{\upsilon_s^{2^{k}}} = G + \upsilon_s^{2^k}H$$
+        $$\pi_k^{-\upsilon_s^{2^{k}}} = G - \upsilon_s^{2^k}H$$
+    - Define $`\pi_{k+1}^{\upsilon_s^{2^{k+1}}}:=G + \zeta_{k}H`$
+  - Check that $`\pi_n^{\upsilon_s^{2^n}}`$ is equal to $`\pi`$.
 
 ##### Step 4: Verify deep composition polynomial is FRI first layer
 
@@ -987,9 +985,8 @@ Check that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
         - $\text{Verify}((\upsilon_s, \eta_2^{\upsilon_s}), \mathbf{H}_2, \mathfrak{h}_2)$.
         - $\text{Verify}((\upsilon_s, \tau_j^{\upsilon_s}), \mathbf{T}_j, \mathfrak{T}_j)$ for all $0\leq j < m$.
     - Check that $\pi_0^{\upsilon_s}$ is equal to the following:
-        $$
-        \gamma\frac{\eta_1^{\upsilon_s} - \eta_1^{z^2}}{\upsilon_s - z^2} + \gamma'\frac{\eta_2^{\upsilon_s} - \eta_2^{z^2}}{\upsilon_s - z^2} + \sum_j \gamma_j\frac{\tau_j^{\upsilon_s} - \tau_j^{z}}{\upsilon_s - z} + \gamma_j'\frac{\tau_j^{\upsilon_s} - \tau_j^{gz}}{\upsilon_s - gz}
-        $$
+
+        $$\gamma\frac{\eta_1^{\upsilon_s} - \eta_1^{z^2}}{\upsilon_s - z^2} + \gamma'\frac{\eta_2^{\upsilon_s} - \eta_2^{z^2}}{\upsilon_s - z^2} + \sum_j \gamma_j\frac{\tau_j^{\upsilon_s} - \tau_j^{z}}{\upsilon_s - z} + \gamma_j'\frac{\tau_j^{\upsilon_s} - \tau_j^{gz}}{\upsilon_s - gz}$$
 
 ## Other
 
@@ -1187,14 +1184,14 @@ We will once again use the fibonacci example as an ilustration. Recall from the 
 
 - Take the evaluation $H(z)$ along with the trace evaluations the prover provided.
 - Reconstruct the evaluations $B(z)$ and $C(z)$ from the trace evaluations. Check that the claimed evaluation $H(z)$ the prover gave us actually satisfies
-    $$
+    ```math
     H(z) = B(z) (\alpha_1 z^{D - deg(B)} + \beta_1) + C(z) (\alpha_2 z^{D - deg(C)} + \beta_2)
-    $$
+    ```
 - Take the evaluations $H(x_0)$ and $t(x_0)$.
 - Check that the claimed evaluation $Deep(x_0)$ the prover gave us actually satisfies
-    $$
+    ```math
     Deep(x_0) = \gamma_1 \dfrac{H(x_0) - H(z)}{x_0 - z} + \gamma_2 \dfrac{t(x_0) - t(z)}{x_0 - z} + \gamma_3 \dfrac{t(x_0) - t(zg)}{x_0 - zg} + \gamma_4 \dfrac{t(x_0) - t(zg^2)}{x_0 - zg^2}
-    $$
+    ```
 - Take the provided `FRI` commitment and check that it verifies.
 - Using the merkle root and the merkle proof the prover provided, check that $t(x_0)$ belongs to the trace.
 
