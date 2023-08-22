@@ -120,7 +120,9 @@ To fix this, holes in the memory cells are filled, just like the ones of the RC.
 
 It's something important to note that when filling the holes, we can't use dedicated columns like `op0_addr`, since this would break the constraints. For this to work, we either need new columns for holes, or make use of subcolumns, which are explained in their dedicated section. 
 
-No matter which approach is used , either by subcolumns or columns, we will need cells where the constraints of the range check and memory are applied, but not the specific ones related to the instructions. Using these columns, we can fill the holes without breaking the constraint system.
+No matter which approach is used , either by subcolumns or columns, we will need cells where the constraints of the range check and memory are applied, but not the specific ones related to the instructions. 
+
+Finally, using these columns, we can fill the holes without breaking the constraint system.
 
 #### Dummy memory accesses
 
