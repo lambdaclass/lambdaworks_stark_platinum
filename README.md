@@ -419,7 +419,7 @@ so $`t(x) - P(x)`$ has $`1`$ and $`g`$ as roots. Showing these values are roots 
 To convince the verifier that the transition constraints are satisfied, we construct the `transition constraint polynomial` and call it $`C(x)`$. It's defined as follows:
 
 ```math
-C(x) = \frac{t(xg^2) - t(xg) - t(x)}{\prod_{i} (x - g^i)}
+C(x) = \frac{t(xg^2) - t(xg) - t(x)}{\prod_{0 \leq i \leq 5} (x - g^i)}
 ```
 
 How does $`C`$ encode the transition constraints? We mentioned above that these are satisfied if the polynomial in the numerator vanishes in the elements $`\{g^0, g^1, g^2, g^3, g^4, g^5\}`$. As with $`B`$, this is the same as showing that $`C(x)`$ is a polynomial instead of a rational function.
