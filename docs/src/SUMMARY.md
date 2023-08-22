@@ -10,5 +10,6 @@
 - [Cairo](./starks/cairo.md)
     - [Trace](./starks/cairo_trace.md)
     - [RAP](./starks/cairo_rap.md)
+    - [Virtual Columns](./starks/virtual_cols.md)
+    - [Built-ins](./starks/builtins.md)
     - [CLI](./starks/cairo_cli.md)
-
