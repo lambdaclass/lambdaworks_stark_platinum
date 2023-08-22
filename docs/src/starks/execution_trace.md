@@ -120,11 +120,32 @@ In the case of memory, something similar happens, where the values should be con
 To fix this, holes in the memory cells are filled, just like the ones of the RC. Dummy memory accesses
 #### Dummy memory accesses
 
-As explained in section 9.8 of the Cairo paper, we need to prove that memory used extends the public memory. This public memory contains the bytecode that was executed, outputs, and other data.
 
-The first is critical for the verifier to not only know that something was executed correctly but to know what was executed.
+As part of proving the execution of a Cairo program, we need to prove that memory used by the program extends the public memory. This is important since public memory contains for example the bytecode that was executed and the outputs.
 
-To make this check, we need to add dummy accesses on the memory cells with address 0 and value 0, which helps us prove it was used by changing the final value of the constraints that ensure that the memory is continuous and read-only.
+The bytecode is something critical for the verifier to not only know that something was executed correctly but to know what was executed.
+
+To do this, we the permutation check, which that proves the memory is continuous and single-valued
+
+To do this, the permutation check of the memory is modified.
+
+Initially, we had $ M $, $ V $ and $ M' $, $ V' $ pairs of memory addresses and values, where $ M $ and $ V $ are the values as used and without order, and $ M' $, $ V' $ the pairs ordered by address. 
+
+For the public memory, we will add it directly to $ M' $, $ V' $. We also need to add dummy accesses to the pairs $ M $ $ V $. These dummy accesses are just pairs of $(M, V) = (0,0)$.
+
+This change makes the statement that $ (M', V') $ is a permutation of $ (M, V) $, which means that they are the same values in a different order, no longer true. This means that the two cumulative products used to check the statement are no longer equal, and their division 
+
+Luckily, we can know the new expected value on the verifier, since we have access to the public memory. Even more, it's this fact that enables the verifier to check the memory is an extension of the public memory. 
+
+The math is quite straightforward. When the memory was the same, we expected a final value $ p_{n-1} = 1 $. This came from two cumulative products that should equal, one from the unordered pairs, and one from the ordered ones.
+
+Now, adding zeros to one side and the real values to the other unbalances the cumulative products, so the verifier will need to balance it by dividing $ p_{n-1} $ by the extra factors that appeared with the addition of the public memory. Doing so will make the final value $ 1 $ again.
+
+Since they only depend on the public memory, the verifier has enough data to recalculate them and use them. Even more, if the prover lies, the equality that the verifier is expecting won't hold.
+
+In reality, instead of dividing and expecting the result to equal to $ 1 $, we can just check the equality against the new expected value, and avoid doing that inversion.
+
+All of this is explained in section 9.8 of the Cairo paper. 
 #### Trace extension / Padding
 
 The last step is padding the trace to a power of two for efficiency. We may also need to pad the trace if for some reason some unbalance is given by the layout.
