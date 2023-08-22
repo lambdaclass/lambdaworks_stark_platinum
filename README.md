@@ -513,13 +513,17 @@ We summarize below the steps required in a STARK proof for both prover and verif
 
 - Take the evaluations $`H(z)`$, $`H(x_0)`$, $`t(z)`$, $`t(zg)`$, $`t(zg^2)`$ and $`t(x_0)`$ the prover provided.
 - Reconstruct the evaluations $`B(z)`$ and $`C(z)`$ from the trace evaluations we were given. Check that the claimed evaluation $`H(z)`$ the prover gave us actually satisfies
-    ```math
-    H(z) = B(z) (\alpha_1 z^{D - deg(B)} + \beta_1) + C(z) (\alpha_2 z^{D - deg(C)} + \beta_2)
-    ```
+
+```math
+H(z) = B(z) (\alpha_1 z^{D - deg(B)} + \beta_1) + C(z) (\alpha_2 z^{D - deg(C)} + \beta_2)
+```
+
 - Check that the claimed evaluation $`Deep(x_0)`$ the prover gave us actually satisfies
-    ```math
-    Deep(x_0) = \gamma_1 \dfrac{H(x_0) - H(z)}{x_0 - z} + \gamma_2 \dfrac{t(x_0) - t(z)}{x_0 - z} + \gamma_3 \dfrac{t(x_0) - t(zg)}{x_0 - zg} + \gamma_4 \dfrac{t(x_0) - t(zg^2)}{x_0 - zg^2}
-    ```
+
+```math
+Deep(x_0) = \gamma_1 \dfrac{H(x_0) - H(z)}{x_0 - z} + \gamma_2 \dfrac{t(x_0) - t(z)}{x_0 - z} + \gamma_3 \dfrac{t(x_0) - t(zg)}{x_0 - zg} + \gamma_4 \dfrac{t(x_0) - t(zg^2)}{x_0 - zg^2}
+```
+
 - Using the merkle root and the merkle proof the prover provided, check that $`t(x_0)`$ belongs to the trace.
 - Take the provided `FRI` commitment and check that it verifies.
 
