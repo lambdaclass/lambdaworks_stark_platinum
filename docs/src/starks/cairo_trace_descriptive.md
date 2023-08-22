@@ -116,7 +116,12 @@ This is explained in section 9.9 of the Cairo Paper
 
 In the case of memory, something similar happens, where the values should be continuous, but if there are built-ins, this may not be the case. For example, the built-in may be using addresses in ranges higher than the ones used by the program. 
 
-To fix this, holes in the memory cells are filled, just like the ones of the RC. Dummy memory accesses
+To fix this, holes in the memory cells are filled, just like the ones of the RC. 
+
+It's something important to note that when filling the holes, we can't use dedicated columns like `op0_addr`, since this would break the constraints. For this to work, we either need new columns for holes, or make use of subcolumns, which are explained in their dedicated section. 
+
+No matter which approach is used , either by subcolumns or columns, we will need cells where the constraints of the range check and memory are applied, but not the specific ones related to the instructions. Using these columns, we can fill the holes without breaking the constraint system.
+
 #### Dummy memory accesses
 
 As part of proving the execution of a Cairo program, we need to prove that memory used by the program extends the public memory. This is important since public memory contains for example the bytecode that was executed and the outputs.
@@ -144,6 +149,7 @@ Since they only depend on the public memory, the verifier has enough data to rec
 In reality, instead of dividing and expecting the result to equal to $ 1 $, we can just check the equality against the new expected value, and avoid doing that inversion.
 
 All of this is explained in section 9.8 of the Cairo paper. 
+
 #### Trace extension / Padding
 
 The last step is padding the trace to a power of two for efficiency. We may also need to pad the trace if for some reason some unbalance is given by the layout.
