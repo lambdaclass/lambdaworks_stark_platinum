@@ -884,6 +884,7 @@ In our cases the sets $A$ will be of the form $A=(f(a), f(ab), f(ab^2), \dots, f
 ##### Build proof
 
 - Send the proof to the verifier:
+
 $$
 \begin{align}
 \Pi = ( &\\
