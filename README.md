@@ -1501,8 +1501,8 @@ The verifier sends challenges $\alpha, z \in \mathbb{F}$ (or the prover samples 
 1. Define $M_{\text{Mem}}\in\mathbb{F}^{2^{n+2}\times 2}$ to be the matrix with columns $a$, $v$.
 1. Define $M_{\text{MemRepl}}\in\mathbb{F}^{2^{n+2}\times 2}$ to be the matrix that's equal to $M_{\text{Mem}}$ in the first $2^{n+2} - L_{\text{pub}}$ rows, and its last $L_{\text{pub}}$ entries are the addresses and values of the actual public memory (program code).
 1. Sort $M_{\text{MemRepl}}$ by the first column in increasing order. The result is a matrix $M_{\text{MemReplSorted}}$ of size $2^{n+2}\times 2$. Denote its columns by $a'$ and $v'$.
-1. Compute the vector $p$ of size $2^{n+2}$ with entries 
-$$ p_i := \prod_{j=0}^i\frac{z - (a_i' + \alpha v_i')}{z - (a_i + \alpha v_i)}$$
+1. Compute the vector $p$ of size $2^{n+2}$ with entries
+   $$p_i := \prod_{j=0}^i\frac{z - (a_i' + \alpha v_i')}{z - (a_i + \alpha v_i)}$$
 1. Reshape the matrix $M_{\text{MemReplSorted}}$ into a $2^n\times 8$ in row-major. Reshape the vector $p$ into a $2^n \times 4$ matrix in row-major.
 1. Concatenate these 12 rows. The result is a matrix $M_\text{MemRAP2}$ of size $2^n \times 12$
 
@@ -1511,7 +1511,7 @@ The verifier sends challenge $z' \in \mathbb{F}$. Further columns are added to i
 1. Stack the rows of the submatrix of $T$ defined by the columns in the group `offsets` into a vector $b$ of length $3\cdot 2^n$.
 1. Sort the values of $b$ in increasing order. Let $b'$ be the result.
 1. Compute the vector $p'$ of size $3\cdot 2^n$ with entries
-$$ p_i' := \prod_{j=0}^i\frac{z' - b_i'}{z' - b_i}$$
+   $$p_i' := \prod_{j=0}^i\frac{z' - b_i'}{z' - b_i}$$
 1. Reshape $b'$ and $p'$ into matrices of size $2^n \times 3$ each and concatenate them into a matrix $M_\text{RangeCheckRAP2}$ of size $2^n \times 6$.
 1. Concatenate $M_\text{MemRAP2}$ and $M_\text{RangeCheckRAP2}$ into a matrix $M_\text{RAP2}$ of size $2^n \times 18$.
 
