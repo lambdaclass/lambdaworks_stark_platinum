@@ -974,12 +974,13 @@ Check that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
     - Solve the following system of equations on the variables $G, H$
 
   $$
-  \pi_k^{\upsilon_s^{2^{k}}} = G + \upsilon_s^{2^k}H
+  5123
   $$
 
   $$
-  \pi_k^{-\upsilon_s^{2^{k}}} = G - \upsilon_s^{2^k}H
+ 23123
   $$
+
       - Define $`\pi_{k+1}^{\upsilon_s^{2^{k+1}}}:=G + \zeta_{k}H`$
     - Check that $`\pi_n^{\upsilon_s^{2^n}}`$ is equal to $`\pi`$.
 
