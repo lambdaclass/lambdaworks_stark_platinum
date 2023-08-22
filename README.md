@@ -1184,14 +1184,10 @@ We will once again use the fibonacci example as an ilustration. Recall from the 
 
 - Take the evaluation $H(z)$ along with the trace evaluations the prover provided.
 - Reconstruct the evaluations $B(z)$ and $C(z)$ from the trace evaluations. Check that the claimed evaluation $H(z)$ the prover gave us actually satisfies
-    ```math
-    H(z) = B(z) (\alpha_1 z^{D - deg(B)} + \beta_1) + C(z) (\alpha_2 z^{D - deg(C)} + \beta_2)
-    ```
+    $$H(z) = B(z) (\alpha_1 z^{D - deg(B)} + \beta_1) + C(z) (\alpha_2 z^{D - deg(C)} + \beta_2)$$
 - Take the evaluations $H(x_0)$ and $t(x_0)$.
 - Check that the claimed evaluation $Deep(x_0)$ the prover gave us actually satisfies
-    ```math
-    Deep(x_0) = \gamma_1 \dfrac{H(x_0) - H(z)}{x_0 - z} + \gamma_2 \dfrac{t(x_0) - t(z)}{x_0 - z} + \gamma_3 \dfrac{t(x_0) - t(zg)}{x_0 - zg} + \gamma_4 \dfrac{t(x_0) - t(zg^2)}{x_0 - zg^2}
-    ```
+    $$Deep(x_0) = \gamma_1 \dfrac{H(x_0) - H(z)}{x_0 - z} + \gamma_2 \dfrac{t(x_0) - t(z)}{x_0 - z} + \gamma_3 \dfrac{t(x_0) - t(zg)}{x_0 - zg} + \gamma_4 \dfrac{t(x_0) - t(zg^2)}{x_0 - zg^2}$$
 - Take the provided `FRI` commitment and check that it verifies.
 - Using the merkle root and the merkle proof the prover provided, check that $t(x_0)$ belongs to the trace.
 
@@ -1208,10 +1204,7 @@ Following along the code in the `prove` and `verify` functions, most of it maps 
 This is possibly the most complex part of the code, so what follows is a long explanation for it.
 
 In our fibonacci example, after obtaining the trace polynomial `t` by interpolating, the transition constraint polynomial is
-
-$$
-C(x) = \dfrac{t(xg^2) - t(xg) - t(x)}{\prod_{i = 0}^{5} (x - g^i)}
-$$
+$$C(x) = \dfrac{t(xg^2) - t(xg) - t(x)}{\prod_{0 \leq i \leq 5} (x - g^i)}$$
 
 On our `prove` code, if someone passes us a fibonacci `AIR` like the one we showed above used in one of our tests, we somehow need to construct $C(x)$. However, what we are given is not a polynomial, but rather this method
 
@@ -1273,7 +1266,7 @@ With this in hand, we just call
 
 ```rust
 let composition_poly =  
-    constraint_evaluations.compute_composition_poly(&   lde_roots_of_unity_coset);
+    constraint_evaluations.compute_composition_poly(&lde_roots_of_unity_coset);
 ```
 
 which simply interpolates the sum of all evaluations to obtain `H`.
@@ -1298,23 +1291,27 @@ $$
 
 as the zerofier ones we can compute easily. These become:
 
-$$
-t(\omega^0 g^2) - t(\omega^0 g) - t(\omega^0) \\
-t(\omega g^2) - t(\omega g) - t(\omega) \\
-t(\omega^2 g^2) - t(\omega^2 g) - t(\omega^2) \\
-\vdots \\
-t(\omega^{15} g^2) - t(\omega^{15} g) - t(\omega^{15}) \\
-$$
+$$t(\omega^0 g^2) - t(\omega^0 g) - t(\omega^0)$$
+
+$$t(\omega g^2) - t(\omega g) - t(\omega)$$
+
+$$t(\omega^2 g^2) - t(\omega^2 g) - t(\omega^2)$$
+
+$$\vdots$$
+
+$$t(\omega^{15} g^2) - t(\omega^{15} g) - t(\omega^{15})$$
 
 If we remember that $\omega^2 = g$, this is
 
-$$
-t(\omega^4) - t(\omega^2) - t(\omega^0) \\
-t(\omega^5) - t(\omega^3) - t(\omega) \\
-t(\omega^6) - t(\omega^4) - t(\omega^2) \\
-\vdots \\
-t(\omega^{3}) - t(\omega) - t(\omega^{15}) \\
-$$
+$$t(\omega^4) - t(\omega^2) - t(\omega^0)$$
+
+$$t(\omega^5) - t(\omega^3) - t(\omega)$$
+
+$$t(\omega^6) - t(\omega^4) - t(\omega^2)$$
+
+$$\vdots$$
+
+$$t(\omega^{3}) - t(\omega) - t(\omega^{15})$$
 
 and we can compute each evaluation here by calling `compute_transition` on the appropriate frame built from the `lde_trace`. Specifically, for the first evaluation we can build the frame:
 
