@@ -584,7 +584,7 @@ For our `LDE`, we chose $`16`$-th roots of unity, but we could have chosen any o
 
 ## Protocol Overview
 
-In this section, we start diving deeper before showing the formal protocol. If you haven't done so, we recommend first reading the "Recap" section.
+In this section, we start diving deeper into the protocol before showing its formal description. If you haven't done so, we recommend first reading the "Recap" section.
 
 At a high level, the protocol works as follows. The starting point is a matrix $T$ that encodes the trace of a valid execution of the program. This matrix needs to be in a special format so that its correctness is equivalent to checking a finite number of polynomial equations on its rows. Transforming the execution to this matrix is what's called the arithmetization process.
 
@@ -793,7 +793,7 @@ Both prover and verifier compute the following.
 
 Given a vector $A=(y_0, \dots, y_L)$. The operation $\text{Commit}(A)$ returns the root $r$ of the Merkle tree that has the hash of the elements of $A$ as leaves.
 
-For $i\in[0,2^{n+k})$, the operation $\text{open}(A, i)$ returns $y_i$ and the authentication path $s$ to the Merkle tree root.
+For $i\in[0,2^{n+k})$, the operation $\text{Open}(A, i)$ returns $y_i$ and the authentication path $s$ to the Merkle tree root.
 
 The operation $\text{Verify}(i,y,r,s)$ returns _Accept_ or _Reject_ depending on whether the $i$-th element of $A$ is $y$. It checks whether the authentication path $s$ is compatible with $i$, $y$ and the Merkle tree root $r$.
 
