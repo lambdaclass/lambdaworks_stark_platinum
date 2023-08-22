@@ -295,7 +295,7 @@ Let's say our computation consists of calculating the `k`-th number in the fibon
 a_0 = 1 \\
 a_1 = 1 \\
 a_{n+2} = a_{n + 1} + a_n \\
-```math
+```
 
 An execution trace for this just consists of a table with one column, where each row is the `i`-th number in the sequence:
 
