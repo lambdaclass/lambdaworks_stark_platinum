@@ -363,9 +363,9 @@ The first step is to interpolate these values to generate the `trace polynomial`
 
 With `g` in hand, we take the trace polynomial `t` to be the one satisfying
 
-$`
+```math
 t(g^i) = a_i
-`$
+```
 
 From here onwards, we will talk about the validity of the trace in terms of properties that this polynomial must satisfy. We will also implicitly identify a certain power of $`g`$ with its corresponding trace element, so for example we sometimes think of $`g^5`$ as $`a_5`$, the fifth row in the trace, even though technically it's $`t`$ *evaluated in* $`g^5`$ that equals $`a_5`$.
 
@@ -387,46 +387,49 @@ To convince the verifier that the trace polynomial satisfies the relationships a
 
 To show that the boundary constraints are satisfied, we construct the `boundary polynomial`. Recall that our boundary constraints are $`t(g^0) = t(g) = 1`$. Let's call $`P`$ the polynomial that interpolates these constraints, that is, $`P`$ satisfies:
 
-$`
-P(1) = 1 \\
+```math
+P(1) = 1
+```
+
+```math
 P(g) = 1
-`$
+```
 
 The boundary polynomial $`B`$ is defined as follows:
 
-$`
+```math
 B(x) = \dfrac{t(x) - P(x)}{(x - 1) (x - g)}
-`$
+```
 
 The denominator here is called the `boundary zerofier`, and it's the polynomial whose roots are the elements of the trace where the boundary constraints must hold.
 
 How does $`B`$ encode the boundary constraints? The idea is that, if the trace satisfies said constraints, then
 
-$`
+```math
 t(1) - P(1) = 1 - 1 = 0 \\
-`$
+```
 
-$`
+```math
 t(g) - P(g) = 1 - 1 = 0
-`$
+```
 
 so $`t(x) - P(x)`$ has $`1`$ and $`g`$ as roots. Showing these values are roots is the same as showing that $`B(x)`$ is a polynomial instead of a rational function, and that's why we construct $`B`$ this way.
 
 #### Transition constraint polynomial
 To convince the verifier that the transition constraints are satisfied, we construct the `transition constraint polynomial` and call it $`C(x)`$. It's defined as follows:
 
-$`
+```math
 C(x) = \dfrac{t(xg^2) - t(xg) - t(x)}{\prod_{i = 0}^{5} (x - g^i)}
-`$
+```
 
 How does $`C`$ encode the transition constraints? We mentioned above that these are satisfied if the polynomial in the numerator vanishes in the elements $`\{g^0, g^1, g^2, g^3, g^4, g^5\}`$. As with $`B`$, this is the same as showing that $`C(x)`$ is a polynomial instead of a rational function.
 
 #### Constructing $`H`$
 With the boundary and transition constraint polynomials in hand, we build the `composition polynomial` $`H`$ as follows: The verifier will sample four numbers $`\alpha_1, \alpha_2, \beta_1, \beta_2`$ and $`H`$ will be
 
-$$
+```math
 H(x) = B(x) (\alpha_1 x^{D - deg(B)} + \beta_1) + C(x) (\alpha_2 x^{D - deg(C)} + \beta_2)
-$$
+```
 
 where $`D`$ is the smallest power of two greater than the degrees of both $`B`$ and $`C`$, so for example if $`deg(B) = 3`$ and $`deg(C) = 6`$, then $`D = 8`$.
 
@@ -446,9 +449,9 @@ After commiting to `H`, the prover needs to show that `H` was constructed correc
 
 Because the boundary and transition constraints are a public part of the protocol, the verifier knows them, and thus the only thing it needs to compute the evaluation $`(z)`$ by itself are the three trace evaluations mentioned above. Because it asked the prover for them, it can check both sides of the equation:
 
-$$
+```math
 H(z) = B(z) (\alpha_1 z^{D - deg(B)} + \beta_1) + C(z) (\alpha_2 z^{D - deg(C)} + \beta_2)
-$$
+```
 
 and be convinced that $`H`$ was constructed correctly.
 
@@ -463,9 +466,9 @@ There are two things left the prover needs to show to complete the proof:
 
 Earlier we said we would use the `FRI` protocol to commit to `H` and show the first item in the list. However, we can slightly modify the polynomial we do `FRI` on to show both the first and second items at the same time. This new modified polynomial is called the `DEEP` composition polynomial. We define it as follows:
 
-$$
+```math
 Deep(x) = \gamma_1 \dfrac{H(x) - H(z)}{x - z} + \gamma_2 \dfrac{t(x) - t(z)}{x - z} + \gamma_3 \dfrac{t(x) - t(zg)}{x - zg} + \gamma_4 \dfrac{t(x) - t(zg^2)}{x - zg^2}
-$$
+```
 
 where the numbers $`\gamma_i`$ are randomly sampled by the verifier.
 
@@ -484,9 +487,9 @@ Where `z` is the same random, out of domain point used in the consistency check 
 
 With the values provided by the prover, the verifier can check both sides of the equation:
 
-$$
+```math
 Deep(x_0) = \gamma_1 \dfrac{H(x_0) - H(z)}{x_0 - z} + \gamma_2 \dfrac{t(x_0) - t(z)}{x_0 - z} + \gamma_3 \dfrac{t(x_0) - t(zg)}{x_0 - zg} + \gamma_4 \dfrac{t(x_0) - t(zg^2)}{x_0 - zg^2}
-$$
+```
 
 The prover also needs to show that the trace evaluation $`t(x_0)`$ belongs to the trace. To achieve this, it needs to commit the merkle roots of `t` and the merkle proof of $`t(x_0)`$.
 
@@ -510,13 +513,13 @@ We summarize below the steps required in a STARK proof for both prover and verif
 
 - Take the evaluations $`H(z)`$, $`H(x_0)`$, $`t(z)`$, $`t(zg)`$, $`t(zg^2)`$ and $`t(x_0)`$ the prover provided.
 - Reconstruct the evaluations $`B(z)`$ and $`C(z)`$ from the trace evaluations we were given. Check that the claimed evaluation $`H(z)`$ the prover gave us actually satisfies
-    $$
+    ```math
     H(z) = B(z) (\alpha_1 z^{D - deg(B)} + \beta_1) + C(z) (\alpha_2 z^{D - deg(C)} + \beta_2)
-    $$
+    ```
 - Check that the claimed evaluation $`Deep(x_0)`$ the prover gave us actually satisfies
-    $$
+    ```math
     Deep(x_0) = \gamma_1 \dfrac{H(x_0) - H(z)}{x_0 - z} + \gamma_2 \dfrac{t(x_0) - t(z)}{x_0 - z} + \gamma_3 \dfrac{t(x_0) - t(zg)}{x_0 - zg} + \gamma_4 \dfrac{t(x_0) - t(zg^2)}{x_0 - zg^2}
-    $$
+    ```
 - Using the merkle root and the merkle proof the prover provided, check that $`t(x_0)`$ belongs to the trace.
 - Take the provided `FRI` commitment and check that it verifies.
 
@@ -534,9 +537,9 @@ The general idea, however, remains the same. The deep composition polynomial `H`
 
 Much in the same way, our fibonacci `AIR` had only one transition constraint, but there could be several. We will therefore have multiple transition constraint polynomials $`C_1(x), \dots, C_n(x)`$, each of which encodes a different relationship between rows that must be satisfied. Also, because there are multiple trace columns, a transition constraint can mix different trace polynomials. One such constraint could be
 
-$$
+```math
 C_1(x) = t_1(gx) - t_2(x)
-$$
+```
 
 which means "The first column on the next row has to be equal to the second column in the current row".
 
@@ -546,9 +549,9 @@ Again, even though this seems way more complex, the ideas remain the same. The c
 
 In the actual implementation, we won't commit to $`H`$, but rather to a decomposition of $`H`$ into an even term $`H_1(x)`$ and an odd term $`H_2(x)`$, which satisfy
 
-$$
+```math
 H(x) = H_1(x^2) + x H_2(x^2)
-$$
+```
 
 This way, we don't commit to $`H`$ but to $`H_1`$ and $`H_2`$. This is just an optimization at the code level; once again, the ideas remain exactly the same.
 
@@ -567,9 +570,9 @@ Additionally, we also take it so that $`\omega`$ satisfies $`\omega^2 = g`$ ($`g
 
 The evaluation of $`t`$ on the set $`\{\omega^i : 0 \leq i \leq 15\}`$ is called a *low degree extension* (`LDE`) of $`t`$. Notice this is not a new polynomial, they're evaluations of $`t`$ on some set of points. Also note that, because $`\omega^2 = g`$, the `LDE` contains all the evaluations of $`t`$ on the set of powers of $`g`$. In fact,
 
-$$
+```math
     \{t(\omega^{2i}) : 0 \leq i \leq 15\} = \{t(g^i) : 0 \leq i \leq 7\}
-$$
+```
 
 This will be extremely important when we get to implementation.
 
