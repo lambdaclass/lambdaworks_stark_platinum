@@ -980,8 +980,8 @@ Check that $\text{Keccak256}(x || y)$ has $c$ leading zeroes.
   ```math
   \pi_k^{-\upsilon_s^{2^{k}}} = G - \upsilon_s^{2^k}H
   ```
-    - Define $`\pi_{k+1}^{\upsilon_s^{2^{k+1}}}:=G + \zeta_{k}H`$
-  - Check that $`\pi_n^{\upsilon_s^{2^n}}`$ is equal to $`\pi`$.
+      - Define $`\pi_{k+1}^{\upsilon_s^{2^{k+1}}}:=G + \zeta_{k}H`$
+    - Check that $`\pi_n^{\upsilon_s^{2^n}}`$ is equal to $`\pi`$.
 
 ##### Step 4: Verify deep composition polynomial is FRI first layer
 
