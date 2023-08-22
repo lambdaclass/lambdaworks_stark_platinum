@@ -293,7 +293,13 @@ Let's say our computation consists of calculating the `k`-th number in the fibon
 
 ```math
 a_0 = 1 
+```
+
+```math
 a_1 = 1 
+```
+
+```math
 a_{n+2} = a_{n + 1} + a_n 
 ```
 
