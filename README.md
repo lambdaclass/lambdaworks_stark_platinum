@@ -14,8 +14,6 @@
 [tg-url]: https://t.me/+98Whlzql7Hs0MDZh
 
 
-
-
 ## ⚠️ Disclaimer
 
 This prover is still in development and may contain bugs. It is not intended to be used in production yet. 
