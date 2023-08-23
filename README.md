@@ -14,7 +14,7 @@
 [tg-url]: https://t.me/+98Whlzql7Hs0MDZh
 
 
-## [Check out the Documentation](https://lambdaclass.github.io/lambdaworks_stark_platinum)
+## [Documentation](https://lambdaclass.github.io/lambdaworks_stark_platinum)
 
 
 ## ⚠️ Disclaimer
