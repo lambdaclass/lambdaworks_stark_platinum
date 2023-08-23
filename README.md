@@ -235,6 +235,7 @@ The following links, repos and projects have been important in the development o
 - [DEEP FRI](https://eprint.iacr.org/2019/336)
 - [BrainSTARK](https://aszepieniec.github.io/stark-brainfuck/)
 - [Plonky2](https://github.com/mir-protocol/plonky2)
+- [Aztec](https://github.com/AztecProtocol)
 - [Arkworks](https://github.com/arkworks-rs)
 - [Thank goodness it's FRIday](https://vitalik.ca/general/2017/11/22/starks_part_2.html)
 - [Diving DEEP FRI](https://blog.lambdaclass.com/diving-deep-fri/)
