@@ -68,35 +68,35 @@ docker_build_cairo_compiler:
 docker_compile_cairo:
 	docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(OUTPUT)
 
-target/release/cairo-platinum: 
-	cargo build --bin cairo-platinum --release --features instruments
+target/release/cairo-platinum-prover:
+	cargo build --bin cairo-platinum-prover --release --features instruments
 	
-docker_compile_and_run_all: target/release/cairo-platinum
+docker_compile_and_run_all: target/release/cairo-platinum-prover
 	@echo "Compiling program with docker"
 	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --bin cairo-platinum --features instruments --quiet --release prove_and_verify $(PROGRAM).json
+	@cargo run --bin cairo-platinum-prover --features instruments --quiet --release prove_and_verify $(PROGRAM).json
 	@rm $(PROGRAM).json
 
-docker_compile_and_prove: target/release/cairo-platinum
+docker_compile_and_prove: target/release/cairo-platinum-prover
 	@echo "Compiling program with docker"
 	@docker run -v $(ROOT_DIR):/pwd cairo cairo-compile /pwd/$(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --bin cairo-platinum --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
+	@cargo run --bin cairo-platinum-prover --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
 	@rm $(PROGRAM).json
 
-compile_and_run_all: target/release/cairo-platinum
+compile_and_run_all: target/release/cairo-platinum-prover
 	@echo "Compiling program with cairo-compile"
 	@cairo-compile $(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --bin cairo-platinum --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
+	@cargo run --bin cairo-platinum-prover --features instruments --quiet --release prove_and_verify $(PROGRAM).json 
 	@rm $(PROGRAM).json
 
-compile_and_prove: target/release/cairo-platinum
+compile_and_prove: target/release/cairo-platinum-prover
 	@echo "Compiling program with cairo-compile"
 	@cairo-compile $(PROGRAM) > $(PROGRAM).json
 	@echo "Compiling done \n"
-	@cargo run --bin cairo-platinum --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
+	@cargo run --bin cairo-platinum-prover --features instruments --quiet --release prove $(PROGRAM).json $(PROOF_PATH)
 	@rm $(PROGRAM).json
 
 clean:
