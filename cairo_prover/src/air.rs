@@ -1632,12 +1632,8 @@ mod prop_test {
     #[test]
     fn deserialize_and_verify() {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
-        let (main_trace, pub_inputs) = generate_prover_args(
-            &program_content,
-            &None,
-            CairoLayout::Plain,
-        )
-        .unwrap();
+        let (main_trace, pub_inputs) =
+            generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
 
         let proof_options = ProofOptions::default_test_options();
 
@@ -1661,12 +1657,8 @@ mod prop_test {
     #[test]
     fn deserialize_should_not_panic_with_changed_and_sliced_bytes() {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
-        let (main_trace, pub_inputs) = generate_prover_args(
-            &program_content,
-            &None,
-            CairoLayout::Plain,
-        )
-        .unwrap();
+        let (main_trace, pub_inputs) =
+            generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
 
         let proof_options = ProofOptions::default_test_options();
 

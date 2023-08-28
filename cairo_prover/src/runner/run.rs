@@ -9,12 +9,9 @@ use cairo_vm::cairo_run::{self, EncodeTraceError};
 
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
 
-
-
 use cairo_vm::vm::errors::{
     cairo_run_errors::CairoRunError, trace_errors::TraceError, vm_errors::VirtualMachineError,
 };
-
 
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use stark_platinum_prover::trace::TraceTable;
@@ -82,7 +79,7 @@ impl From<TraceError> for Error {
 pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
-    program_content: &[u8]
+    program_content: &[u8],
 ) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
@@ -98,17 +95,14 @@ pub fn run_program(
         secure_run: None,
     };
 
-    let (runner, vm) = match cairo_run::cairo_run(
-        program_content,
-        &cairo_run_config,
-        &mut hint_executor,
-    ) {
-        Ok(runner) => runner,
-        Err(error) => {
-            eprintln!("{error}");
-            panic!();
-        }
-    };
+    let (runner, vm) =
+        match cairo_run::cairo_run(program_content, &cairo_run_config, &mut hint_executor) {
+            Ok(runner) => runner,
+            Err(error) => {
+                eprintln!("{error}");
+                panic!();
+            }
+        };
 
     let relocated_trace = vm.get_relocated_trace().unwrap();
 
@@ -220,12 +214,8 @@ mod tests {
 
         let program_content = std::fs::read(json_filename).unwrap();
 
-        let (register_states, memory, program_size, _rg_in_out) = run_program(
-            None,
-            CairoLayout::AllCairo,
-            &program_content,
-        )
-        .unwrap();
+        let (register_states, memory, program_size, _rg_in_out) =
+            run_program(None, CairoLayout::AllCairo, &program_content).unwrap();
 
         let pub_inputs = PublicInputs::from_regs_and_mem(
             &register_states,

@@ -670,12 +670,8 @@ mod test {
 
         let program_content = std::fs::read(json_filename).unwrap();
 
-        let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
-            None,
-            CairoLayout::AllCairo,
-            &program_content
-        )
-        .unwrap();
+        let (register_states, memory, program_size, _rangecheck_base_end) =
+            run_program(None, CairoLayout::AllCairo, &program_content).unwrap();
         let pub_inputs = PublicInputs::from_regs_and_mem(
             &register_states,
             &memory,

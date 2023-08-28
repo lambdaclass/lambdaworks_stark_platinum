@@ -88,12 +88,8 @@ fn test_prove_cairo_output_and_rc_program() {
 #[test_log::test]
 fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
-    let (main_trace, mut pub_input) = generate_prover_args(
-        &program_content,
-        &None,
-        CairoLayout::Plain,
-    )
-    .unwrap();
+    let (main_trace, mut pub_input) =
+        generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
 
     let proof_options = ProofOptions::default_test_options();
 
@@ -112,12 +108,8 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_range_bounds() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
-    let (main_trace, mut pub_inputs) = generate_prover_args(
-        &program_content,
-        &None,
-        CairoLayout::Plain,
-    )
-    .unwrap();
+    let (main_trace, mut pub_inputs) =
+        generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
 
     let proof_options = ProofOptions::default_test_options();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
@@ -136,12 +128,8 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     // that asserts that the sum of the rc decomposed values is equal to the
     // range-checked value won't hold, and the verifier will reject the proof.
     let program_content = std::fs::read(cairo0_program_path("rc_program.json")).unwrap();
-    let (main_trace, pub_inputs) = generate_prover_args(
-        &program_content,
-        &None,
-        CairoLayout::Small,
-    )
-    .unwrap();
+    let (main_trace, pub_inputs) =
+        generate_prover_args(&program_content, &None, CairoLayout::Small).unwrap();
 
     // The malicious value, we change the previous value to a 35.
     let malicious_rc_value = Felt252::from(35);
@@ -166,12 +154,8 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
     // This value is greater than 2^128, and the verifier should reject the proof built with it.
     let overflowing_rc_value = Felt252::from_hex("0x100000000000000000000000000000001").unwrap();
     let program_content = std::fs::read(cairo0_program_path("rc_program.json")).unwrap();
-    let (register_states, mut malicious_memory, program_size, _) = run_program(
-        None,
-        CairoLayout::Small,
-        &program_content,
-    )
-    .unwrap();
+    let (register_states, mut malicious_memory, program_size, _) =
+        run_program(None, CairoLayout::Small, &program_content).unwrap();
 
     // The malicious value is inserted in memory here.
     malicious_memory.data.insert(27, overflowing_rc_value);
@@ -197,12 +181,8 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
 #[test_log::test]
 fn test_verifier_rejects_proof_with_changed_output() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
-    let (main_trace, pub_inputs) = generate_prover_args(
-        &program_content,
-        &Some(27..28),
-        CairoLayout::Small,
-    )
-    .unwrap();
+    let (main_trace, pub_inputs) =
+        generate_prover_args(&program_content, &Some(27..28), CairoLayout::Small).unwrap();
 
     // The malicious value, we change the previous value to a 100.
     let malicious_output_value = Felt252::from(100);
@@ -238,12 +218,8 @@ fn test_verifier_rejects_proof_with_changed_output() {
 #[test_log::test]
 fn test_verifier_rejects_proof_with_different_security_params() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
-    let (main_trace, pub_inputs) = generate_prover_args(
-        &program_content,
-        &None,
-        CairoLayout::Small,
-    )
-    .unwrap();
+    let (main_trace, pub_inputs) =
+        generate_prover_args(&program_content, &None, CairoLayout::Small).unwrap();
 
     let proof_options_prover = ProofOptions::new_secure(SecurityLevel::Conjecturable80Bits, 3);
 
@@ -261,12 +237,8 @@ fn test_verifier_rejects_proof_with_different_security_params() {
 #[test]
 fn check_simple_cairo_trace_evaluates_to_zero() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
-    let (main_trace, public_input) = generate_prover_args(
-        &program_content,
-        &None,
-        CairoLayout::Plain,
-    )
-    .unwrap();
+    let (main_trace, public_input) =
+        generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
     let mut trace_polys = main_trace.compute_trace_polys();
     let mut transcript = DefaultTranscript::new();
 
@@ -292,12 +264,8 @@ fn check_simple_cairo_trace_evaluates_to_zero() {
 #[test]
 fn deserialize_and_verify() {
     let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
-    let (main_trace, pub_inputs) = generate_prover_args(
-        &program_content,
-        &None,
-        CairoLayout::Plain,
-    )
-    .unwrap();
+    let (main_trace, pub_inputs) =
+        generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
 
     let proof_options = ProofOptions::default_test_options();
 
@@ -321,12 +289,8 @@ fn deserialize_and_verify() {
 #[test]
 fn deserialize_should_not_panic_with_changed_and_sliced_bytes() {
     let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
-    let (main_trace, pub_inputs) = generate_prover_args(
-        &program_content,
-        &None,
-        CairoLayout::Plain,
-    )
-    .unwrap();
+    let (main_trace, pub_inputs) =
+        generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
 
     let proof_options = ProofOptions::default_test_options();
 
