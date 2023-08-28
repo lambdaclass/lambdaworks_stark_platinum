@@ -5,18 +5,17 @@ use crate::execution_trace::build_main_trace;
 use crate::register_states::RegisterStates;
 
 use super::vec_writer::VecWriter;
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_vm::cairo_run::{self, EncodeTraceError};
-use cairo_vm::felt::Felt252;
+
 use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::BuiltinHintProcessor;
-use cairo_vm::hint_processor::cairo_1_hint_processor::hint_processor::Cairo1HintProcessor;
-use cairo_vm::serde::deserialize_program::BuiltinName;
-use cairo_vm::types::{program::Program, relocatable::MaybeRelocatable};
+
+
+
 use cairo_vm::vm::errors::{
     cairo_run_errors::CairoRunError, trace_errors::TraceError, vm_errors::VirtualMachineError,
 };
-use cairo_vm::vm::runners::cairo_runner::{CairoArg, CairoRunner, RunResources};
-use cairo_vm::vm::vm_core::VirtualMachine;
+
+
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use stark_platinum_prover::trace::TraceTable;
 use std::ops::Range;
@@ -60,13 +59,6 @@ impl From<TraceError> for Error {
     }
 }
 
-/// Indicates the version of the Cairo program.
-/// This is used to determine how to parse and run the program.
-pub enum CairoVersion {
-    V0 = 0,
-    V1 = 1,
-}
-
 /// Runs a cairo program in JSON format and returns trace, memory and program length.
 /// Uses [cairo-rs](https://github.com/lambdaclass/cairo-rs/) project to run the program.
 ///
@@ -90,132 +82,31 @@ pub enum CairoVersion {
 pub fn run_program(
     entrypoint_function: Option<&str>,
     layout: CairoLayout,
-    program_content: &[u8],
-    cairo_version: &CairoVersion,
-    proof_mode: bool,
+    program_content: &[u8]
 ) -> Result<(RegisterStates, CairoMemory, usize, Option<Range<u64>>), Error> {
     // default value for entrypoint is "main"
     let entrypoint = entrypoint_function.unwrap_or("main");
 
-    let (vm, runner) = match cairo_version {
-        CairoVersion::V0 => {
-            let trace_enabled = true;
-            let mut hint_executor = BuiltinHintProcessor::new_empty();
-            let cairo_run_config = cairo_run::CairoRunConfig {
-                entrypoint,
-                trace_enabled,
-                relocate_mem: true,
-                layout: layout.as_str(),
-                proof_mode,
-                secure_run: None,
-            };
+    let trace_enabled = true;
+    let mut hint_executor = BuiltinHintProcessor::new_empty();
+    let cairo_run_config = cairo_run::CairoRunConfig {
+        entrypoint,
+        trace_enabled,
+        relocate_mem: true,
+        layout: layout.as_str(),
+        proof_mode: true,
+        secure_run: None,
+    };
 
-            let (runner, vm) = match cairo_run::cairo_run(
-                program_content,
-                &cairo_run_config,
-                &mut hint_executor,
-            ) {
-                Ok(runner) => runner,
-                Err(error) => {
-                    eprintln!("{error}");
-                    panic!();
-                }
-            };
-
-            (vm, runner)
-        }
-        CairoVersion::V1 => {
-            let _args: [usize; 0] = [];
-
-            let casm_contract: CasmContractClass = serde_json::from_slice(program_content).unwrap();
-
-            let program: Program = casm_contract.clone().try_into().unwrap();
-
-            let mut runner = CairoRunner::new(&(program), layout.as_str(), false).unwrap();
-            let mut vm = VirtualMachine::new(true);
-
-            runner
-                .initialize_function_runner_cairo_1(&mut vm, &[BuiltinName::range_check])
-                .unwrap();
-
-            // Implicit Args
-            let syscall_segment = MaybeRelocatable::from(vm.add_memory_segment());
-
-            let builtins: Vec<&'static str> = runner
-                .get_program_builtins()
-                .iter()
-                .map(|b| b.name())
-                .collect();
-
-            let builtin_segment: Vec<MaybeRelocatable> = vm
-                .get_builtin_runners()
-                .iter()
-                .filter(|b| builtins.contains(&b.name()))
-                .flat_map(|b| b.initial_stack())
-                .collect();
-
-            let initial_gas = MaybeRelocatable::from(usize::MAX);
-
-            let mut implicit_args = builtin_segment;
-            implicit_args.extend([initial_gas]);
-            implicit_args.extend([syscall_segment]);
-
-            // Other args
-
-            // Load builtin costs
-            let builtin_costs: Vec<MaybeRelocatable> =
-                vec![0.into(), 0.into(), 0.into(), 0.into(), 0.into()];
-            let builtin_costs_ptr = vm.add_memory_segment();
-            vm.load_data(builtin_costs_ptr, &builtin_costs).unwrap();
-
-            // Load extra data
-            let core_program_end_ptr = (runner.program_base.unwrap() + program.data_len()).unwrap();
-
-            let extra_data_i128 = i128::from_str_radix("208B7FFF7FFF7FFE", 16).unwrap();
-            let extra_data = Felt252::from(extra_data_i128);
-            let program_extra_data: Vec<MaybeRelocatable> =
-                vec![extra_data.into(), builtin_costs_ptr.into()];
-            vm.load_data(core_program_end_ptr, &program_extra_data)
-                .unwrap();
-
-            // Load calldata
-            let calldata_start = vm.add_memory_segment();
-            // let calldata_end = vm.load_data(calldata_start, &args.to_vec()).unwrap();
-
-            // Create entrypoint_args
-
-            let mut entrypoint_args: Vec<CairoArg> = implicit_args
-                .iter()
-                .map(|m| CairoArg::from(m.clone()))
-                .collect();
-            entrypoint_args.extend([
-                MaybeRelocatable::from(calldata_start).into(),
-                // MaybeRelocatable::from(calldata_end).into(),
-                MaybeRelocatable::from(calldata_start).into(),
-            ]);
-            let entrypoint_args: Vec<&CairoArg> = entrypoint_args.iter().collect();
-
-            let mut hint_processor =
-                Cairo1HintProcessor::new(casm_contract.hints.as_slice(), RunResources::default());
-
-            // Run contract entrypoint
-            // We assume entrypoint 0 for only one function
-            let _run_resources = RunResources::default();
-
-            runner
-                .run_from_entrypoint(
-                    0,
-                    &entrypoint_args,
-                    true,
-                    Some(program.data_len() + program_extra_data.len()),
-                    &mut vm,
-                    &mut hint_processor,
-                )
-                .unwrap();
-
-            let _ = runner.relocate(&mut vm, true);
-
-            (vm, runner)
+    let (runner, vm) = match cairo_run::cairo_run(
+        program_content,
+        &cairo_run_config,
+        &mut hint_executor,
+    ) {
+        Ok(runner) => runner,
+        Err(error) => {
+            eprintln!("{error}");
+            panic!();
         }
     };
 
@@ -277,12 +168,11 @@ pub fn run_program(
 
 pub fn generate_prover_args(
     program_content: &[u8],
-    cairo_version: &CairoVersion,
     output_range: &Option<Range<u64>>,
     layout: CairoLayout,
 ) -> Result<(TraceTable<Stark252PrimeField>, PublicInputs), Error> {
     let (register_states, memory, program_size, range_check_builtin_range) =
-        run_program(None, layout, program_content, cairo_version, true)?;
+        run_program(None, layout, program_content)?;
 
     let memory_segments = create_memory_segment_map(range_check_builtin_range, output_range);
 
@@ -334,8 +224,6 @@ mod tests {
             None,
             CairoLayout::AllCairo,
             &program_content,
-            &CairoVersion::V0,
-            false,
         )
         .unwrap();
 

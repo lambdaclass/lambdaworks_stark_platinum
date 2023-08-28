@@ -1,7 +1,7 @@
 use crate::{
     air::{generate_cairo_proof, verify_cairo_proof},
     cairo_layout::CairoLayout,
-    runner::run::{generate_prover_args, CairoVersion},
+    runner::run::generate_prover_args,
     starks::proof::options::ProofOptions,
 };
 use std::ops::Range;
@@ -30,19 +30,8 @@ pub fn test_prove_cairo_program(
 
     let program_content = std::fs::read(file_path).unwrap();
     let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, output_range, layout).unwrap();
+        generate_prover_args(&program_content, output_range, layout).unwrap();
 
-    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
-
-    assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));
-}
-
-/// Loads the program in path, runs it with the Cairo VM, and makes a proof of it
-pub fn test_prove_cairo1_program(file_path: &str, layout: CairoLayout) {
-    let proof_options = ProofOptions::default_test_options();
-    let program_content = std::fs::read(file_path).unwrap();
-    let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V1, &None, layout).unwrap();
     let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
 
     assert!(verify_cairo_proof(&proof, &pub_inputs, &proof_options));

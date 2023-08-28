@@ -620,7 +620,7 @@ mod test {
     use crate::{
         air::{MemorySegmentMap, EXTRA_VAL},
         cairo_layout::CairoLayout,
-        runner::run::{run_program, CairoVersion},
+        runner::run::run_program,
     };
 
     use super::*;
@@ -673,9 +673,7 @@ mod test {
         let (register_states, memory, program_size, _rangecheck_base_end) = run_program(
             None,
             CairoLayout::AllCairo,
-            &program_content,
-            &CairoVersion::V0,
-            false,
+            &program_content
         )
         .unwrap();
         let pub_inputs = PublicInputs::from_regs_and_mem(

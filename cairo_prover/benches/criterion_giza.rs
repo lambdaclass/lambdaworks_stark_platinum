@@ -2,7 +2,7 @@
 use cairo_platinum_prover::{
     air::generate_cairo_proof,
     cairo_layout::CairoLayout,
-    runner::run::{generate_prover_args, CairoVersion},
+    runner::run::generate_prover_args,
 };
 #[cfg(feature = "giza")]
 use criterion::{black_box, measurement::WallTime, BenchmarkGroup};
@@ -88,7 +88,7 @@ fn run_lambdaworks_bench(
 ) {
     let program_content = std::fs::read(program_path).unwrap();
     let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None, layout).unwrap();
+        generate_prover_args(&program_content, &None, layout).unwrap();
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| {

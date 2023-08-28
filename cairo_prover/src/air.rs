@@ -1564,7 +1564,7 @@ mod prop_test {
     use crate::{
         air::{generate_cairo_proof, verify_cairo_proof},
         cairo_layout::CairoLayout,
-        runner::run::{generate_prover_args, CairoVersion},
+        runner::run::generate_prover_args,
         tests::utils::cairo0_program_path,
         Felt252,
     };
@@ -1634,7 +1634,6 @@ mod prop_test {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
         let (main_trace, pub_inputs) = generate_prover_args(
             &program_content,
-            &CairoVersion::V0,
             &None,
             CairoLayout::Plain,
         )
@@ -1664,7 +1663,6 @@ mod prop_test {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
         let (main_trace, pub_inputs) = generate_prover_args(
             &program_content,
-            &CairoVersion::V0,
             &None,
             CairoLayout::Plain,
         )

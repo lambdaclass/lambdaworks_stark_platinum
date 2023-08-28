@@ -1,6 +1,6 @@
 use cairo_platinum_prover::air::{generate_cairo_proof, verify_cairo_proof, PublicInputs};
 use cairo_platinum_prover::cairo_layout::CairoLayout;
-use cairo_platinum_prover::runner::run::{generate_prover_args, CairoVersion};
+use cairo_platinum_prover::runner::run::generate_prover_args;
 use lambdaworks_math::field::fields::fft_friendly::stark_252_prime_field::Stark252PrimeField;
 use lambdaworks_math::traits::{Deserializable, Serializable};
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
@@ -15,14 +15,6 @@ fn generate_proof(
 ) -> Option<(StarkProof<Stark252PrimeField>, PublicInputs)> {
     let timer = Instant::now();
 
-    let cairo_version = if input_path.contains(".casm") {
-        println!("Running casm on CairoVM and generating trace ...");
-        CairoVersion::V1
-    } else {
-        println!("Running program on CairoVM and generating trace ...");
-        CairoVersion::V0
-    };
-
     let Ok(program_content) = std::fs::read(input_path) else {
         println!("Error opening {input_path} file");
         return None;
@@ -32,7 +24,7 @@ fn generate_proof(
     let layout = CairoLayout::Plain;
 
     let Ok((main_trace, pub_inputs)) =
-        generate_prover_args(&program_content, &cairo_version, &None, layout)
+        generate_prover_args(&program_content,&None, layout)
     else {
         println!("Error generating prover args");
         return None;

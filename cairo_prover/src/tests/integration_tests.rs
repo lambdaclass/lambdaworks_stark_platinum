@@ -22,7 +22,7 @@ use crate::{
     },
     cairo_layout::CairoLayout,
     execution_trace::build_main_trace,
-    runner::run::{generate_prover_args, run_program, CairoVersion},
+    runner::run::{generate_prover_args, run_program},
     tests::utils::{cairo0_program_path, test_prove_cairo_program},
     Felt252,
 };
@@ -90,7 +90,6 @@ fn test_verifier_rejects_proof_of_a_slightly_different_program() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
     let (main_trace, mut pub_input) = generate_prover_args(
         &program_content,
-        &CairoVersion::V0,
         &None,
         CairoLayout::Plain,
     )
@@ -115,7 +114,6 @@ fn test_verifier_rejects_proof_with_different_range_bounds() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
     let (main_trace, mut pub_inputs) = generate_prover_args(
         &program_content,
-        &CairoVersion::V0,
         &None,
         CairoLayout::Plain,
     )
@@ -140,7 +138,6 @@ fn test_verifier_rejects_proof_with_changed_range_check_value() {
     let program_content = std::fs::read(cairo0_program_path("rc_program.json")).unwrap();
     let (main_trace, pub_inputs) = generate_prover_args(
         &program_content,
-        &CairoVersion::V0,
         &None,
         CairoLayout::Small,
     )
@@ -173,8 +170,6 @@ fn test_verifier_rejects_proof_with_overflowing_range_check_value() {
         None,
         CairoLayout::Small,
         &program_content,
-        &CairoVersion::V0,
-        false,
     )
     .unwrap();
 
@@ -204,7 +199,6 @@ fn test_verifier_rejects_proof_with_changed_output() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
     let (main_trace, pub_inputs) = generate_prover_args(
         &program_content,
-        &CairoVersion::V0,
         &Some(27..28),
         CairoLayout::Small,
     )
@@ -246,7 +240,6 @@ fn test_verifier_rejects_proof_with_different_security_params() {
     let program_content = std::fs::read(cairo0_program_path("output_program.json")).unwrap();
     let (main_trace, pub_inputs) = generate_prover_args(
         &program_content,
-        &CairoVersion::V0,
         &None,
         CairoLayout::Small,
     )
@@ -270,7 +263,6 @@ fn check_simple_cairo_trace_evaluates_to_zero() {
     let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
     let (main_trace, public_input) = generate_prover_args(
         &program_content,
-        &CairoVersion::V0,
         &None,
         CairoLayout::Plain,
     )
@@ -302,7 +294,6 @@ fn deserialize_and_verify() {
     let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
     let (main_trace, pub_inputs) = generate_prover_args(
         &program_content,
-        &CairoVersion::V0,
         &None,
         CairoLayout::Plain,
     )
@@ -332,7 +323,6 @@ fn deserialize_should_not_panic_with_changed_and_sliced_bytes() {
     let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
     let (main_trace, pub_inputs) = generate_prover_args(
         &program_content,
-        &CairoVersion::V0,
         &None,
         CairoLayout::Plain,
     )
