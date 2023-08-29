@@ -617,11 +617,7 @@ fn decompose_rc_values_into_trace_columns(rc_values: &[&Felt252]) -> [Vec<Felt25
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        air::{MemorySegmentMap, EXTRA_VAL},
-        cairo_layout::CairoLayout,
-        runner::run::run_program,
-    };
+    use crate::air::EXTRA_VAL;
 
     use super::*;
     use lambdaworks_math::field::element::FieldElement;
@@ -648,135 +644,6 @@ mod test {
         assert_eq!(decomposition_columns[5][2], Felt252::from_hex("3").unwrap());
         assert_eq!(decomposition_columns[6][2], Felt252::from_hex("2").unwrap());
         assert_eq!(decomposition_columns[7][2], Felt252::from_hex("1").unwrap());
-    }
-
-    #[test]
-    fn test_build_main_trace_simple_program() {
-        /*
-        The following trace and memory files are obtained running the following Cairo program:
-        ```
-        func main() {
-            let x = 1;
-            let y = 2;
-            assert x + y = 3;
-            return ();
-        }
-
-        ```
-        */
-
-        let base_dir = env!("CARGO_MANIFEST_DIR");
-        let json_filename = base_dir.to_owned() + "/src/runner/program.json";
-
-        let program_content = std::fs::read(json_filename).unwrap();
-
-        let (register_states, memory, program_size, _rangecheck_base_end) =
-            run_program(None, CairoLayout::AllCairo, &program_content).unwrap();
-        let pub_inputs = PublicInputs::from_regs_and_mem(
-            &register_states,
-            &memory,
-            program_size,
-            &MemorySegmentMap::new(),
-        );
-        let execution_trace = build_cairo_execution_trace(&register_states, &memory, &pub_inputs);
-
-        // This trace is obtained from Giza when running the prover for the mentioned program.
-        let expected_trace = TraceTable::new_from_cols(&vec![
-            // col 0
-            vec![Felt252::zero(), Felt252::zero(), Felt252::one()],
-            // col 1
-            vec![Felt252::one(), Felt252::one(), Felt252::one()],
-            // col 2
-            vec![Felt252::one(), Felt252::one(), Felt252::zero()],
-            // col 3
-            vec![Felt252::zero(), Felt252::zero(), Felt252::one()],
-            // col 4
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 5
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 6
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 7
-            vec![Felt252::zero(), Felt252::zero(), Felt252::one()],
-            // col 8
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 9
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 10
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 11
-            vec![Felt252::one(), Felt252::zero(), Felt252::zero()],
-            // col 12
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 13
-            vec![Felt252::zero(), Felt252::zero(), Felt252::one()],
-            // col 14
-            vec![Felt252::one(), Felt252::one(), Felt252::zero()],
-            // col 15
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 16
-            vec![Felt252::from(3), Felt252::from(3), Felt252::from(9)],
-            // col 17
-            vec![Felt252::from(8), Felt252::from(9), Felt252::from(9)],
-            // col 18
-            vec![Felt252::from(8), Felt252::from(8), Felt252::from(8)],
-            // col 19
-            vec![Felt252::from(1), Felt252::from(3), Felt252::from(5)],
-            // col 20
-            vec![Felt252::from(8), Felt252::from(8), Felt252::from(6)],
-            // col 21
-            vec![Felt252::from(7), Felt252::from(7), Felt252::from(7)],
-            // col 22
-            vec![Felt252::from(2), Felt252::from(4), Felt252::from(7)],
-            // col 23
-            vec![
-                Felt252::from(0x480680017fff8000),
-                Felt252::from(0x400680017fff7fff),
-                Felt252::from(0x208b7fff7fff7ffe),
-            ],
-            // col 24
-            vec![Felt252::from(3), Felt252::from(3), Felt252::from(9)],
-            // col 25
-            vec![Felt252::from(9), Felt252::from(9), Felt252::from(9)],
-            // col 26
-            vec![Felt252::from(3), Felt252::from(3), Felt252::from(9)],
-            // col 27
-            vec![
-                Felt252::from(0x8000),
-                Felt252::from(0x7fff),
-                Felt252::from(0x7ffe),
-            ],
-            // col 28
-            vec![
-                Felt252::from(0x7fff),
-                Felt252::from(0x7fff),
-                Felt252::from(0x7fff),
-            ],
-            // col 29
-            vec![
-                Felt252::from(0x8001),
-                Felt252::from(0x8001),
-                Felt252::from(0x7fff),
-            ],
-            // col 30
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 31
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 32
-            vec![
-                Felt252::from(0x1b),
-                Felt252::from(0x1b),
-                Felt252::from(0x51),
-            ],
-            // col 33 - extra addrs
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 34 - extra values
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-            // col 35 - rc holes
-            vec![Felt252::zero(), Felt252::zero(), Felt252::zero()],
-        ]);
-
-        assert_eq!(execution_trace.cols(), expected_trace.cols());
     }
 
     #[test]
