@@ -12,7 +12,7 @@ use super::{
 };
 
 /// AIR is a representation of the Constraints
-pub trait AIR: Clone {
+pub trait AIR {
     type Field: IsFFTField;
     type RAPChallenges;
     type PublicInputs;

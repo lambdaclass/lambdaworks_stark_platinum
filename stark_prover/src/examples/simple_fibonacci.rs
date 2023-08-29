@@ -1,5 +1,5 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::field::{element::FieldElement, traits::IsFFTField};
+use lambdaworks_math::field::{element::FieldElement, traits::{IsFFTField, IsField}};
 
 use crate::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
@@ -10,7 +10,6 @@ use crate::{
     traits::AIR,
 };
 
-#[derive(Clone)]
 pub struct FibonacciAIR<F>
 where
     F: IsFFTField,
@@ -18,6 +17,7 @@ where
     context: AirContext,
     trace_length: usize,
     pub_inputs: FibonacciPublicInputs<F>,
+    constraint_system: ConstraintSystem<F>
 }
 
 #[derive(Clone, Debug)]
@@ -52,10 +52,15 @@ where
             num_transition_exemptions: 1,
         };
 
+        let mut cs = ConstraintSystem::new(vec!["F1"]);
+        
+        cs.add_fibo_constraint(&"F1");
+        
         Self {
             pub_inputs: pub_inputs.clone(),
             context,
             trace_length,
+            constraint_system:  cs
         }
     }
 
@@ -78,11 +83,15 @@ where
         frame: &Frame<Self::Field>,
         _rap_challenges: &Self::RAPChallenges,
     ) -> Vec<FieldElement<Self::Field>> {
-        let first_row = frame.get_row(0);
-        let second_row = frame.get_row(1);
-        let third_row = frame.get_row(2);
+        let res = self.constraint_system.constraints[0].evaluate(
+            &vec![
+                frame.get_row(2).to_vec(),
+                frame.get_row(1).to_vec(),
+                frame.get_row(0).to_vec(),
+            ]
+        );
 
-        vec![third_row[0].clone() - second_row[0].clone() - first_row[0].clone()]
+        vec![res]
     }
 
     fn boundary_constraints(
@@ -126,4 +135,44 @@ pub fn fibonacci_trace<F: IsFFTField>(
     }
 
     TraceTable::new_from_cols(&[ret])
+}
+
+trait Constraint<F: IsField> {
+    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>) -> FieldElement<F>;
+}
+
+
+#[derive(Clone)]
+struct FibonacciConstraint {
+    fibonacci_column: usize
+}
+
+impl<F: IsField> Constraint<F> for FibonacciConstraint {
+    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>) -> FieldElement<F> {
+        &frame[0][self.fibonacci_column] - &frame[1][self.fibonacci_column] - &frame[2][self.fibonacci_column]
+    }
+}
+
+struct ConstraintSystem<F: IsField>{
+    column_names: Vec<String>,
+    constraints: Vec<Box<dyn Constraint<F>>>
+}
+
+impl<F: IsField> ConstraintSystem<F> {
+    fn new(column_names: Vec<&str>) -> Self {
+        Self {
+            column_names: column_names.iter().map(|x| x.to_string()).collect(),
+            constraints: Vec::new()
+        }
+    }
+    
+    fn index(&self, column_name: &String) -> usize {
+        self.column_names.iter().position(|c|c == column_name).unwrap()
+    }
+    
+    fn add_fibo_constraint(&mut self, column_name: &str) {
+        self.constraints.push(Box::new(
+            FibonacciConstraint { fibonacci_column: self.index(&column_name.to_string()) }
+        ));
+    }
 }

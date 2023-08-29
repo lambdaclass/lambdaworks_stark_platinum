@@ -231,14 +231,15 @@ fn round_2_compute_composition_polynomial<F, A>(
 ) -> Round2<F>
 where
     F: IsFFTField,
-    A: AIR<Field = F> + Send + Sync,
+    A: AIR<Field = F>,
     A::RAPChallenges: Send + Sync,
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     // Create evaluation table
-    let evaluator = ConstraintEvaluator::new(air, &round_1_result.rap_challenges);
+    let evaluator = ConstraintEvaluator::<F, A>::new(&air, &round_1_result.rap_challenges);
 
     let constraint_evaluations = evaluator.evaluate(
+        &air,
         &round_1_result.lde_trace,
         domain,
         transition_coeffs,
@@ -535,7 +536,7 @@ pub fn prove<F, A>(
 ) -> Result<StarkProof<F>, ProvingError>
 where
     F: IsFFTField,
-    A: AIR<Field = F> + Send + Sync,
+    A: AIR<Field = F>,
     A::RAPChallenges: Send + Sync,
     FieldElement<F>: ByteConversion + Send + Sync,
 {

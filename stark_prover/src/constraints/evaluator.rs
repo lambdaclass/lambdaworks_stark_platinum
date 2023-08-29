@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use itertools::Itertools;
 use lambdaworks_math::{
     fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
@@ -22,21 +24,23 @@ use crate::traits::AIR;
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
 
 pub struct ConstraintEvaluator<F: IsFFTField, A: AIR> {
-    air: A,
     boundary_constraints: BoundaryConstraints<F>,
+    phantom: PhantomData<A>
 }
+
 impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
     pub fn new(air: &A, rap_challenges: &A::RAPChallenges) -> Self {
         let boundary_constraints = air.boundary_constraints(rap_challenges);
 
         Self {
-            air: air.clone(),
             boundary_constraints,
+            phantom: PhantomData
         }
     }
 
     pub fn evaluate(
         &self,
+        air: &A,
         lde_trace: &TraceTable<F>,
         domain: &Domain<F>,
         alpha_and_beta_transition_coefficients: &[(FieldElement<F>, FieldElement<F>)],
@@ -45,12 +49,11 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
     ) -> ConstraintEvaluationTable<F>
     where
         FieldElement<F>: ByteConversion + Send + Sync,
-        A: Send + Sync,
         A::RAPChallenges: Send + Sync,
     {
         // The + 1 is for the boundary constraints column
         let mut evaluation_table = ConstraintEvaluationTable::new(
-            self.air.context().num_transition_constraints() + 1,
+            air.context().num_transition_constraints() + 1,
             &domain.lde_roots_of_unity_coset,
         );
         let boundary_constraints = &self.boundary_constraints;
@@ -71,8 +74,8 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                 })
                 .collect::<Vec<Vec<FieldElement<F>>>>();
 
-        let trace_length = self.air.trace_length();
-        let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
+        let trace_length = air.trace_length();
+        let composition_poly_degree_bound = air.composition_poly_degree_bound();
         let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
         // Maybe we can do this more efficiently by taking the offset's power and then using successors for roots of unity
         let d_adjustment_power = domain
@@ -120,17 +123,17 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
         #[cfg(all(debug_assertions, not(feature = "parallel")))]
         check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
 
-        let blowup_factor = self.air.blowup_factor();
+        let blowup_factor = air.blowup_factor();
 
         #[cfg(all(debug_assertions, not(feature = "parallel")))]
         let mut transition_evaluations = Vec::new();
 
-        let transition_exemptions = self.air.transition_exemptions();
+        let transition_exemptions = air.transition_exemptions();
 
         let transition_exemptions_evaluations =
             evaluate_transition_exemptions(transition_exemptions, domain);
-        let num_exemptions = self.air.context().num_transition_exemptions;
-        let context = self.air.context();
+        let num_exemptions = air.context().num_transition_exemptions;
+        let context = air.context();
         let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
 
         #[cfg(feature = "parallel")]
@@ -155,7 +158,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
 
         let blowup_factor_order = u64::from(blowup_factor.trailing_zeros());
 
-        let offset = FieldElement::<F>::from(self.air.context().proof_options.coset_offset);
+        let offset = FieldElement::<F>::from(air.context().proof_options.coset_offset);
         let offset_pow = offset.pow(trace_length);
         let one = FieldElement::<F>::one();
         let mut zerofier_evaluations = get_powers_of_primitive_root_coset(
@@ -194,18 +197,18 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                     lde_trace,
                     i,
                     blowup_factor,
-                    &self.air.context().transition_offsets,
+                    &air.context().transition_offsets,
                 );
 
-                let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
+                let evaluations_transition = air.compute_transition(&frame, rap_challenges);
 
                 #[cfg(all(debug_assertions, not(feature = "parallel")))]
                 transition_evaluations.push(evaluations_transition.clone());
 
                 let acc_transition = evaluations_transition
                     .iter()
-                    .zip(&self.air.context().transition_exemptions)
-                    .zip(&self.air.context().transition_degrees)
+                    .zip(&air.context().transition_exemptions)
+                    .zip(&air.context().transition_degrees)
                     .zip(alpha_and_beta_transition_coefficients)
                     .fold(
                         FieldElement::zero(),
@@ -226,8 +229,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                                         * &transition_exemptions_evaluations[0][i]
                                 } else {
                                     // This case is not used for Cairo Programs, it can be improved in the future
-                                    let vector = &self
-                                        .air
+                                    let vector = &air
                                         .context()
                                         .transition_exemptions
                                         .iter()
