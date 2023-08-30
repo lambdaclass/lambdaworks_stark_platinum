@@ -1,4 +1,4 @@
-use std::ops::Div;
+use std::{ops::Div, fmt::Binary};
 
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::{
@@ -17,7 +17,7 @@ use crate::{
     transcript::transcript_to_field,
 };
 
-use super::simple_fibonacci::{ConstraintSystem, PermutationConstraint, FibonacciConstraint};
+use super::simple_fibonacci::{ConstraintSystem, Permutation, Fibonacci};
 
 
 pub struct FibonacciRAP<F>
@@ -66,14 +66,22 @@ where
             num_transition_exemptions: 2,
         };
 
-        let mut cs = ConstraintSystem::<Self::Field>::new(vec!["Fibonacci", "Fibonacci_Permuted", "Z"], vec!["Gamma"]);
-        FibonacciConstraint::add_to(&mut cs, "Fibonacci");
-        PermutationConstraint::add_to(&mut cs,
-            "Z",
-            vec!["Fibonacci".to_string()],
-            vec!["Fibonacci_Permuted".to_string()],
-            "Gamma",
-            "Gamma"
+        let mut cs = ConstraintSystem::<Self::Field>::new(
+            // Columns
+            vec!["FIBONACCI", "FIBONACCI_PERMUTED", "CUMULATIVE", "FLAG"],
+            // Challenges
+            vec!["GAMMA", "ZETA"]
+        );
+
+        // Constraints
+        cs.add_fibonacci_constraint("FIBONACCI");
+        cs.add_binary_constraint("FLAG");
+        cs.add_permutation_constraint(
+            "CUMULATIVE",
+            vec!["FIBONACCI".to_string()],
+            vec!["FIBONACCI_PERMUTED".to_string()],
+            "GAMMA",
+            "ZETA"
         );
 
         Self {
@@ -133,7 +141,7 @@ where
         let mut constraints =
             vec![
                 self.constraint_system.constraints[0].evaluate(&real_frame, &vec![]),
-                self.constraint_system.constraints[1].evaluate(&real_frame, &vec![gamma.clone()])
+                self.constraint_system.constraints[2].evaluate(&real_frame, &vec![gamma.clone(), gamma.clone()])
             ];
 
         constraints
