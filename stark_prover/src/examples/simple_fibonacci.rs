@@ -53,14 +53,7 @@ where
         };
 
         let mut cs = ConstraintSystem::new(vec!["Fibonacci", "Disordered_Fibonacci", "Z"], vec!["Alpha"]);
-        cs.add_fibo_constraint("Fibonacci");
-
-        //cs.add_permutation_constraint(
-        //    &"Z",
-        //    vec!["Fibonacci".to_string()],
-        //    vec!["Disordered_Fibonacci".to_string()],
-        //    vec!["Alpha".to_string()]
-        //);
+        FibonacciConstraint::add_to(&mut cs, "Fibonacci");
 
         Self {
             pub_inputs: pub_inputs.clone(),
@@ -153,6 +146,14 @@ pub struct FibonacciConstraint {
     fibonacci_column: usize
 }
 
+impl FibonacciConstraint {
+    pub fn add_to<F: IsField>(cs: &mut ConstraintSystem<F>, column_name: &str) {
+        cs.constraints.push(Box::new(
+            Self { fibonacci_column: cs.index(&column_name.to_string()) }
+        ));
+    }
+}
+
 impl<F: IsField> Constraint<F> for FibonacciConstraint {
     fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F> {
         &frame[2][self.fibonacci_column] - &frame[1][self.fibonacci_column] - &frame[0][self.fibonacci_column]
@@ -165,6 +166,20 @@ pub struct PermutationConstraint {
     columns_b: Vec<usize>,
     challenge_z: usize,
     challenge_gamma: usize
+}
+
+impl PermutationConstraint {
+    pub fn add_to<F: IsField>(cs: &mut ConstraintSystem<F>, cumulative: &str, columns_a: Vec<String>, columns_b: Vec<String>, challenge_z: &str, challenge_gamma: &str) {
+        cs.constraints.push(Box::new(
+            Self {
+                cumulative: cs.index(&cumulative.to_string()),
+                columns_a: columns_a.iter().map(|x| cs.index(&x)).collect(),
+                columns_b: columns_b.iter().map(|x| cs.index(&x)).collect(),
+                challenge_gamma: cs.challenge_index(&challenge_gamma.to_string()),
+                challenge_z: cs.challenge_index(&challenge_z.to_string()),
+            }
+        ));
+    }
 }
 
 impl<F: IsField> Constraint<F> for PermutationConstraint {
@@ -203,23 +218,5 @@ impl<F: IsField> ConstraintSystem<F> {
 
     fn challenge_index(&self, column_name: &String) -> usize {
         self.challenges.iter().position(|c|c == column_name).unwrap()
-    }
-    
-    pub fn add_fibo_constraint(&mut self, column_name: &str) {
-        self.constraints.push(Box::new(
-            FibonacciConstraint { fibonacci_column: self.index(&column_name.to_string()) }
-        ));
-    }
-
-    pub fn add_permutation_constraint(&mut self, cumulative: &str, columns_a: Vec<String>, columns_b: Vec<String>, challenge_z: &str, challenge_gamma: &str) {
-        self.constraints.push(Box::new(
-            PermutationConstraint {
-                cumulative: self.index(&cumulative.to_string()),
-                columns_a: columns_a.iter().map(|x| self.index(&x)).collect(),
-                columns_b: columns_b.iter().map(|x| self.index(&x)).collect(),
-                challenge_gamma: self.challenge_index(&challenge_gamma.to_string()),
-                challenge_z: self.challenge_index(&challenge_z.to_string()),
-            }
-        ));
     }
 }

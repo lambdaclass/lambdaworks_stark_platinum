@@ -17,7 +17,7 @@ use crate::{
     transcript::transcript_to_field,
 };
 
-use super::simple_fibonacci::ConstraintSystem;
+use super::simple_fibonacci::{ConstraintSystem, PermutationConstraint, FibonacciConstraint};
 
 
 pub struct FibonacciRAP<F>
@@ -67,8 +67,8 @@ where
         };
 
         let mut cs = ConstraintSystem::<Self::Field>::new(vec!["Fibonacci", "Fibonacci_Permuted", "Z"], vec!["Gamma"]);
-        cs.add_fibo_constraint("Fibonacci");
-        cs.add_permutation_constraint(
+        FibonacciConstraint::add_to(&mut cs, "Fibonacci");
+        PermutationConstraint::add_to(&mut cs,
             "Z",
             vec!["Fibonacci".to_string()],
             vec!["Fibonacci_Permuted".to_string()],
