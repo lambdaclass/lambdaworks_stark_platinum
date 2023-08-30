@@ -25,7 +25,7 @@ use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluatio
 
 pub struct CompositionPolynomial<F: IsFFTField, A: AIR> {
     boundary_constraints: BoundaryConstraints<F>,
-    phantom: PhantomData<A>
+    phantom: PhantomData<A>,
 }
 
 impl<F: IsFFTField, A: AIR + AIR<Field = F>> CompositionPolynomial<F, A> {
@@ -34,7 +34,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> CompositionPolynomial<F, A> {
 
         Self {
             boundary_constraints,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 
@@ -56,14 +56,14 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> CompositionPolynomial<F, A> {
             air.context().num_transition_constraints() + 1,
             &domain.lde_roots_of_unity_coset,
         );
-        
+
         let boundary_evaluation = self.compute_boundary_evaluations(
             air,
             lde_trace,
             domain,
             alpha_and_beta_transition_coefficients,
             alpha_and_beta_boundary_coefficients,
-            rap_challenges
+            rap_challenges,
         );
 
         let blowup_factor = air.blowup_factor();
@@ -347,4 +347,3 @@ where
         })
         .collect()
 }
-

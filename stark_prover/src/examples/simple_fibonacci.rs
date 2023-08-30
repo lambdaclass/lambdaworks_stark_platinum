@@ -1,5 +1,8 @@
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
-use lambdaworks_math::field::{element::FieldElement, traits::{IsFFTField, IsField}};
+use lambdaworks_math::field::{
+    element::FieldElement,
+    traits::{IsFFTField, IsField},
+};
 
 use crate::{
     constraints::boundary::{BoundaryConstraint, BoundaryConstraints},
@@ -17,7 +20,7 @@ where
     context: AirContext,
     trace_length: usize,
     pub_inputs: FibonacciPublicInputs<F>,
-    constraint_system: ConstraintSystem<F>
+    constraint_system: ConstraintSystem<F>,
 }
 
 #[derive(Clone, Debug)]
@@ -52,14 +55,17 @@ where
             num_transition_exemptions: 1,
         };
 
-        let mut cs = ConstraintSystem::new(vec!["Fibonacci", "Disordered_Fibonacci", "Z"], vec!["Alpha"]);
+        let mut cs = ConstraintSystem::new(
+            vec!["Fibonacci", "Disordered_Fibonacci", "Z"],
+            vec!["Alpha"],
+        );
         Fibonacci::add_to(&mut cs, "Fibonacci");
 
         Self {
             pub_inputs: pub_inputs.clone(),
             context,
             trace_length,
-            constraint_system:  cs
+            constraint_system: cs,
         }
     }
 
@@ -88,7 +94,7 @@ where
                 frame.get_row(1).to_vec(),
                 frame.get_row(2).to_vec(),
             ],
-            &Vec::new()
+            &Vec::new(),
         );
 
         vec![res]
@@ -137,8 +143,12 @@ pub fn fibonacci_trace<F: IsFFTField>(
     TraceTable::new_from_cols(&[ret])
 }
 
-pub trait Constraint<F: IsField> {  
-    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F>;
+pub trait Constraint<F: IsField> {
+    fn evaluate(
+        &self,
+        frame: &Vec<Vec<FieldElement<F>>>,
+        challenges: &Vec<FieldElement<F>>,
+    ) -> FieldElement<F>;
 }
 
 pub struct Binary {
@@ -147,34 +157,44 @@ pub struct Binary {
 
 impl Binary {
     pub fn add_to<F: IsField>(cs: &mut ConstraintSystem<F>, binary_column: &str) {
-        cs.constraints.push(Box::new(
-            Self { binary_column: cs.index(&binary_column.to_string()) }
-        ));
+        cs.constraints.push(Box::new(Self {
+            binary_column: cs.index(&binary_column.to_string()),
+        }));
     }
 }
 
 impl<F: IsField> Constraint<F> for Binary {
-    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F> {
+    fn evaluate(
+        &self,
+        frame: &Vec<Vec<FieldElement<F>>>,
+        challenges: &Vec<FieldElement<F>>,
+    ) -> FieldElement<F> {
         (&frame[0][self.binary_column] - FieldElement::one()) * &frame[0][self.binary_column]
     }
 }
 
 #[derive(Clone)]
 pub struct Fibonacci {
-    fibonacci_column: usize
+    fibonacci_column: usize,
 }
 
 impl Fibonacci {
     pub fn add_to<F: IsField>(cs: &mut ConstraintSystem<F>, column_name: &str) {
-        cs.constraints.push(Box::new(
-            Self { fibonacci_column: cs.index(&column_name.to_string()) }
-        ));
+        cs.constraints.push(Box::new(Self {
+            fibonacci_column: cs.index(&column_name.to_string()),
+        }));
     }
 }
 
 impl<F: IsField> Constraint<F> for Fibonacci {
-    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F> {
-        &frame[2][self.fibonacci_column] - &frame[1][self.fibonacci_column] - &frame[0][self.fibonacci_column]
+    fn evaluate(
+        &self,
+        frame: &Vec<Vec<FieldElement<F>>>,
+        challenges: &Vec<FieldElement<F>>,
+    ) -> FieldElement<F> {
+        &frame[2][self.fibonacci_column]
+            - &frame[1][self.fibonacci_column]
+            - &frame[0][self.fibonacci_column]
     }
 }
 
@@ -183,25 +203,34 @@ pub struct Permutation {
     columns_a: Vec<usize>,
     columns_b: Vec<usize>,
     challenge_z: usize,
-    challenge_gamma: usize
+    challenge_gamma: usize,
 }
 
 impl Permutation {
-    pub fn add_to<F: IsField>(cs: &mut ConstraintSystem<F>, cumulative: &str, columns_a: Vec<String>, columns_b: Vec<String>, challenge_z: &str, challenge_gamma: &str) {
-        cs.constraints.push(Box::new(
-            Self {
-                cumulative: cs.index(&cumulative.to_string()),
-                columns_a: columns_a.iter().map(|x| cs.index(&x)).collect(),
-                columns_b: columns_b.iter().map(|x| cs.index(&x)).collect(),
-                challenge_gamma: cs.challenge_index(&challenge_gamma.to_string()),
-                challenge_z: cs.challenge_index(&challenge_z.to_string()),
-            }
-        ));
+    pub fn add_to<F: IsField>(
+        cs: &mut ConstraintSystem<F>,
+        cumulative: &str,
+        columns_a: Vec<String>,
+        columns_b: Vec<String>,
+        challenge_z: &str,
+        challenge_gamma: &str,
+    ) {
+        cs.constraints.push(Box::new(Self {
+            cumulative: cs.index(&cumulative.to_string()),
+            columns_a: columns_a.iter().map(|x| cs.index(&x)).collect(),
+            columns_b: columns_b.iter().map(|x| cs.index(&x)).collect(),
+            challenge_gamma: cs.challenge_index(&challenge_gamma.to_string()),
+            challenge_z: cs.challenge_index(&challenge_z.to_string()),
+        }));
     }
 }
 
 impl<F: IsField> Constraint<F> for Permutation {
-    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F> {
+    fn evaluate(
+        &self,
+        frame: &Vec<Vec<FieldElement<F>>>,
+        challenges: &Vec<FieldElement<F>>,
+    ) -> FieldElement<F> {
         let z = &challenges[self.challenge_z];
         let gamma = challenges[self.challenge_gamma].clone();
 
@@ -215,10 +244,10 @@ impl<F: IsField> Constraint<F> for Permutation {
     }
 }
 
-pub struct ConstraintSystem<F: IsField>{
+pub struct ConstraintSystem<F: IsField> {
     column_names: Vec<String>,
     challenges: Vec<String>,
-    pub constraints: Vec<Box<dyn Constraint<F>>>
+    pub constraints: Vec<Box<dyn Constraint<F>>>,
 }
 
 impl<F: IsField> ConstraintSystem<F> {
@@ -226,24 +255,44 @@ impl<F: IsField> ConstraintSystem<F> {
         Self {
             column_names: column_names.iter().map(|x| x.to_string()).collect(),
             challenges: challenges.iter().map(|x| x.to_string()).collect(),
-            constraints: Vec::new()
+            constraints: Vec::new(),
         }
     }
-    
+
     fn index(&self, column_name: &String) -> usize {
-        self.column_names.iter().position(|c|c == column_name).unwrap()
+        self.column_names
+            .iter()
+            .position(|c| c == column_name)
+            .unwrap()
     }
 
     fn challenge_index(&self, column_name: &String) -> usize {
-        self.challenges.iter().position(|c|c == column_name).unwrap()
+        self.challenges
+            .iter()
+            .position(|c| c == column_name)
+            .unwrap()
     }
 
     pub fn add_fibonacci_constraint(&mut self, column_name: &str) {
         Fibonacci::add_to(self, column_name)
     }
 
-    pub fn add_permutation_constraint(&mut self, cumulative: &str, columns_a: Vec<String>, columns_b: Vec<String>, challenge_z: &str, challenge_gamma: &str) {
-        Permutation::add_to(self, cumulative, columns_a, columns_b, challenge_z, challenge_gamma)
+    pub fn add_permutation_constraint(
+        &mut self,
+        cumulative: &str,
+        columns_a: Vec<String>,
+        columns_b: Vec<String>,
+        challenge_z: &str,
+        challenge_gamma: &str,
+    ) {
+        Permutation::add_to(
+            self,
+            cumulative,
+            columns_a,
+            columns_b,
+            challenge_z,
+            challenge_gamma,
+        )
     }
 
     pub fn add_binary_constraint(&mut self, binary_column: &str) {
