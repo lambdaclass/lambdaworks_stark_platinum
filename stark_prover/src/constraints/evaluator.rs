@@ -23,12 +23,12 @@ use crate::traits::AIR;
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
 
-pub struct ConstraintEvaluator<F: IsFFTField, A: AIR> {
+pub struct CompositionPolynomial<F: IsFFTField, A: AIR> {
     boundary_constraints: BoundaryConstraints<F>,
     phantom: PhantomData<A>
 }
 
-impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
+impl<F: IsFFTField, A: AIR + AIR<Field = F>> CompositionPolynomial<F, A> {
     pub fn new(air: &A, rap_challenges: &A::RAPChallenges) -> Self {
         let boundary_constraints = air.boundary_constraints(rap_challenges);
 
@@ -56,72 +56,15 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
             air.context().num_transition_constraints() + 1,
             &domain.lde_roots_of_unity_coset,
         );
-        let boundary_constraints = &self.boundary_constraints;
-        let number_of_b_constraints = boundary_constraints.constraints.len();
-        let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
-            boundary_constraints
-                .constraints
-                .iter()
-                .map(|bc| {
-                    let point = &domain.trace_primitive_root.pow(bc.step as u64);
-                    let mut evals = domain
-                        .lde_roots_of_unity_coset
-                        .iter()
-                        .map(|v| v.clone() - point)
-                        .collect::<Vec<FieldElement<F>>>();
-                    FieldElement::inplace_batch_inverse(&mut evals);
-                    evals
-                })
-                .collect::<Vec<Vec<FieldElement<F>>>>();
-
-        let trace_length = air.trace_length();
-        let composition_poly_degree_bound = air.composition_poly_degree_bound();
-        let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
-        // Maybe we can do this more efficiently by taking the offset's power and then using successors for roots of unity
-        let d_adjustment_power = domain
-            .lde_roots_of_unity_coset
-            .iter()
-            .map(|d| d.pow(boundary_term_degree_adjustment))
-            .collect::<Vec<FieldElement<F>>>();
-
-        #[cfg(all(debug_assertions, not(feature = "parallel")))]
-        let boundary_polys: Vec<Polynomial<FieldElement<F>>> = Vec::new();
-
-        let n_col = lde_trace.n_cols;
-        let n_elem = domain.lde_roots_of_unity_coset.len();
-        let boundary_polys_evaluations = boundary_constraints
-            .constraints
-            .iter()
-            .map(|constraint| {
-                let col = constraint.col;
-                lde_trace
-                    .table
-                    .iter()
-                    .skip(col)
-                    .step_by(n_col)
-                    .take(n_elem)
-                    .map(|v| v - &constraint.value)
-                    .collect::<Vec<FieldElement<F>>>()
-            })
-            .collect::<Vec<Vec<FieldElement<F>>>>();
-        let boundary_evaluation = (0..domain.lde_roots_of_unity_coset.len())
-            .zip(&d_adjustment_power)
-            .map(|(i, d)| {
-                (0..number_of_b_constraints)
-                    .zip(alpha_and_beta_boundary_coefficients)
-                    .fold(FieldElement::zero(), |acc, (index, (alpha, beta))| {
-                        acc + &boundary_zerofiers_inverse_evaluations[index][i]
-                            * (alpha * d + beta)
-                            * &boundary_polys_evaluations[index][i]
-                    })
-            })
-            .collect::<Vec<FieldElement<F>>>();
-
-        #[cfg(all(debug_assertions, not(feature = "parallel")))]
-        let boundary_zerofiers = Vec::new();
-
-        #[cfg(all(debug_assertions, not(feature = "parallel")))]
-        check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
+        
+        let boundary_evaluation = self.compute_boundary_evaluations(
+            air,
+            lde_trace,
+            domain,
+            alpha_and_beta_transition_coefficients,
+            alpha_and_beta_boundary_coefficients,
+            rap_challenges
+        );
 
         let blowup_factor = air.blowup_factor();
 
@@ -141,6 +84,8 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
 
         #[cfg(not(feature = "parallel"))]
         let degree_adjustments_iter = 1..=max_transition_degree;
+        let trace_length = air.trace_length();
+        let composition_poly_degree_bound = air.composition_poly_degree_bound();
 
         let degree_adjustments: Vec<Vec<FieldElement<F>>> = degree_adjustments_iter
             .map(|transition_degree| {
@@ -261,6 +206,85 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
         evaluation_table
     }
 
+    fn compute_boundary_evaluations(
+        &self,
+        air: &A,
+        lde_trace: &TraceTable<F>,
+        domain: &Domain<F>,
+        alpha_and_beta_transition_coefficients: &[(FieldElement<F>, FieldElement<F>)],
+        alpha_and_beta_boundary_coefficients: &[(FieldElement<F>, FieldElement<F>)],
+        rap_challenges: &A::RAPChallenges,
+    ) -> Vec<FieldElement<F>> {
+        let boundary_constraints = &self.boundary_constraints;
+        let number_of_b_constraints = boundary_constraints.constraints.len();
+        let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
+            boundary_constraints
+                .constraints
+                .iter()
+                .map(|bc| {
+                    let point = &domain.trace_primitive_root.pow(bc.step as u64);
+                    let mut evals = domain
+                        .lde_roots_of_unity_coset
+                        .iter()
+                        .map(|v| v.clone() - point)
+                        .collect::<Vec<FieldElement<F>>>();
+                    FieldElement::inplace_batch_inverse(&mut evals);
+                    evals
+                })
+                .collect::<Vec<Vec<FieldElement<F>>>>();
+
+        let trace_length = air.trace_length();
+        let composition_poly_degree_bound = air.composition_poly_degree_bound();
+        let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
+        // Maybe we can do this more efficiently by taking the offset's power and then using successors for roots of unity
+        let d_adjustment_power = domain
+            .lde_roots_of_unity_coset
+            .iter()
+            .map(|d| d.pow(boundary_term_degree_adjustment))
+            .collect::<Vec<FieldElement<F>>>();
+
+        #[cfg(all(debug_assertions, not(feature = "parallel")))]
+        let boundary_polys: Vec<Polynomial<FieldElement<F>>> = Vec::new();
+
+        let n_col = lde_trace.n_cols;
+        let n_elem = domain.lde_roots_of_unity_coset.len();
+        let boundary_polys_evaluations = boundary_constraints
+            .constraints
+            .iter()
+            .map(|constraint| {
+                let col = constraint.col;
+                lde_trace
+                    .table
+                    .iter()
+                    .skip(col)
+                    .step_by(n_col)
+                    .take(n_elem)
+                    .map(|v| v - &constraint.value)
+                    .collect::<Vec<FieldElement<F>>>()
+            })
+            .collect::<Vec<Vec<FieldElement<F>>>>();
+        let boundary_evaluation = (0..domain.lde_roots_of_unity_coset.len())
+            .zip(&d_adjustment_power)
+            .map(|(i, d)| {
+                (0..number_of_b_constraints)
+                    .zip(alpha_and_beta_boundary_coefficients)
+                    .fold(FieldElement::zero(), |acc, (index, (alpha, beta))| {
+                        acc + &boundary_zerofiers_inverse_evaluations[index][i]
+                            * (alpha * d + beta)
+                            * &boundary_polys_evaluations[index][i]
+                    })
+            })
+            .collect::<Vec<FieldElement<F>>>();
+
+        #[cfg(all(debug_assertions, not(feature = "parallel")))]
+        let boundary_zerofiers = Vec::new();
+
+        #[cfg(all(debug_assertions, not(feature = "parallel")))]
+        check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
+
+        boundary_evaluation
+    }
+
     /// Given `evaluations` T_i(x) of the trace polynomial composed with the constraint
     /// polynomial at a certain point `x`, computes the following evaluations and returns them:
     ///
@@ -323,3 +347,4 @@ where
         })
         .collect()
 }
+

@@ -24,7 +24,7 @@ use crate::debug::validate_trace;
 use crate::transcript::sample_z_ood;
 
 use super::config::{BatchedMerkleTree, Commitment};
-use super::constraints::evaluator::ConstraintEvaluator;
+use super::constraints::evaluator::CompositionPolynomial;
 use super::domain::Domain;
 use super::frame::Frame;
 use super::fri::fri_decommit::FriDecommitment;
@@ -236,7 +236,7 @@ where
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     // Create evaluation table
-    let evaluator = ConstraintEvaluator::<F, A>::new(&air, &round_1_result.rap_challenges);
+    let evaluator = CompositionPolynomial::<F, A>::new(&air, &round_1_result.rap_challenges);
 
     let constraint_evaluations = evaluator.evaluate(
         &air,

@@ -52,10 +52,16 @@ where
             num_transition_exemptions: 1,
         };
 
-        let mut cs = ConstraintSystem::new(vec!["F1"]);
-        
-        cs.add_fibo_constraint(&"F1");
-        
+        let mut cs = ConstraintSystem::new(vec!["Fibonacci", "Disordered_Fibonacci", "Z"], vec!["Alpha"]);
+        cs.add_fibo_constraint("Fibonacci");
+
+        //cs.add_permutation_constraint(
+        //    &"Z",
+        //    vec!["Fibonacci".to_string()],
+        //    vec!["Disordered_Fibonacci".to_string()],
+        //    vec!["Alpha".to_string()]
+        //);
+
         Self {
             pub_inputs: pub_inputs.clone(),
             context,
@@ -88,7 +94,8 @@ where
                 frame.get_row(2).to_vec(),
                 frame.get_row(1).to_vec(),
                 frame.get_row(0).to_vec(),
-            ]
+            ],
+            &Vec::new()
         );
 
         vec![res]
@@ -137,10 +144,9 @@ pub fn fibonacci_trace<F: IsFFTField>(
     TraceTable::new_from_cols(&[ret])
 }
 
-trait Constraint<F: IsField> {
-    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>) -> FieldElement<F>;
+trait Constraint<F: IsField> {  
+    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F>;
 }
-
 
 #[derive(Clone)]
 struct FibonacciConstraint {
@@ -148,20 +154,41 @@ struct FibonacciConstraint {
 }
 
 impl<F: IsField> Constraint<F> for FibonacciConstraint {
-    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>) -> FieldElement<F> {
+    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F> {
         &frame[0][self.fibonacci_column] - &frame[1][self.fibonacci_column] - &frame[2][self.fibonacci_column]
+    }
+}
+
+struct PermutationConstraint {
+    cumulative: usize,
+    columns_a: Vec<usize>,
+    columns_b: Vec<usize>,
+    challenges: Vec<usize>
+}
+
+impl<F: IsField> Constraint<F> for PermutationConstraint {
+    fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F> {
+        let mut columns_a = FieldElement::zero();
+        let mut columns_b = FieldElement::zero();
+        for ((&col_a, &col_b), challenge_col) in self.columns_a.iter().zip(&self.columns_b).zip(challenges) {
+            columns_a = columns_a + &frame[0][col_a] * challenge_col;
+            columns_b = columns_b + &frame[0][col_b] * challenge_col;
+        }
+        columns_a * &frame[0][self.cumulative] - columns_b * &frame[1][self.cumulative]
     }
 }
 
 struct ConstraintSystem<F: IsField>{
     column_names: Vec<String>,
+    challenges: Vec<String>,
     constraints: Vec<Box<dyn Constraint<F>>>
 }
 
 impl<F: IsField> ConstraintSystem<F> {
-    fn new(column_names: Vec<&str>) -> Self {
+    fn new(column_names: Vec<&str>, challenges: Vec<&str>) -> Self {
         Self {
             column_names: column_names.iter().map(|x| x.to_string()).collect(),
+            challenges: challenges.iter().map(|x| x.to_string()).collect(),
             constraints: Vec::new()
         }
     }
@@ -169,10 +196,25 @@ impl<F: IsField> ConstraintSystem<F> {
     fn index(&self, column_name: &String) -> usize {
         self.column_names.iter().position(|c|c == column_name).unwrap()
     }
+
+    fn challenge_index(&self, column_name: &String) -> usize {
+        self.challenges.iter().position(|c|c == column_name).unwrap()
+    }
     
     fn add_fibo_constraint(&mut self, column_name: &str) {
         self.constraints.push(Box::new(
             FibonacciConstraint { fibonacci_column: self.index(&column_name.to_string()) }
+        ));
+    }
+
+    fn add_permutation_constraint(&mut self, cumulative: &str, columns_a: Vec<String>, columns_b: Vec<String>, challenges: Vec<String>) {
+        self.constraints.push(Box::new(
+            PermutationConstraint {
+                cumulative: self.index(&cumulative.to_string()),
+                columns_a: columns_a.iter().map(|x| self.index(&x)).collect(),
+                columns_b: columns_b.iter().map(|x| self.index(&x)).collect(),
+                challenges: challenges.iter().map(|x| self.challenge_index(&x)).collect()
+            }
         ));
     }
 }
