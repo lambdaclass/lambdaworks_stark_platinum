@@ -91,9 +91,9 @@ where
     ) -> Vec<FieldElement<Self::Field>> {
         let res = self.constraint_system.constraints[0].evaluate(
             &vec![
-                frame.get_row(2).to_vec(),
-                frame.get_row(1).to_vec(),
                 frame.get_row(0).to_vec(),
+                frame.get_row(1).to_vec(),
+                frame.get_row(2).to_vec(),
             ],
             &Vec::new()
         );
@@ -144,48 +144,52 @@ pub fn fibonacci_trace<F: IsFFTField>(
     TraceTable::new_from_cols(&[ret])
 }
 
-trait Constraint<F: IsField> {  
+pub trait Constraint<F: IsField> {  
     fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F>;
 }
 
 #[derive(Clone)]
-struct FibonacciConstraint {
+pub struct FibonacciConstraint {
     fibonacci_column: usize
 }
 
 impl<F: IsField> Constraint<F> for FibonacciConstraint {
     fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F> {
-        &frame[0][self.fibonacci_column] - &frame[1][self.fibonacci_column] - &frame[2][self.fibonacci_column]
+        &frame[2][self.fibonacci_column] - &frame[1][self.fibonacci_column] - &frame[0][self.fibonacci_column]
     }
 }
 
-struct PermutationConstraint {
+pub struct PermutationConstraint {
     cumulative: usize,
     columns_a: Vec<usize>,
     columns_b: Vec<usize>,
-    challenges: Vec<usize>
+    challenge_z: usize,
+    challenge_gamma: usize
 }
 
 impl<F: IsField> Constraint<F> for PermutationConstraint {
     fn evaluate(&self, frame: &Vec<Vec<FieldElement<F>>>, challenges: &Vec<FieldElement<F>>) -> FieldElement<F> {
-        let mut columns_a = FieldElement::zero();
-        let mut columns_b = FieldElement::zero();
-        for ((&col_a, &col_b), challenge_col) in self.columns_a.iter().zip(&self.columns_b).zip(challenges) {
-            columns_a = columns_a + &frame[0][col_a] * challenge_col;
-            columns_b = columns_b + &frame[0][col_b] * challenge_col;
+        let z = &challenges[self.challenge_z];
+        let gamma = challenges[self.challenge_gamma].clone();
+
+        let mut columns_a = z.clone();
+        let mut columns_b = z.clone();
+        for (i, (&col_a, &col_b)) in self.columns_a.iter().zip(&self.columns_b).enumerate() {
+            columns_a = columns_a + &frame[0][col_a] * gamma.pow(i);
+            columns_b = columns_b + &frame[0][col_b] * gamma.pow(i);
         }
         columns_a * &frame[0][self.cumulative] - columns_b * &frame[1][self.cumulative]
     }
 }
 
-struct ConstraintSystem<F: IsField>{
+pub struct ConstraintSystem<F: IsField>{
     column_names: Vec<String>,
     challenges: Vec<String>,
-    constraints: Vec<Box<dyn Constraint<F>>>
+    pub constraints: Vec<Box<dyn Constraint<F>>>
 }
 
 impl<F: IsField> ConstraintSystem<F> {
-    fn new(column_names: Vec<&str>, challenges: Vec<&str>) -> Self {
+    pub fn new(column_names: Vec<&str>, challenges: Vec<&str>) -> Self {
         Self {
             column_names: column_names.iter().map(|x| x.to_string()).collect(),
             challenges: challenges.iter().map(|x| x.to_string()).collect(),
@@ -201,19 +205,20 @@ impl<F: IsField> ConstraintSystem<F> {
         self.challenges.iter().position(|c|c == column_name).unwrap()
     }
     
-    fn add_fibo_constraint(&mut self, column_name: &str) {
+    pub fn add_fibo_constraint(&mut self, column_name: &str) {
         self.constraints.push(Box::new(
             FibonacciConstraint { fibonacci_column: self.index(&column_name.to_string()) }
         ));
     }
 
-    fn add_permutation_constraint(&mut self, cumulative: &str, columns_a: Vec<String>, columns_b: Vec<String>, challenges: Vec<String>) {
+    pub fn add_permutation_constraint(&mut self, cumulative: &str, columns_a: Vec<String>, columns_b: Vec<String>, challenge_z: &str, challenge_gamma: &str) {
         self.constraints.push(Box::new(
             PermutationConstraint {
                 cumulative: self.index(&cumulative.to_string()),
                 columns_a: columns_a.iter().map(|x| self.index(&x)).collect(),
                 columns_b: columns_b.iter().map(|x| self.index(&x)).collect(),
-                challenges: challenges.iter().map(|x| self.challenge_index(&x)).collect()
+                challenge_gamma: self.challenge_index(&challenge_gamma.to_string()),
+                challenge_z: self.challenge_index(&challenge_z.to_string()),
             }
         ));
     }
