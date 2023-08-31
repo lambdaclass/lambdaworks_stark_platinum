@@ -65,9 +65,15 @@ fn run_verifier_bench(
     program_path: &str,
 ) {
     let (proof, pub_inputs) = load_proof_and_pub_inputs(program_path);
-    let proof_options = ProofOptions::new_secure(SecurityLevel::Provable80Bits, 3);
+    let proof_options = ProofOptions::new_secure(SecurityLevel::Conjecturable80Bits, 3);
     group.bench_function(benchname, |bench| {
-        bench.iter(|| black_box(verify_cairo_proof(&proof, &pub_inputs, &proof_options)));
+        bench.iter(|| {
+            assert!(black_box(verify_cairo_proof(
+                &proof,
+                &pub_inputs,
+                &proof_options
+            )))
+        });
     });
 }
 

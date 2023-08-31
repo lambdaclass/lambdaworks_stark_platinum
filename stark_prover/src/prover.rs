@@ -1,11 +1,11 @@
-#[cfg(Felt252ature = "instruments")]
+#[cfg(feature = "instruments")]
 use std::time::Instant;
 
-#[cfg(not(Felt252ature = "test_fiat_shamir"))]
+#[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 
-#[cfg(Felt252ature = "test_fiat_shamir")]
+#[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
 
 use lambdaworks_math::fft::{errors::FFTError, polynomial::FFTPoly};
@@ -16,8 +16,8 @@ use lambdaworks_math::{
 };
 use log::info;
 
-#[cfg(Felt252ature = "parallel")]
-use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+#[cfg(feature = "parallel")]
+use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 #[cfg(debug_assertions)]
 use crate::debug::validate_trace;
@@ -81,12 +81,12 @@ struct Round4<F: IsFFTField> {
     nonce: u64,
 }
 
-#[cfg(Felt252ature = "test_fiat_shamir")]
+#[cfg(feature = "test_fiat_shamir")]
 fn round_0_transcript_initialization() -> TestTranscript {
     TestTranscript::new()
 }
 
-#[cfg(not(Felt252ature = "test_fiat_shamir"))]
+#[cfg(not(feature = "test_fiat_shamir"))]
 fn round_0_transcript_initialization() -> DefaultTranscript {
     // TODO: add strong fiat shamir
     DefaultTranscript::new()
@@ -165,9 +165,9 @@ where
     F: IsFFTField,
     FieldElement<F>: Send + Sync,
 {
-    #[cfg(not(Felt252ature = "parallel"))]
+    #[cfg(not(feature = "parallel"))]
     let trace_polys_iter = trace_polys.iter();
-    #[cfg(Felt252ature = "parallel")]
+    #[cfg(feature = "parallel")]
     let trace_polys_iter = trace_polys.par_iter();
 
     trace_polys_iter
@@ -337,7 +337,7 @@ fn round_4_compute_and_run_fri_on_the_deep_composition_polynomial<
     transcript: &mut T,
 ) -> Round4<F>
 where
-    FieldElement<F>: ByteConversion,
+    FieldElement<F>: ByteConversion + Send + Sync,
 {
     let coset_offset_u64 = air.context().proof_options.coset_offset;
     let coset_offset = FieldElement::<F>::from(coset_offset_u64);
@@ -419,7 +419,7 @@ fn compute_deep_composition_poly<A, F>(
 where
     A: AIR,
     F: IsFFTField,
-    FieldElement<F>: ByteConversion,
+    FieldElement<F>: ByteConversion + Send + Sync,
 {
     // Compute composition polynomial terms of the deep composition polynomial.
     let h_1 = &round_2_result.composition_poly_even;
@@ -448,36 +448,82 @@ where
 
     // @@@ this could be const
     let trace_frame_length = trace_frame_evaluations.len();
+
+    #[cfg(feature = "parallel")]
+    let trace_term = trace_polys
+        .par_iter()
+        .enumerate()
+        .fold(
+            || Polynomial::zero(),
+            |trace_terms, (i, t_j)| {
+                compute_trace_term(
+                    &trace_terms,
+                    (i, t_j),
+                    trace_frame_length,
+                    trace_terms_gammas,
+                    trace_frame_evaluations,
+                    transition_offsets,
+                    (z, primitive_root),
+                )
+            },
+        )
+        .reduce(|| Polynomial::zero(), |a, b| a + b);
+
+    #[cfg(not(feature = "parallel"))]
     let trace_term =
         trace_polys
             .iter()
             .enumerate()
             .fold(Polynomial::zero(), |trace_terms, (i, t_j)| {
-                let i_times_trace_frame_evaluation = i * trace_frame_length;
-                let iter_trace_gammas = trace_terms_gammas
-                    .iter()
-                    .skip(i_times_trace_frame_evaluation);
-                let trace_int = trace_frame_evaluations
-                    .iter()
-                    .zip(transition_offsets)
-                    .zip(iter_trace_gammas)
-                    .fold(
-                        Polynomial::zero(),
-                        |trace_agg, ((eval, offset), trace_gamma)| {
-                            // @@@ we can avoid this clone
-                            let t_j_z = &eval[i];
-                            // @@@ this can be pre-computed
-                            let z_shifted = z * primitive_root.pow(*offset);
-                            let mut poly = t_j - t_j_z;
-                            poly.ruffini_division_inplace(&z_shifted);
-                            trace_agg + poly * trace_gamma
-                        },
-                    );
-
-                trace_terms + trace_int
+                compute_trace_term(
+                    &trace_terms,
+                    (i, t_j),
+                    trace_frame_length,
+                    trace_terms_gammas,
+                    trace_frame_evaluations,
+                    transition_offsets,
+                    (z, primitive_root),
+                )
             });
 
     h_1_term + h_2_term + trace_term
+}
+
+fn compute_trace_term<F>(
+    trace_terms: &Polynomial<FieldElement<F>>,
+    (i, t_j): (usize, &Polynomial<FieldElement<F>>),
+    trace_frame_length: usize,
+    trace_terms_gammas: &[FieldElement<F>],
+    trace_frame_evaluations: &[Vec<FieldElement<F>>],
+    transition_offsets: &[usize],
+    (z, primitive_root): (&FieldElement<F>, &FieldElement<F>),
+) -> Polynomial<FieldElement<F>>
+where
+    F: IsFFTField,
+    FieldElement<F>: ByteConversion + Send + Sync,
+{
+    let i_times_trace_frame_evaluation = i * trace_frame_length;
+    let iter_trace_gammas = trace_terms_gammas
+        .iter()
+        .skip(i_times_trace_frame_evaluation);
+    let trace_int = trace_frame_evaluations
+        .iter()
+        .zip(transition_offsets)
+        .zip(iter_trace_gammas)
+        .fold(
+            Polynomial::zero(),
+            |trace_agg, ((eval, offset), trace_gamma)| {
+                // @@@ we can avoid this clone
+                let t_j_z = &eval[i];
+                // @@@ this can be pre-computed
+                let z_shifted = z * primitive_root.pow(*offset);
+                let mut poly = t_j - t_j_z;
+                poly.ruffini_division_inplace(&z_shifted);
+                trace_agg + poly * trace_gamma
+            },
+        );
+
+    trace_terms + trace_int
 }
 
 fn open_deep_composition_poly<F: IsFFTField, A: AIR<Field = F>>(
@@ -508,9 +554,12 @@ where
                 round_2_result.lde_composition_poly_odd_evaluations[index].clone();
 
             // Trace polynomials openings
-            let lde_trace_merkle_proofs = round_1_result
-                .lde_trace_merkle_trees
-                .iter()
+            #[cfg(feature = "parallel")]
+            let merkle_trees_iter = round_1_result.lde_trace_merkle_trees.par_iter();
+            #[cfg(not(feature = "parallel"))]
+            let merkle_trees_iter = round_1_result.lde_trace_merkle_trees.iter();
+
+            let lde_trace_merkle_proofs = merkle_trees_iter
                 .map(|tree| tree.get_proof_by_pos(index).unwrap())
                 .collect();
 
@@ -540,27 +589,27 @@ where
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     info!("Started proof generation...");
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 0: Transcript Initialization");
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer0 = Instant::now();
 
     let air = A::new(main_trace.n_rows(), pub_inputs, proof_options);
     let domain = Domain::new(&air);
     let mut transcript = round_0_transcript_initialization();
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed0 = timer0.elapsed();
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed0);
 
     // ===================================
     // ==========|   Round 1   |==========
     // ===================================
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 1: RAP");
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer1 = Instant::now();
 
     let round_1_result = round_1_randomized_air_with_preprocessing::<F, A, _>(
@@ -578,18 +627,18 @@ where
         &round_1_result.rap_challenges,
     );
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed1 = timer1.elapsed();
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed1);
 
     // ===================================
     // ==========|   Round 2   |==========
     // ===================================
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 2: Compute composition polynomial");
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer2 = Instant::now();
 
     // <<<< Receive challenges: 𝛼_j^B
@@ -633,18 +682,18 @@ where
     // >>>> Send commitments: [H₁], [H₂]
     transcript.append(&round_2_result.composition_poly_root);
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed2 = timer2.elapsed();
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed2);
 
     // ===================================
     // ==========|   Round 3   |==========
     // ===================================
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 3: Evaluate polynomial in out of domain elements");
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer3 = Instant::now();
 
     // <<<< Receive challenge: z
@@ -682,18 +731,18 @@ where
         }
     }
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed3 = timer3.elapsed();
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed3);
 
     // ===================================
     // ==========|   Round 4   |==========
     // ===================================
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 4: FRI");
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer4 = Instant::now();
 
     // Part of this round is running FRI, which is an interactive
@@ -709,12 +758,12 @@ where
         &mut transcript,
     );
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed4 = timer4.elapsed();
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed4);
 
-    #[cfg(Felt252ature = "instruments")]
+    #[cfg(feature = "instruments")]
     {
         let total_time = elapsed1 + elapsed2 + elapsed3 + elapsed4;
         println!(
