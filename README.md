@@ -30,14 +30,22 @@ CLI currently runs with 100 bits of conjecturable security
 
 ## Table of Contents
 
-- [Main Building Blocks](#main-building-blocks)
-- [Requirements](#requirements)
-- [Trying it](#how-to-try-it)
-- [Prove and verify](#-prove-and-verify)
-- [Fuzzers](#running-fuzzers)
-- [Using cairo-compile for Cairo 0 programs](#using-cairo-compile-for-cairo-0-programs)
-- [References](#-references)
-- [Related projects](#-related-projects)
+- [🌟 Lambdaworks Stark Platinum Prover 🌟](#-lambdaworks-stark-platinum-prover-)
+  - [An open-source STARK prover, drop-in replacement for Winterfell.](#an-open-source-stark-prover-drop-in-replacement-for-winterfell)
+  - [⚠️ Disclaimer](#️-disclaimer)
+  - [Documentation](#documentation)
+  - [Table of Contents](#table-of-contents)
+  - [Main building blocks](#main-building-blocks)
+  - [Requirements](#requirements)
+  - [How to try it](#how-to-try-it)
+    - [🚀 Prove and verify](#-prove-and-verify)
+    - [Using Docker compiler for Cairo 0 programs](#using-docker-compiler-for-cairo-0-programs)
+    - [Using cairo-compile for Cairo 0 programs](#using-cairo-compile-for-cairo-0-programs)
+    - [Using WASM verifier](#using-wasm-verifier)
+  - [Running tests](#running-tests)
+  - [Running fuzzers](#running-fuzzers)
+  - [📚 References](#-references)
+  - [🌞 Related Projects](#-related-projects)
 
 ## Main building blocks
 
@@ -94,11 +102,9 @@ To be added:
   
 ## How to try it
 
-For the moment, only programs in Cairo 0 with no arguments and contracts in Cairo 1 with no arguments are supported.
-
 ### 🚀 Prove and verify
 
-To prove Cairo programs you can use:
+To prove Cairo 0 programs without arguments you can use:
 
 ```bash
 make prove PROGRAM_PATH=<compiled_program_path> PROOF_PATH=<output_proof_path>
@@ -122,7 +128,6 @@ To prove and verify with a single command you can use:
 ```bash
 make run_all PROGRAM_PATH=<proof_path>
 ```
-
 
 ### Using Docker compiler for Cairo 0 programs
 
@@ -159,32 +164,6 @@ Or
 ```bash
 make compile_and_prove PROGRAM=program_name.cairo PROOF_PATH=proof_path
 ```
-
-### Compiling Cairo 1 contracts
-
-Clone `cairo` repository:
-
-``` bash
-git clone https://github.com/starkware-libs/cairo
-```
-
-Checkout version 1.1.0 (corresponding to that tag of the repository). In the `cairo` folder, run:
-
-``` bash
-git checkout v1.1.0
-```
-
-- To create json file from Cairo contract:
-
-  ``` bash
-  cargo run --bin starknet-compile -- /path/to/input.cairo /path/to/output.json
-  ```
-
-- To create casm file from json file:
-
-  ``` bash
-  cargo run --bin starknet-sierra-compile -- /path/to/input.json /path/to/output.casm
-  ```
 
 ### Using WASM verifier
 

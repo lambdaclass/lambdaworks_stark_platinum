@@ -441,8 +441,11 @@ where
 mod prop_test {
 
     use lambdaworks_crypto::merkle_tree::proof::Proof;
-    use lambdaworks_math::field::{
-        element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+    use lambdaworks_math::{
+        errors::DeserializationError,
+        field::{
+            element::FieldElement, fields::fft_friendly::stark_252_prime_field::Stark252PrimeField,
+        },
     };
     use proptest::{collection, prelude::*, prop_compose, proptest};
 
@@ -695,5 +698,15 @@ mod prop_test {
                 prop_assert_eq!(&a.lde_trace_evaluations, &b.lde_trace_evaluations);
             }
         }
+    }
+
+    #[test]
+    fn deserialize_empty_proof_should_give_error() {
+        assert_eq!(
+            DeserializationError::InvalidAmountOfBytes,
+            StarkProof::<Stark252PrimeField>::deserialize(&[])
+                .err()
+                .unwrap()
+        );
     }
 }

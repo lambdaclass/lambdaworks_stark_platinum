@@ -1,7 +1,6 @@
 #[cfg(feature = "giza")]
 use cairo_platinum_prover::{
-    air::generate_cairo_proof,
-    runner::run::{generate_prover_args, CairoVersion},
+    air::generate_cairo_proof, cairo_layout::CairoLayout, runner::run::generate_prover_args,
 };
 #[cfg(feature = "giza")]
 use criterion::{black_box, measurement::WallTime, BenchmarkGroup};
@@ -41,6 +40,7 @@ fn cairo_benches(c: &mut Criterion) {
         &proof_options,
         "lambdaworks/fibonacci/1000",
         &cairo0_program_path("fibonacci_1000.json"),
+        CairoLayout::Plain,
     );
     run_giza_bench(
         &mut group,
@@ -56,6 +56,7 @@ fn cairo_benches(c: &mut Criterion) {
         &proof_options,
         "lambdaworks/fibonacci/10000",
         &cairo0_program_path("fibonacci_10000.json"),
+        CairoLayout::Plain,
     );
     run_giza_bench(
         &mut group,
@@ -81,10 +82,10 @@ fn run_lambdaworks_bench(
     proof_options: &options::ProofOptions,
     benchname: &str,
     program_path: &str,
+    layout: CairoLayout,
 ) {
     let program_content = std::fs::read(program_path).unwrap();
-    let (main_trace, pub_inputs) =
-        generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+    let (main_trace, pub_inputs) = generate_prover_args(&program_content, &None, layout).unwrap();
 
     group.bench_function(benchname, |bench| {
         bench.iter(|| {

@@ -1,5 +1,6 @@
-use std::{collections::HashMap, ops::Range};
+use std::ops::Range;
 
+use cairo_vm::without_std::collections::HashMap;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::{
     errors::DeserializationError,
@@ -46,27 +47,32 @@ const MEMORY_INCREASING_0: usize = 31;
 const MEMORY_INCREASING_1: usize = 32;
 const MEMORY_INCREASING_2: usize = 33;
 const MEMORY_INCREASING_3: usize = 34;
+const MEMORY_INCREASING_4: usize = 35;
 
-const MEMORY_CONSISTENCY_0: usize = 35;
-const MEMORY_CONSISTENCY_1: usize = 36;
-const MEMORY_CONSISTENCY_2: usize = 37;
-const MEMORY_CONSISTENCY_3: usize = 38;
+const MEMORY_CONSISTENCY_0: usize = 36;
+const MEMORY_CONSISTENCY_1: usize = 37;
+const MEMORY_CONSISTENCY_2: usize = 38;
+const MEMORY_CONSISTENCY_3: usize = 39;
+const MEMORY_CONSISTENCY_4: usize = 40;
 
-const PERMUTATION_ARGUMENT_0: usize = 39;
-const PERMUTATION_ARGUMENT_1: usize = 40;
-const PERMUTATION_ARGUMENT_2: usize = 41;
-const PERMUTATION_ARGUMENT_3: usize = 42;
+const PERMUTATION_ARGUMENT_0: usize = 41;
+const PERMUTATION_ARGUMENT_1: usize = 42;
+const PERMUTATION_ARGUMENT_2: usize = 43;
+const PERMUTATION_ARGUMENT_3: usize = 44;
+const PERMUTATION_ARGUMENT_4: usize = 45;
 
-const RANGE_CHECK_INCREASING_0: usize = 43;
-const RANGE_CHECK_INCREASING_1: usize = 44;
-const RANGE_CHECK_INCREASING_2: usize = 45;
+const RANGE_CHECK_INCREASING_0: usize = 46;
+const RANGE_CHECK_INCREASING_1: usize = 47;
+const RANGE_CHECK_INCREASING_2: usize = 48;
+const RANGE_CHECK_INCREASING_3: usize = 49;
 
-const RANGE_CHECK_0: usize = 46;
-const RANGE_CHECK_1: usize = 47;
-const RANGE_CHECK_2: usize = 48;
+const RANGE_CHECK_0: usize = 50;
+const RANGE_CHECK_1: usize = 51;
+const RANGE_CHECK_2: usize = 52;
+const RANGE_CHECK_3: usize = 53;
 
 // Range-check builtin value decomposition constraint
-const RANGE_CHECK_BUILTIN: usize = 49;
+const RANGE_CHECK_BUILTIN: usize = 54;
 
 // Frame row identifiers
 //  - Flags
@@ -105,43 +111,50 @@ pub const OFF_OP1: usize = 29;
 pub const FRAME_T0: usize = 30;
 pub const FRAME_T1: usize = 31;
 pub const FRAME_MUL: usize = 32;
-pub const FRAME_SELECTOR: usize = 33;
+pub const EXTRA_ADDR: usize = 33;
+pub const EXTRA_VAL: usize = 34;
+pub const RC_HOLES: usize = 35;
 
 // Range-check frame identifiers
-pub const RC_0: usize = 34;
-pub const RC_1: usize = 35;
-pub const RC_2: usize = 36;
-pub const RC_3: usize = 37;
-pub const RC_4: usize = 38;
-pub const RC_5: usize = 39;
-pub const RC_6: usize = 40;
-pub const RC_7: usize = 41;
-pub const RC_VALUE: usize = 42;
+pub const RC_0: usize = 36;
+pub const RC_1: usize = 37;
+pub const RC_2: usize = 38;
+pub const RC_3: usize = 39;
+pub const RC_4: usize = 40;
+pub const RC_5: usize = 41;
+pub const RC_6: usize = 42;
+pub const RC_7: usize = 43;
+pub const RC_VALUE: usize = 44;
 
 // Auxiliary range check columns
-pub const RANGE_CHECK_COL_1: usize = 43;
-pub const RANGE_CHECK_COL_2: usize = 44;
-pub const RANGE_CHECK_COL_3: usize = 45;
+pub const RANGE_CHECK_COL_1: usize = 45;
+pub const RANGE_CHECK_COL_2: usize = 46;
+pub const RANGE_CHECK_COL_3: usize = 47;
+pub const RANGE_CHECK_COL_4: usize = 48;
 
 // Auxiliary memory columns
-pub const MEMORY_ADDR_SORTED_0: usize = 46;
-pub const MEMORY_ADDR_SORTED_1: usize = 47;
-pub const MEMORY_ADDR_SORTED_2: usize = 48;
-pub const MEMORY_ADDR_SORTED_3: usize = 49;
+pub const MEMORY_ADDR_SORTED_0: usize = 49;
+pub const MEMORY_ADDR_SORTED_1: usize = 50;
+pub const MEMORY_ADDR_SORTED_2: usize = 51;
+pub const MEMORY_ADDR_SORTED_3: usize = 52;
+pub const MEMORY_ADDR_SORTED_4: usize = 53;
 
-pub const MEMORY_VALUES_SORTED_0: usize = 50;
-pub const MEMORY_VALUES_SORTED_1: usize = 51;
-pub const MEMORY_VALUES_SORTED_2: usize = 52;
-pub const MEMORY_VALUES_SORTED_3: usize = 53;
+pub const MEMORY_VALUES_SORTED_0: usize = 54;
+pub const MEMORY_VALUES_SORTED_1: usize = 55;
+pub const MEMORY_VALUES_SORTED_2: usize = 56;
+pub const MEMORY_VALUES_SORTED_3: usize = 57;
+pub const MEMORY_VALUES_SORTED_4: usize = 58;
 
-pub const PERMUTATION_ARGUMENT_COL_0: usize = 54;
-pub const PERMUTATION_ARGUMENT_COL_1: usize = 55;
-pub const PERMUTATION_ARGUMENT_COL_2: usize = 56;
-pub const PERMUTATION_ARGUMENT_COL_3: usize = 57;
+pub const PERMUTATION_ARGUMENT_COL_0: usize = 59;
+pub const PERMUTATION_ARGUMENT_COL_1: usize = 60;
+pub const PERMUTATION_ARGUMENT_COL_2: usize = 61;
+pub const PERMUTATION_ARGUMENT_COL_3: usize = 62;
+pub const PERMUTATION_ARGUMENT_COL_4: usize = 63;
 
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1: usize = 58;
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2: usize = 59;
-pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3: usize = 60;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1: usize = 64;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2: usize = 65;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3: usize = 66;
+pub const PERMUTATION_ARGUMENT_RANGE_CHECK_COL_4: usize = 67;
 
 // Trace layout
 pub const MEM_P_TRACE_OFFSET: usize = 17;
@@ -178,6 +191,7 @@ pub struct PublicInputs {
     pub memory_segments: MemorySegmentMap,
     pub public_memory: HashMap<Felt252, Felt252>,
     pub num_steps: usize, // number of execution steps
+    pub codelen: usize,   // length of the program segment
 }
 
 impl PublicInputs {
@@ -187,12 +201,12 @@ impl PublicInputs {
     pub fn from_regs_and_mem(
         register_states: &RegisterStates,
         memory: &CairoMemory,
-        program_size: usize,
+        codelen: usize,
         memory_segments: &MemorySegmentMap,
     ) -> Self {
         let output_range = memory_segments.get(&MemorySegment::Output);
 
-        let mut public_memory = (1..=program_size as u64)
+        let mut public_memory = (1..=codelen as u64)
             .map(|i| (Felt252::from(i), *memory.get(&i).unwrap()))
             .collect::<HashMap<Felt252, Felt252>>();
 
@@ -214,6 +228,7 @@ impl PublicInputs {
             memory_segments: memory_segments.clone(),
             public_memory,
             num_steps: register_states.steps(),
+            codelen,
         }
     }
 }
@@ -268,6 +283,7 @@ impl Serializable for PublicInputs {
         bytes.extend(public_memory_bytes);
 
         bytes.extend(self.num_steps.to_be_bytes());
+        bytes.extend(self.codelen.to_be_bytes());
 
         bytes
     }
@@ -431,6 +447,14 @@ impl Deserializable for PublicInputs {
                 .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
         );
 
+        let codelen = usize::from_be_bytes(
+            bytes
+                .get(0..8)
+                .ok_or(DeserializationError::InvalidAmountOfBytes)?
+                .try_into()
+                .map_err(|_| DeserializationError::InvalidAmountOfBytes)?,
+        );
+
         Ok(Self {
             pc_init,
             ap_init,
@@ -442,6 +466,7 @@ impl Deserializable for PublicInputs {
             memory_segments,
             public_memory,
             num_steps,
+            codelen,
         })
     }
 }
@@ -470,22 +495,43 @@ pub struct CairoRAPChallenges {
     pub z_range_check: FieldElement<Stark252PrimeField>,
 }
 
+/// Receives two slices corresponding to the accessed addresses and values, filled with
+/// the memory holes and with the (0, 0) public memory dummy accesses.
+/// Each (address, value) public memory pair is written in a (0, 0) dummy access until
+/// there is no one left.
+///
+/// NOTE: At the end of this process there might be some additional (0, 0) dummy accesses
+/// that were not overwritten. This is not a problem as long as all the public memory pairs
+/// have been written.
 fn add_pub_memory_in_public_input_section(
-    addresses: &Vec<Felt252>,
+    addresses: &[Felt252],
     values: &[Felt252],
     public_input: &PublicInputs,
 ) -> (Vec<Felt252>, Vec<Felt252>) {
-    let mut a_aux = addresses.clone();
+    let mut a_aux = addresses.to_owned();
     let mut v_aux = values.to_owned();
 
-    let public_input_section = addresses.len() - public_input.public_memory.len();
     let output_range = public_input.memory_segments.get(&MemorySegment::Output);
-    let pub_memory_addrs = get_pub_memory_addrs(output_range, public_input);
 
-    a_aux.splice(public_input_section.., pub_memory_addrs);
-    for i in public_input_section..a_aux.len() {
-        let address = &a_aux[i];
-        v_aux[i] = *public_input.public_memory.get(address).unwrap();
+    let pub_addrs = get_pub_memory_addrs(output_range, public_input);
+    let mut pub_addrs_iter = pub_addrs.iter();
+
+    // Iterate over addresses
+    for (i, a) in a_aux.iter_mut().enumerate() {
+        // When address `0` is found, it means it corresponds to a dummy access.
+        if a == &Felt252::zero() {
+            // While there are public memory addresses left, overwrite the dummy
+            // (addr, value) accesses with the real public memory pairs.
+            if let Some(pub_addr) = pub_addrs_iter.next() {
+                *a = *pub_addr;
+                v_aux[i] = *public_input.public_memory.get(pub_addr).unwrap();
+            } else {
+                // When there are no public memory pairs left to write, break the
+                // loop and return the (addr, value) pairs with dummy accesses
+                // overwritten.
+                break;
+            }
+        }
     }
 
     (a_aux, v_aux)
@@ -592,16 +638,16 @@ impl AIR for CairoAIR {
     ) -> Self {
         debug_assert!(trace_length.is_power_of_two());
 
-        let mut trace_columns = 34 + 3 + 12 + 3;
+        let mut trace_columns = 34 + 4 + 15 + 4;
         let mut transition_degrees = vec![
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Flags 0-14.
             1, // Flag 15
-            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // Other constraints.
-            2, 2, 2, 2, // Increasing memory auxiliary constraints.
-            2, 2, 2, 2, // Consistent memory auxiliary constraints.
-            2, 2, 2, 2, // Permutation auxiliary constraints.
-            2, 2, 2, // range-check increasing constraints.
-            2, 2, 2, // range-check permutation argument constraints.
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // Other constraints.
+            2, 2, 2, 2, 2, // Increasing memory auxiliary constraints.
+            2, 2, 2, 2, 2, // Consistent memory auxiliary constraints.
+            2, 2, 2, 2, 2, // Permutation auxiliary constraints.
+            2, 2, 2, 2, // range-check increasing constraints.
+            2, 2, 2, 2, // range-check permutation argument constraints.
         ];
         let mut transition_exemptions = vec![
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // flags (16)
@@ -609,19 +655,19 @@ impl AIR for CairoAIR {
             0, 0, 0, // operand consraints (3)
             1, 1, 1, 1, 0, 0, // register constraints (6)
             0, 0, 0, 0, 0, // opcode constraints (5)
-            0, 0, 0, 1, // memory continuous (4)
-            0, 0, 0, 1, // memory value consistency (4)
-            0, 0, 0, 1, // memory permutation argument (4)
-            0, 0, 1, // range check continuous (3)
-            0, 0, 0, // range check permutation argument (3)
+            0, 0, 0, 0, 1, // memory continuous (4)
+            0, 0, 0, 0, 1, // memory value consistency (4)
+            0, 0, 0, 0, 1, // memory permutation argument (4)
+            0, 0, 0, 1, // range check continuous (3)
+            0, 0, 0, 0, // range check permutation argument (3)
         ];
-        let mut num_transition_constraints = 49;
+        let mut num_transition_constraints = 54;
 
         // This is a hacky solution for the moment and must be changed once we start implementing 
         // layouts functionality. The `has_rc_builtin` boolean should not exist, we will know the
         // layout from the Cairo public inputs directly, and the number of constraints and columns
         // will be enforced through that.
-        let has_rc_builtin = !pub_inputs.memory_segments.is_empty();
+        let has_rc_builtin = pub_inputs.memory_segments.get(&MemorySegment::RangeCheck).is_some();
         if has_rc_builtin {
             trace_columns += 8 + 1; // 8 columns for each rc of the range-check builtin values decomposition, 1 for the values
             transition_degrees.push(1); // Range check builtin constraint
@@ -664,10 +710,17 @@ impl AIR for CairoAIR {
         rap_challenges: &Self::RAPChallenges,
     ) -> TraceTable<Self::Field> {
         let addresses_original = main_trace
-            .get_cols(&[FRAME_PC, FRAME_DST_ADDR, FRAME_OP0_ADDR, FRAME_OP1_ADDR])
+            .get_cols(&[
+                FRAME_PC,
+                FRAME_DST_ADDR,
+                FRAME_OP0_ADDR,
+                FRAME_OP1_ADDR,
+                EXTRA_ADDR,
+            ])
             .table;
+
         let values_original = main_trace
-            .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1])
+            .get_cols(&[FRAME_INST, FRAME_DST, FRAME_OP0, FRAME_OP1, EXTRA_VAL])
             .table;
 
         let (addresses, values) = add_pub_memory_in_public_input_section(
@@ -675,6 +728,7 @@ impl AIR for CairoAIR {
             &values_original,
             &self.pub_inputs,
         );
+
         let (addresses, values) = sort_columns_by_memory_address(addresses, values);
 
         let permutation_col = generate_memory_permutation_argument_column(
@@ -686,7 +740,9 @@ impl AIR for CairoAIR {
         );
 
         // Range Check
-        let offsets_original = main_trace.get_cols(&[OFF_DST, OFF_OP0, OFF_OP1]).table;
+        let offsets_original = main_trace
+            .get_cols(&[OFF_DST, OFF_OP0, OFF_OP1, RC_HOLES])
+            .table;
         let mut offsets_sorted: Vec<u16> = offsets_original
             .iter()
             .map(|x| x.representative().into())
@@ -706,24 +762,29 @@ impl AIR for CairoAIR {
         // Convert from long-format to wide-format again
         let mut aux_table = Vec::new();
         for i in 0..main_trace.n_rows() {
-            aux_table.push(offsets_sorted[3 * i]);
-            aux_table.push(offsets_sorted[3 * i + 1]);
-            aux_table.push(offsets_sorted[3 * i + 2]);
-            aux_table.push(addresses[4 * i]);
-            aux_table.push(addresses[4 * i + 1]);
-            aux_table.push(addresses[4 * i + 2]);
-            aux_table.push(addresses[4 * i + 3]);
-            aux_table.push(values[4 * i]);
-            aux_table.push(values[4 * i + 1]);
-            aux_table.push(values[4 * i + 2]);
-            aux_table.push(values[4 * i + 3]);
-            aux_table.push(permutation_col[4 * i]);
-            aux_table.push(permutation_col[4 * i + 1]);
-            aux_table.push(permutation_col[4 * i + 2]);
-            aux_table.push(permutation_col[4 * i + 3]);
-            aux_table.push(range_check_permutation_col[3 * i]);
-            aux_table.push(range_check_permutation_col[3 * i + 1]);
-            aux_table.push(range_check_permutation_col[3 * i + 2]);
+            aux_table.push(offsets_sorted[4 * i]);
+            aux_table.push(offsets_sorted[4 * i + 1]);
+            aux_table.push(offsets_sorted[4 * i + 2]);
+            aux_table.push(offsets_sorted[4 * i + 3]);
+            aux_table.push(addresses[5 * i]);
+            aux_table.push(addresses[5 * i + 1]);
+            aux_table.push(addresses[5 * i + 2]);
+            aux_table.push(addresses[5 * i + 3]);
+            aux_table.push(addresses[5 * i + 4]);
+            aux_table.push(values[5 * i]);
+            aux_table.push(values[5 * i + 1]);
+            aux_table.push(values[5 * i + 2]);
+            aux_table.push(values[5 * i + 3]);
+            aux_table.push(values[5 * i + 4]);
+            aux_table.push(permutation_col[5 * i]);
+            aux_table.push(permutation_col[5 * i + 1]);
+            aux_table.push(permutation_col[5 * i + 2]);
+            aux_table.push(permutation_col[5 * i + 3]);
+            aux_table.push(permutation_col[5 * i + 4]);
+            aux_table.push(range_check_permutation_col[4 * i]);
+            aux_table.push(range_check_permutation_col[4 * i + 1]);
+            aux_table.push(range_check_permutation_col[4 * i + 2]);
+            aux_table.push(range_check_permutation_col[4 * i + 3]);
         }
 
         TraceTable::new(aux_table, self.number_auxiliary_rap_columns())
@@ -738,7 +799,9 @@ impl AIR for CairoAIR {
     }
 
     fn number_auxiliary_rap_columns(&self) -> usize {
-        12 + 3 + 3
+        // RANGE_CHECK_COL_i + MEMORY_INCREASING_i + MEMORY_CONSISTENCY_i + PERMUTATION_ARGUMENT_COL_i +
+        // + PERMUTATION_ARGUMENT_RANGE_CHECK_COL_i
+        4 + 5 + 5 + 5 + 4
     }
 
     fn compute_transition(
@@ -755,7 +818,6 @@ impl AIR for CairoAIR {
         compute_operand_constraints(&mut constraints, frame);
         compute_register_constraints(&mut constraints, frame);
         compute_opcode_constraints(&mut constraints, frame);
-        enforce_selector(&mut constraints, frame);
         memory_is_increasing(&mut constraints, frame, builtin_offset);
         permutation_argument(&mut constraints, frame, rap_challenges, builtin_offset);
         permutation_argument_range_check(&mut constraints, frame, rap_challenges, builtin_offset);
@@ -807,19 +869,21 @@ impl AIR for CairoAIR {
                     * (rap_challenges.z_memory - (address + rap_challenges.alpha_memory * value))
             })
             .inv();
+
         let permutation_final = rap_challenges
             .z_memory
             .pow(self.pub_inputs.public_memory.len())
             * cumulative_product;
+
         let permutation_final_constraint = BoundaryConstraint::new(
-            PERMUTATION_ARGUMENT_COL_3 - builtin_offset,
+            PERMUTATION_ARGUMENT_COL_4 - builtin_offset,
             final_index,
             permutation_final,
         );
 
         let one: FieldElement<Self::Field> = FieldElement::one();
         let range_check_final_constraint = BoundaryConstraint::new(
-            PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3 - builtin_offset,
+            PERMUTATION_ARGUMENT_RANGE_CHECK_COL_4 - builtin_offset,
             final_index,
             one,
         );
@@ -829,8 +893,9 @@ impl AIR for CairoAIR {
             0,
             FieldElement::from(self.pub_inputs.range_check_min.unwrap() as u64),
         );
+
         let range_check_max = BoundaryConstraint::new(
-            RANGE_CHECK_COL_3 - builtin_offset,
+            RANGE_CHECK_COL_4 - builtin_offset,
             final_index,
             FieldElement::from(self.pub_inputs.range_check_max.unwrap() as u64),
         );
@@ -975,13 +1040,6 @@ fn compute_opcode_constraints(constraints: &mut [Felt252], frame: &Frame<Stark25
     constraints[ASSERT_EQ] = curr[F_OPC_AEQ] * (curr[FRAME_DST] - curr[FRAME_RES]);
 }
 
-fn enforce_selector(constraints: &mut [Felt252], frame: &Frame<Stark252PrimeField>) {
-    let curr = frame.get_row(0);
-    for result_cell in constraints.iter_mut().take(ASSERT_EQ + 1).skip(INST) {
-        *result_cell = *result_cell * curr[FRAME_SELECTOR];
-    }
-}
-
 fn memory_is_increasing(
     constraints: &mut [Felt252],
     frame: &Frame<Stark252PrimeField>,
@@ -1010,9 +1068,15 @@ fn memory_is_increasing(
             - one);
 
     constraints[MEMORY_INCREASING_3] = (curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+        - curr[MEMORY_ADDR_SORTED_4 - builtin_offset])
+        * (curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - one);
+
+    constraints[MEMORY_INCREASING_4] = (curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
         - next[MEMORY_ADDR_SORTED_0 - builtin_offset])
         * (next[MEMORY_ADDR_SORTED_0 - builtin_offset]
-            - curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
             - one);
 
     constraints[MEMORY_CONSISTENCY_0] = (curr[MEMORY_VALUES_SORTED_0 - builtin_offset]
@@ -1034,9 +1098,15 @@ fn memory_is_increasing(
             - one);
 
     constraints[MEMORY_CONSISTENCY_3] = (curr[MEMORY_VALUES_SORTED_3 - builtin_offset]
+        - curr[MEMORY_VALUES_SORTED_4 - builtin_offset])
+        * (curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
+            - curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - one);
+
+    constraints[MEMORY_CONSISTENCY_4] = (curr[MEMORY_VALUES_SORTED_4 - builtin_offset]
         - next[MEMORY_VALUES_SORTED_0 - builtin_offset])
         * (next[MEMORY_ADDR_SORTED_0 - builtin_offset]
-            - curr[MEMORY_ADDR_SORTED_3 - builtin_offset]
+            - curr[MEMORY_ADDR_SORTED_4 - builtin_offset]
             - one);
 }
 
@@ -1056,26 +1126,31 @@ fn permutation_argument(
     let p1 = &curr[PERMUTATION_ARGUMENT_COL_1 - builtin_offset];
     let p2 = &curr[PERMUTATION_ARGUMENT_COL_2 - builtin_offset];
     let p3 = &curr[PERMUTATION_ARGUMENT_COL_3 - builtin_offset];
+    let p4 = &curr[PERMUTATION_ARGUMENT_COL_4 - builtin_offset];
 
     let ap0_next = &next[MEMORY_ADDR_SORTED_0 - builtin_offset];
     let ap1 = &curr[MEMORY_ADDR_SORTED_1 - builtin_offset];
     let ap2 = &curr[MEMORY_ADDR_SORTED_2 - builtin_offset];
     let ap3 = &curr[MEMORY_ADDR_SORTED_3 - builtin_offset];
+    let ap4 = &curr[MEMORY_ADDR_SORTED_4 - builtin_offset];
 
     let vp0_next = &next[MEMORY_VALUES_SORTED_0 - builtin_offset];
     let vp1 = &curr[MEMORY_VALUES_SORTED_1 - builtin_offset];
     let vp2 = &curr[MEMORY_VALUES_SORTED_2 - builtin_offset];
     let vp3 = &curr[MEMORY_VALUES_SORTED_3 - builtin_offset];
+    let vp4 = &curr[MEMORY_VALUES_SORTED_4 - builtin_offset];
 
     let a0_next = &next[FRAME_PC];
     let a1 = &curr[FRAME_DST_ADDR];
     let a2 = &curr[FRAME_OP0_ADDR];
     let a3 = &curr[FRAME_OP1_ADDR];
+    let a4 = &curr[EXTRA_ADDR];
 
     let v0_next = &next[FRAME_INST];
     let v1 = &curr[FRAME_DST];
     let v2 = &curr[FRAME_OP0];
     let v3 = &curr[FRAME_OP1];
+    let v4 = &curr[EXTRA_VAL];
 
     constraints[PERMUTATION_ARGUMENT_0] =
         (z - (ap1 + alpha * vp1)) * p1 - (z - (a1 + alpha * v1)) * p0;
@@ -1084,7 +1159,9 @@ fn permutation_argument(
     constraints[PERMUTATION_ARGUMENT_2] =
         (z - (ap3 + alpha * vp3)) * p3 - (z - (a3 + alpha * v3)) * p2;
     constraints[PERMUTATION_ARGUMENT_3] =
-        (z - (ap0_next + alpha * vp0_next)) * p0_next - (z - (a0_next + alpha * v0_next)) * p3;
+        (z - (ap4 + alpha * vp4)) * p4 - (z - (a4 + alpha * v4)) * p3;
+    constraints[PERMUTATION_ARGUMENT_4] =
+        (z - (ap0_next + alpha * vp0_next)) * p0_next - (z - (a0_next + alpha * v0_next)) * p4;
 }
 
 fn permutation_argument_range_check(
@@ -1109,27 +1186,36 @@ fn permutation_argument_range_check(
             - curr[RANGE_CHECK_COL_2 - builtin_offset]
             - one);
     constraints[RANGE_CHECK_INCREASING_2] = (curr[RANGE_CHECK_COL_3 - builtin_offset]
+        - curr[RANGE_CHECK_COL_4 - builtin_offset])
+        * (curr[RANGE_CHECK_COL_4 - builtin_offset]
+            - curr[RANGE_CHECK_COL_3 - builtin_offset]
+            - one);
+    constraints[RANGE_CHECK_INCREASING_3] = (curr[RANGE_CHECK_COL_4 - builtin_offset]
         - next[RANGE_CHECK_COL_1 - builtin_offset])
         * (next[RANGE_CHECK_COL_1 - builtin_offset]
-            - curr[RANGE_CHECK_COL_3 - builtin_offset]
+            - curr[RANGE_CHECK_COL_4 - builtin_offset]
             - one);
 
     let p0 = curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1 - builtin_offset];
     let p0_next = next[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_1 - builtin_offset];
     let p1 = curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_2 - builtin_offset];
     let p2 = curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_3 - builtin_offset];
+    let p3 = curr[PERMUTATION_ARGUMENT_RANGE_CHECK_COL_4 - builtin_offset];
 
     let ap0_next = next[RANGE_CHECK_COL_1 - builtin_offset];
     let ap1 = curr[RANGE_CHECK_COL_2 - builtin_offset];
     let ap2 = curr[RANGE_CHECK_COL_3 - builtin_offset];
+    let ap3 = curr[RANGE_CHECK_COL_4 - builtin_offset];
 
     let a0_next = next[OFF_DST];
     let a1 = curr[OFF_OP0];
     let a2 = curr[OFF_OP1];
+    let a3 = curr[RC_HOLES];
 
     constraints[RANGE_CHECK_0] = (z - ap1) * p1 - (z - a1) * p0;
     constraints[RANGE_CHECK_1] = (z - ap2) * p2 - (z - a2) * p1;
-    constraints[RANGE_CHECK_2] = (z - ap0_next) * p0_next - (z - a0_next) * p2;
+    constraints[RANGE_CHECK_2] = (z - ap3) * p3 - (z - a3) * p2;
+    constraints[RANGE_CHECK_3] = (z - ap0_next) * p0_next - (z - a0_next) * p3;
 }
 
 fn frame_inst_size(frame_row: &[Felt252]) -> Felt252 {
@@ -1182,14 +1268,7 @@ pub fn verify_cairo_proof(
 #[cfg(test)]
 #[cfg(debug_assertions)]
 mod test {
-    use crate::{
-        runner::run::{generate_prover_args, CairoVersion},
-        tests::utils::cairo0_program_path,
-    };
-    use stark_platinum_prover::{debug::validate_trace, domain::Domain};
-
     use super::*;
-    use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
     use lambdaworks_math::field::element::FieldElement;
 
     #[test]
@@ -1217,33 +1296,6 @@ mod test {
     }
 
     #[test]
-    fn check_simple_cairo_trace_evaluates_to_zero() {
-        let program_content = std::fs::read(cairo0_program_path("simple_program.json")).unwrap();
-        let (main_trace, public_input) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
-        let mut trace_polys = main_trace.compute_trace_polys();
-        let mut transcript = DefaultTranscript::new();
-
-        let proof_options = ProofOptions::default_test_options();
-        let cairo_air = CairoAIR::new(main_trace.n_rows(), &public_input, &proof_options);
-        let rap_challenges = cairo_air.build_rap_challenges(&mut transcript);
-
-        let aux_trace = cairo_air.build_auxiliary_trace(&main_trace, &rap_challenges);
-        let aux_polys = aux_trace.compute_trace_polys();
-
-        trace_polys.extend_from_slice(&aux_polys);
-
-        let domain = Domain::new(&cairo_air);
-
-        assert!(validate_trace(
-            &cairo_air,
-            &trace_polys,
-            &domain,
-            &rap_challenges
-        ));
-    }
-
-    #[test]
     fn test_build_auxiliary_trace_add_program_in_public_input_section_works() {
         let dummy_public_input = PublicInputs {
             pc_init: FieldElement::zero(),
@@ -1254,25 +1306,33 @@ mod test {
             public_memory: HashMap::from([
                 (FieldElement::one(), FieldElement::from(10)),
                 (FieldElement::from(2), FieldElement::from(20)),
-                (FieldElement::from(3), FieldElement::from(30)),
             ]),
             range_check_max: None,
             range_check_min: None,
             num_steps: 1,
             memory_segments: MemorySegmentMap::new(),
+            codelen: 3,
         };
 
         let a = vec![
             FieldElement::one(),
             FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
             FieldElement::zero(),
-            FieldElement::zero(),
-            FieldElement::zero(),
+            FieldElement::from(2),
+            FieldElement::from(2),
+            FieldElement::from(2),
+            FieldElement::from(2),
             FieldElement::zero(),
         ];
         let v = vec![
             FieldElement::one(),
             FieldElement::one(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
             FieldElement::zero(),
             FieldElement::zero(),
             FieldElement::zero(),
@@ -1284,10 +1344,14 @@ mod test {
             vec![
                 FieldElement::one(),
                 FieldElement::one(),
-                FieldElement::zero(),
+                FieldElement::one(),
+                FieldElement::one(),
                 FieldElement::one(),
                 FieldElement::from(2),
-                FieldElement::from(3)
+                FieldElement::from(2),
+                FieldElement::from(2),
+                FieldElement::from(2),
+                FieldElement::from(2),
             ]
         );
         assert_eq!(
@@ -1296,9 +1360,13 @@ mod test {
                 FieldElement::one(),
                 FieldElement::one(),
                 FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(10),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(20),
-                FieldElement::from(30)
             ]
         );
     }
@@ -1314,26 +1382,33 @@ mod test {
             public_memory: HashMap::from([
                 (FieldElement::one(), FieldElement::from(10)),
                 (FieldElement::from(2), FieldElement::from(20)),
-                (FieldElement::from(3), FieldElement::from(30)),
                 (FieldElement::from(20), FieldElement::from(40)),
-                (FieldElement::from(21), FieldElement::from(50)),
             ]),
             range_check_max: None,
             range_check_min: None,
             num_steps: 1,
-            memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..22)]),
+            memory_segments: MemorySegmentMap::from([(MemorySegment::Output, 20..21)]),
+            codelen: 3,
         };
 
         let a = vec![
             FieldElement::one(),
             FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
             FieldElement::zero(),
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
             FieldElement::zero(),
-            FieldElement::zero(),
-            FieldElement::zero(),
-            FieldElement::zero(),
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
+            FieldElement::one(),
             FieldElement::zero(),
         ];
+
         let v = vec![
             FieldElement::one(),
             FieldElement::one(),
@@ -1343,19 +1418,34 @@ mod test {
             FieldElement::zero(),
             FieldElement::zero(),
             FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
+            FieldElement::zero(),
         ];
+
         let (ap, vp) = add_pub_memory_in_public_input_section(&a, &v, &dummy_public_input);
         assert_eq!(
             ap,
             vec![
                 FieldElement::one(),
                 FieldElement::one(),
-                FieldElement::zero(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
                 FieldElement::one(),
                 FieldElement::from(2),
-                FieldElement::from(3),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
+                FieldElement::one(),
                 FieldElement::from(20),
-                FieldElement::from(21)
             ]
         );
         assert_eq!(
@@ -1364,11 +1454,18 @@ mod test {
                 FieldElement::one(),
                 FieldElement::one(),
                 FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(10),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(20),
-                FieldElement::from(30),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
+                FieldElement::zero(),
                 FieldElement::from(40),
-                FieldElement::from(50)
             ]
         );
     }
@@ -1466,7 +1563,8 @@ mod prop_test {
 
     use crate::{
         air::{generate_cairo_proof, verify_cairo_proof},
-        runner::run::{generate_prover_args, CairoVersion},
+        cairo_layout::CairoLayout,
+        runner::run::generate_prover_args,
         tests::utils::cairo0_program_path,
         Felt252,
     };
@@ -1490,6 +1588,7 @@ mod prop_test {
             range_check_max in proptest::option::of(any::<u16>()),
             range_check_min in proptest::option::of(any::<u16>()),
             num_steps in any::<usize>(),
+            codelen in any::<usize>(),
         ) -> PublicInputs {
             let public_memory = public_memory.iter().map(|(k, v)| (Felt252::from(*k), Felt252::from(*v))).collect();
             let memory_segments = MemorySegmentMap::from([(MemorySegment::Output, 10u64..16u64), (MemorySegment::RangeCheck, 20u64..71u64)]);
@@ -1504,6 +1603,7 @@ mod prop_test {
                 range_check_min,
                 num_steps,
                 memory_segments,
+                codelen,
             }
         }
     }
@@ -1533,7 +1633,7 @@ mod prop_test {
     fn deserialize_and_verify() {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
         let (main_trace, pub_inputs) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+            generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
 
         let proof_options = ProofOptions::default_test_options();
 
@@ -1558,7 +1658,7 @@ mod prop_test {
     fn deserialize_should_not_panic_with_changed_and_sliced_bytes() {
         let program_content = std::fs::read(cairo0_program_path("fibonacci_10.json")).unwrap();
         let (main_trace, pub_inputs) =
-            generate_prover_args(&program_content, &CairoVersion::V0, &None).unwrap();
+            generate_prover_args(&program_content, &None, CairoLayout::Plain).unwrap();
 
         let proof_options = ProofOptions::default_test_options();
 

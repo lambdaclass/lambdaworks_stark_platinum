@@ -8,4 +8,4 @@ COPY requirements.txt /
 
 RUN pip install -r /requirements.txt
 
-CMD ["cairo-compile"]
+ENTRYPOINT ["cairo-compile"]
