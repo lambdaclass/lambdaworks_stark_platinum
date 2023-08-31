@@ -1,11 +1,11 @@
-#[cfg(Feature = "instruments")]
+#[cfg(feature = "instruments")]
 use std::time::Instant;
 
-#[cfg(not(Feature = "test_fiat_shamir"))]
+#[cfg(not(feature = "test_fiat_shamir"))]
 use lambdaworks_crypto::fiat_shamir::default_transcript::DefaultTranscript;
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 
-#[cfg(Feature = "test_fiat_shamir")]
+#[cfg(feature = "test_fiat_shamir")]
 use lambdaworks_crypto::fiat_shamir::test_transcript::TestTranscript;
 
 use lambdaworks_math::fft::{errors::FFTError, polynomial::FFTPoly};
@@ -81,12 +81,12 @@ struct Round4<F: IsFFTField> {
     nonce: u64,
 }
 
-#[cfg(Feature = "test_fiat_shamir")]
+#[cfg(feature = "test_fiat_shamir")]
 fn round_0_transcript_initialization() -> TestTranscript {
     TestTranscript::new()
 }
 
-#[cfg(not(Feature = "test_fiat_shamir"))]
+#[cfg(not(feature = "test_fiat_shamir"))]
 fn round_0_transcript_initialization() -> DefaultTranscript {
     // TODO: add strong fiat shamir
     DefaultTranscript::new()
@@ -165,9 +165,9 @@ where
     F: IsFFTField,
     FieldElement<F>: Send + Sync,
 {
-    #[cfg(not(Feature = "parallel"))]
+    #[cfg(not(feature = "parallel"))]
     let trace_polys_iter = trace_polys.iter();
-    #[cfg(Feature = "parallel")]
+    #[cfg(feature = "parallel")]
     let trace_polys_iter = trace_polys.par_iter();
 
     trace_polys_iter
@@ -589,27 +589,27 @@ where
     FieldElement<F>: ByteConversion + Send + Sync,
 {
     info!("Started proof generation...");
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 0: Transcript Initialization");
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer0 = Instant::now();
 
     let air = A::new(main_trace.n_rows(), pub_inputs, proof_options);
     let domain = Domain::new(&air);
     let mut transcript = round_0_transcript_initialization();
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed0 = timer0.elapsed();
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed0);
 
     // ===================================
     // ==========|   Round 1   |==========
     // ===================================
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 1: RAP");
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer1 = Instant::now();
 
     let round_1_result = round_1_randomized_air_with_preprocessing::<F, A, _>(
@@ -627,18 +627,18 @@ where
         &round_1_result.rap_challenges,
     );
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed1 = timer1.elapsed();
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed1);
 
     // ===================================
     // ==========|   Round 2   |==========
     // ===================================
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 2: Compute composition polynomial");
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer2 = Instant::now();
 
     // <<<< Receive challenges: 𝛼_j^B
@@ -682,18 +682,18 @@ where
     // >>>> Send commitments: [H₁], [H₂]
     transcript.append(&round_2_result.composition_poly_root);
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed2 = timer2.elapsed();
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed2);
 
     // ===================================
     // ==========|   Round 3   |==========
     // ===================================
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 3: Evaluate polynomial in out of domain elements");
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer3 = Instant::now();
 
     // <<<< Receive challenge: z
@@ -731,18 +731,18 @@ where
         }
     }
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed3 = timer3.elapsed();
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed3);
 
     // ===================================
     // ==========|   Round 4   |==========
     // ===================================
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("- Started round 4: FRI");
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let timer4 = Instant::now();
 
     // Part of this round is running FRI, which is an interactive
@@ -758,12 +758,12 @@ where
         &mut transcript,
     );
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     let elapsed4 = timer4.elapsed();
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     println!("  Time spent: {:?}", elapsed4);
 
-    #[cfg(Feature = "instruments")]
+    #[cfg(feature = "instruments")]
     {
         let total_time = elapsed1 + elapsed2 + elapsed3 + elapsed4;
         println!(
