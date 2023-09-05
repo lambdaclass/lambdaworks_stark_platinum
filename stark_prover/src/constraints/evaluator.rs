@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use itertools::Itertools;
 use lambdaworks_math::{
     fft::cpu::roots_of_unity::get_powers_of_primitive_root_coset,
@@ -21,22 +23,24 @@ use crate::traits::AIR;
 
 use super::{boundary::BoundaryConstraints, evaluation_table::ConstraintEvaluationTable};
 
-pub struct ConstraintEvaluator<F: IsFFTField, A: AIR> {
-    air: A,
+pub struct CompositionPolynomial<F: IsFFTField, A: AIR> {
     boundary_constraints: BoundaryConstraints<F>,
+    phantom: PhantomData<A>,
 }
-impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
+
+impl<F: IsFFTField, A: AIR + AIR<Field = F>> CompositionPolynomial<F, A> {
     pub fn new(air: &A, rap_challenges: &A::RAPChallenges) -> Self {
         let boundary_constraints = air.boundary_constraints(rap_challenges);
 
         Self {
-            air: air.clone(),
             boundary_constraints,
+            phantom: PhantomData,
         }
     }
 
     pub fn evaluate(
         &self,
+        air: &A,
         lde_trace: &TraceTable<F>,
         domain: &Domain<F>,
         alpha_and_beta_transition_coefficients: &[(FieldElement<F>, FieldElement<F>)],
@@ -45,14 +49,172 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
     ) -> ConstraintEvaluationTable<F>
     where
         FieldElement<F>: ByteConversion + Send + Sync,
-        A: Send + Sync,
         A::RAPChallenges: Send + Sync,
     {
         // The + 1 is for the boundary constraints column
         let mut evaluation_table = ConstraintEvaluationTable::new(
-            self.air.context().num_transition_constraints() + 1,
+            air.context().num_transition_constraints() + 1,
             &domain.lde_roots_of_unity_coset,
         );
+
+        let boundary_evaluation = self.compute_boundary_evaluations(
+            air,
+            lde_trace,
+            domain,
+            alpha_and_beta_transition_coefficients,
+            alpha_and_beta_boundary_coefficients,
+            rap_challenges,
+        );
+
+        let blowup_factor = air.blowup_factor();
+
+        #[cfg(all(debug_assertions, not(feature = "parallel")))]
+        let mut transition_evaluations = Vec::new();
+
+        let transition_exemptions = air.transition_exemptions();
+
+        let transition_exemptions_evaluations =
+            evaluate_transition_exemptions(transition_exemptions, domain);
+        let num_exemptions = air.context().num_transition_exemptions;
+        let context = air.context();
+        let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
+
+        #[cfg(feature = "parallel")]
+        let degree_adjustments_iter = (1..=max_transition_degree).into_par_iter();
+
+        #[cfg(not(feature = "parallel"))]
+        let degree_adjustments_iter = 1..=max_transition_degree;
+        let trace_length = air.trace_length();
+        let composition_poly_degree_bound = air.composition_poly_degree_bound();
+
+        let degree_adjustments: Vec<Vec<FieldElement<F>>> = degree_adjustments_iter
+            .map(|transition_degree| {
+                domain
+                    .lde_roots_of_unity_coset
+                    .iter()
+                    .map(|d| {
+                        let degree_adjustment = composition_poly_degree_bound
+                            - (trace_length * (transition_degree - 1));
+                        d.pow(degree_adjustment)
+                    })
+                    .collect()
+            })
+            .collect();
+
+        let blowup_factor_order = u64::from(blowup_factor.trailing_zeros());
+
+        let offset = FieldElement::<F>::from(air.context().proof_options.coset_offset);
+        let offset_pow = offset.pow(trace_length);
+        let one = FieldElement::<F>::one();
+        let mut zerofier_evaluations = get_powers_of_primitive_root_coset(
+            blowup_factor_order,
+            blowup_factor as usize,
+            &offset_pow,
+        )
+        .unwrap()
+        .iter()
+        .map(|v| v - &one)
+        .collect::<Vec<_>>();
+
+        FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
+
+        // Iterate over trace and domain and compute transitions
+        let evaluations_t_iter;
+        let zerofier_iter;
+        #[cfg(feature = "parallel")]
+        {
+            evaluations_t_iter = (0..domain.lde_roots_of_unity_coset.len()).into_par_iter();
+            zerofier_iter = evaluations_t_iter
+                .clone()
+                .map(|i| zerofier_evaluations[i % zerofier_evaluations.len()].clone());
+        }
+        #[cfg(not(feature = "parallel"))]
+        {
+            evaluations_t_iter = 0..domain.lde_roots_of_unity_coset.len();
+            zerofier_iter = zerofier_evaluations.iter().cycle();
+        }
+
+        let evaluations_t = evaluations_t_iter
+            .zip(&boundary_evaluation)
+            .zip(zerofier_iter)
+            .map(|((i, boundary), zerofier)| {
+                let frame = Frame::read_from_trace(
+                    lde_trace,
+                    i,
+                    blowup_factor,
+                    &air.context().transition_offsets,
+                );
+
+                let evaluations_transition = air.compute_transition(&frame, rap_challenges);
+
+                #[cfg(all(debug_assertions, not(feature = "parallel")))]
+                transition_evaluations.push(evaluations_transition.clone());
+
+                let acc_transition = evaluations_transition
+                    .iter()
+                    .zip(&air.context().transition_exemptions)
+                    .zip(&air.context().transition_degrees)
+                    .zip(alpha_and_beta_transition_coefficients)
+                    .fold(
+                        FieldElement::zero(),
+                        |acc, (((eval, exemption), degree), (alpha, beta))| {
+                            #[cfg(feature = "parallel")]
+                            let zerofier = zerofier.clone();
+
+                            if *exemption == 0 {
+                                acc + zerofier
+                                    * (alpha * &degree_adjustments[degree - 1][i] + beta)
+                                    * eval
+                            } else {
+                                //TODO: change how exemptions are indexed!
+                                if num_exemptions == 1 {
+                                    acc + zerofier
+                                        * (alpha * &degree_adjustments[degree - 1][i] + beta)
+                                        * eval
+                                        * &transition_exemptions_evaluations[0][i]
+                                } else {
+                                    // This case is not used for Cairo Programs, it can be improved in the future
+                                    let vector = &air
+                                        .context()
+                                        .transition_exemptions
+                                        .iter()
+                                        .cloned()
+                                        .filter(|elem| elem > &0)
+                                        .unique_by(|elem| *elem)
+                                        .collect::<Vec<usize>>();
+                                    let index = vector
+                                        .iter()
+                                        .position(|elem_2| elem_2 == exemption)
+                                        .expect("is there");
+
+                                    acc + zerofier
+                                        * (alpha * &degree_adjustments[degree - 1][i] + beta)
+                                        * eval
+                                        * &transition_exemptions_evaluations[index][i]
+                                }
+                            }
+                        },
+                    );
+                // TODO: Remove clones
+
+                acc_transition + boundary
+            })
+            .collect::<Vec<FieldElement<F>>>();
+
+        evaluation_table.evaluations_acc = evaluations_t;
+
+        evaluation_table
+    }
+
+    fn compute_boundary_evaluations(
+        &self,
+        air: &A,
+        lde_trace: &TraceTable<F>,
+        domain: &Domain<F>,
+        alpha_and_beta_transition_coefficients: &[(FieldElement<F>, FieldElement<F>)],
+        alpha_and_beta_boundary_coefficients: &[(FieldElement<F>, FieldElement<F>)],
+        rap_challenges: &A::RAPChallenges,
+    ) -> Vec<FieldElement<F>> {
         let boundary_constraints = &self.boundary_constraints;
         let number_of_b_constraints = boundary_constraints.constraints.len();
         let boundary_zerofiers_inverse_evaluations: Vec<Vec<FieldElement<F>>> =
@@ -71,8 +233,8 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
                 })
                 .collect::<Vec<Vec<FieldElement<F>>>>();
 
-        let trace_length = self.air.trace_length();
-        let composition_poly_degree_bound = self.air.composition_poly_degree_bound();
+        let trace_length = air.trace_length();
+        let composition_poly_degree_bound = air.composition_poly_degree_bound();
         let boundary_term_degree_adjustment = composition_poly_degree_bound - trace_length;
         // Maybe we can do this more efficiently by taking the offset's power and then using successors for roots of unity
         let d_adjustment_power = domain
@@ -126,143 +288,7 @@ impl<F: IsFFTField, A: AIR + AIR<Field = F>> ConstraintEvaluator<F, A> {
         #[cfg(all(debug_assertions, not(feature = "parallel")))]
         check_boundary_polys_divisibility(boundary_polys, boundary_zerofiers);
 
-        let blowup_factor = self.air.blowup_factor();
-
-        #[cfg(all(debug_assertions, not(feature = "parallel")))]
-        let mut transition_evaluations = Vec::new();
-
-        let transition_exemptions = self.air.transition_exemptions();
-
-        let transition_exemptions_evaluations =
-            evaluate_transition_exemptions(transition_exemptions, domain);
-        let num_exemptions = self.air.context().num_transition_exemptions;
-        let context = self.air.context();
-        let max_transition_degree = *context.transition_degrees.iter().max().unwrap();
-
-        #[cfg(feature = "parallel")]
-        let degree_adjustments_iter = (1..=max_transition_degree).into_par_iter();
-
-        #[cfg(not(feature = "parallel"))]
-        let degree_adjustments_iter = 1..=max_transition_degree;
-
-        let degree_adjustments: Vec<Vec<FieldElement<F>>> = degree_adjustments_iter
-            .map(|transition_degree| {
-                domain
-                    .lde_roots_of_unity_coset
-                    .iter()
-                    .map(|d| {
-                        let degree_adjustment = composition_poly_degree_bound
-                            - (trace_length * (transition_degree - 1));
-                        d.pow(degree_adjustment)
-                    })
-                    .collect()
-            })
-            .collect();
-
-        let blowup_factor_order = u64::from(blowup_factor.trailing_zeros());
-
-        let offset = FieldElement::<F>::from(self.air.context().proof_options.coset_offset);
-        let offset_pow = offset.pow(trace_length);
-        let one = FieldElement::<F>::one();
-        let mut zerofier_evaluations = get_powers_of_primitive_root_coset(
-            blowup_factor_order,
-            blowup_factor as usize,
-            &offset_pow,
-        )
-        .unwrap()
-        .iter()
-        .map(|v| v - &one)
-        .collect::<Vec<_>>();
-
-        FieldElement::inplace_batch_inverse(&mut zerofier_evaluations);
-
-        // Iterate over trace and domain and compute transitions
-        let evaluations_t_iter;
-        let zerofier_iter;
-        #[cfg(feature = "parallel")]
-        {
-            evaluations_t_iter = (0..domain.lde_roots_of_unity_coset.len()).into_par_iter();
-            zerofier_iter = evaluations_t_iter
-                .clone()
-                .map(|i| zerofier_evaluations[i % zerofier_evaluations.len()].clone());
-        }
-        #[cfg(not(feature = "parallel"))]
-        {
-            evaluations_t_iter = 0..domain.lde_roots_of_unity_coset.len();
-            zerofier_iter = zerofier_evaluations.iter().cycle();
-        }
-
-        let evaluations_t = evaluations_t_iter
-            .zip(&boundary_evaluation)
-            .zip(zerofier_iter)
-            .map(|((i, boundary), zerofier)| {
-                let frame = Frame::read_from_trace(
-                    lde_trace,
-                    i,
-                    blowup_factor,
-                    &self.air.context().transition_offsets,
-                );
-
-                let evaluations_transition = self.air.compute_transition(&frame, rap_challenges);
-
-                #[cfg(all(debug_assertions, not(feature = "parallel")))]
-                transition_evaluations.push(evaluations_transition.clone());
-
-                let acc_transition = evaluations_transition
-                    .iter()
-                    .zip(&self.air.context().transition_exemptions)
-                    .zip(&self.air.context().transition_degrees)
-                    .zip(alpha_and_beta_transition_coefficients)
-                    .fold(
-                        FieldElement::zero(),
-                        |acc, (((eval, exemption), degree), (alpha, beta))| {
-                            #[cfg(feature = "parallel")]
-                            let zerofier = zerofier.clone();
-
-                            if *exemption == 0 {
-                                acc + zerofier
-                                    * (alpha * &degree_adjustments[degree - 1][i] + beta)
-                                    * eval
-                            } else {
-                                //TODO: change how exemptions are indexed!
-                                if num_exemptions == 1 {
-                                    acc + zerofier
-                                        * (alpha * &degree_adjustments[degree - 1][i] + beta)
-                                        * eval
-                                        * &transition_exemptions_evaluations[0][i]
-                                } else {
-                                    // This case is not used for Cairo Programs, it can be improved in the future
-                                    let vector = &self
-                                        .air
-                                        .context()
-                                        .transition_exemptions
-                                        .iter()
-                                        .cloned()
-                                        .filter(|elem| elem > &0)
-                                        .unique_by(|elem| *elem)
-                                        .collect::<Vec<usize>>();
-                                    let index = vector
-                                        .iter()
-                                        .position(|elem_2| elem_2 == exemption)
-                                        .expect("is there");
-
-                                    acc + zerofier
-                                        * (alpha * &degree_adjustments[degree - 1][i] + beta)
-                                        * eval
-                                        * &transition_exemptions_evaluations[index][i]
-                                }
-                            }
-                        },
-                    );
-                // TODO: Remove clones
-
-                acc_transition + boundary
-            })
-            .collect::<Vec<FieldElement<F>>>();
-
-        evaluation_table.evaluations_acc = evaluations_t;
-
-        evaluation_table
+        boundary_evaluation
     }
 
     /// Given `evaluations` T_i(x) of the trace polynomial composed with the constraint

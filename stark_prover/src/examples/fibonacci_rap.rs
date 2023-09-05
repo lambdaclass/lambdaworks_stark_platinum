@@ -1,4 +1,4 @@
-use std::ops::Div;
+use std::{fmt::Binary, ops::Div};
 
 use lambdaworks_crypto::fiat_shamir::transcript::Transcript;
 use lambdaworks_math::{
@@ -17,7 +17,8 @@ use crate::{
     transcript::transcript_to_field,
 };
 
-#[derive(Clone)]
+use super::simple_fibonacci::{ConstraintSystem, Fibonacci, Permutation};
+
 pub struct FibonacciRAP<F>
 where
     F: IsFFTField,
@@ -25,6 +26,7 @@ where
     context: AirContext,
     trace_length: usize,
     pub_inputs: FibonacciRAPPublicInputs<F>,
+    constraint_system: ConstraintSystem<F>,
 }
 
 #[derive(Clone, Debug)]
@@ -63,10 +65,29 @@ where
             num_transition_exemptions: 2,
         };
 
+        let mut cs = ConstraintSystem::<Self::Field>::new(
+            // Columns
+            vec!["FIBONACCI", "FIBONACCI_PERMUTED", "CUMULATIVE", "FLAG"],
+            // Challenges
+            vec!["GAMMA", "ZETA"],
+        );
+
+        // Constraints
+        cs.add_fibonacci_constraint("FIBONACCI");
+        cs.add_binary_constraint("FLAG");
+        cs.add_permutation_constraint(
+            "CUMULATIVE",
+            vec!["FIBONACCI".to_string()],
+            vec!["FIBONACCI_PERMUTED".to_string()],
+            "GAMMA",
+            "ZETA",
+        );
+
         Self {
             context,
             trace_length,
             pub_inputs: pub_inputs.clone(),
+            constraint_system: cs,
         }
     }
 
@@ -110,23 +131,18 @@ where
         gamma: &Self::RAPChallenges,
     ) -> Vec<FieldElement<Self::Field>> {
         // Main constraints
-        let first_row = frame.get_row(0);
-        let second_row = frame.get_row(1);
-        let third_row = frame.get_row(2);
+        let real_frame = vec![
+            frame.get_row(0).to_vec(),
+            frame.get_row(1).to_vec(),
+            frame.get_row(2).to_vec(),
+        ];
 
-        let mut constraints =
-            vec![third_row[0].clone() - second_row[0].clone() - first_row[0].clone()];
+        let mut constraints = vec![
+            self.constraint_system.constraints[0].evaluate(&real_frame, &vec![]),
+            self.constraint_system.constraints[2]
+                .evaluate(&real_frame, &vec![gamma.clone(), gamma.clone()]),
+        ];
 
-        // Auxiliary constraints
-        let z_i = &frame.get_row(0)[2];
-        let z_i_plus_one = &frame.get_row(1)[2];
-
-        let a_i = &frame.get_row(0)[0];
-        let b_i = &frame.get_row(0)[1];
-
-        let eval = z_i_plus_one * (b_i + gamma) - z_i * (a_i + gamma);
-
-        constraints.push(eval);
         constraints
     }
 
