@@ -33,11 +33,6 @@ itertools = "0.11.0"
 # Parallelization crates
 rayon = { version = "1.7.0", optional = true }
 
-# Giza prover crates 
-giza-core = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
-giza-prover = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
-giza-runner = { git = "https://github.com/lambdaclass/giza", branch = "remove_prints", optional = true }
-
 # wasm
 wasm-bindgen = { version = "0.2", optional = true }
 serde-wasm-bindgen = { version = "0.5", optional = true }
@@ -59,7 +54,6 @@ test_fiat_shamir = []
 instruments = []                   # This enables timing prints in prover and verifier
 metal = ["lambdaworks-math/metal"]
 parallel = ["dep:rayon"]
-giza = ["dep:giza-core", "dep:giza-prover", "dep:giza-runner"]
 wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen", "dep:web-sys", "dep:serde_cbor"]
 
 [target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dev-dependencies]
@@ -82,10 +76,6 @@ metal = ["lambdaworks-math/metal"]
 
 [[bench]]
 name = "criterion_verifier_70k"
-harness = false
-
-[[bench]]
-name = "criterion_giza"
 harness = false
 
 [package.metadata.wasm-pack.profile.dev]
