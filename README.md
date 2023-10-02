@@ -1,4 +1,4 @@
-# Lambdaworks Plonk Prover
+# Lambdaworks Platinum Prover
 
 This repo is now deprecated. Platinum Stark and Cairo provers have been moved to the main [Lambdaworks](https://github.com/lambdaclass/lambdaworks) repository.
 
